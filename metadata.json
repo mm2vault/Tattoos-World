@@ -1,0 +1,6 @@
+{
+  "name": "Tatto's World",
+  "description": "Premium tattoo community platform to discover, share art, and build your tattoo identity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

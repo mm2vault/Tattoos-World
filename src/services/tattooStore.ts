@@ -1,0 +1,1057 @@
+import { Tattoo, Comment, UserProfile, CategoryId } from '../types';
+import { 
+  auth, 
+  googleProvider, 
+  ADMIN_EMAIL, 
+  isUserAdmin, 
+  db 
+} from './firebase';
+import { signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+
+const STORAGE_KEYS = {
+  TATTOOS: 'tattos_world_tattoos_v1',
+  COMMENTS: 'tattos_world_comments_v1',
+  LIKES: 'tattos_world_likes_v1',
+  USER: 'tattos_world_current_user_v1',
+  FOLLOWS: 'tattos_world_follows_v1',
+  LANGUAGE: 'tattos_world_lang_v1',
+  SESSION: 'tattos_world_session_active_v1',
+};
+
+export const INITIAL_USER: UserProfile = {
+  uid: 'user_default',
+  displayName: 'Alex Rivers',
+  handle: '@alexinked',
+  email: 'alex@tattosworld.community',
+  photoURL: './images/users/avatar_inkedlife.jpg',
+  bio: 'Tattoo collector & aesthetic seeker. Living canvas.',
+  instagram: 'https://instagram.com/alexinked',
+  tiktok: 'https://tiktok.com/@alexinked',
+  discord: 'alex#2026',
+  website: 'https://tattosworld.com',
+  customLinks: [
+    'https://www.tiktok.com/@alexinked',
+    'https://www.instagram.com/alexinked',
+    'https://www.facebook.com/alexrivers.ink'
+  ],
+  isArtist: false,
+  verified: false,
+  role: 'user',
+  isAdmin: false,
+  followersCount: 342,
+  followingCount: 88,
+  createdAt: '2025-11-12',
+  savedTattooIds: ['tattoo_1', 'tattoo_3'],
+};
+
+export const INITIAL_ARTISTS: UserProfile[] = [
+  {
+    uid: 'artist_inkedlife',
+    displayName: 'Marco Vance',
+    handle: '@inkedlife',
+    email: 'marco@inkedlife.art',
+    photoURL: './images/users/avatar_inkedlife.jpg',
+    bio: 'Tattoo Artist · Sanat, hayatın en gerçek halidir. Daha fazla dövme, daha fazla hikaye...',
+    instagram: 'https://instagram.com/inkedlife',
+    tiktok: 'https://tiktok.com/@inkedlife',
+    discord: 'inkedlife#0001',
+    website: 'https://inkedlife.studio',
+    customLinks: [
+      'https://www.tiktok.com/@inkedlife',
+      'https://www.instagram.com/inkedlife',
+      'https://www.facebook.com/inkedlifestudio',
+      'https://inkedlife.studio'
+    ],
+    isArtist: true,
+    verified: true,
+    role: 'artist',
+    isAdmin: false,
+    followersCount: 3420,
+    followingCount: 128,
+    createdAt: '2024-03-10',
+    savedTattooIds: [],
+  },
+  {
+    uid: 'artist_luna',
+    displayName: 'Luna Valery',
+    handle: '@lunatattoos',
+    email: 'luna@lunatattoos.art',
+    photoURL: './images/users/avatar_luna.jpg',
+    bio: 'Fine line, botanical, and mystic micro-tattoos. Precision on skin.',
+    instagram: 'https://instagram.com/lunatattoos',
+    tiktok: 'https://tiktok.com/@lunatattoos',
+    discord: 'luna#7788',
+    website: 'https://luna.tattoos',
+    customLinks: [
+      'https://www.tiktok.com/@lunatattoos',
+      'https://www.instagram.com/lunatattoos',
+      'https://www.pinterest.com/lunatattoos',
+      'https://luna.tattoos'
+    ],
+    isArtist: true,
+    verified: true,
+    role: 'artist',
+    isAdmin: false,
+    followersCount: 12400,
+    followingCount: 94,
+    createdAt: '2024-05-18',
+    savedTattooIds: [],
+  },
+  {
+    uid: 'artist_darksoul',
+    displayName: 'Damian Black',
+    handle: '@darksoul',
+    email: 'damian@darksoul.ink',
+    photoURL: './images/users/avatar_inkedlife.jpg',
+    bio: 'Dark aesthetic, occult symbols & serpent line specialist.',
+    instagram: 'https://instagram.com/darksoul_ink',
+    tiktok: 'https://tiktok.com/@darksoul_ink',
+    discord: 'darksoul#666',
+    website: 'https://darksoul.ink',
+    customLinks: [
+      'https://www.tiktok.com/@darksoul_ink',
+      'https://www.instagram.com/darksoul_ink',
+      'https://www.youtube.com/@darksoulart',
+      'https://darksoul.ink'
+    ],
+    isArtist: true,
+    verified: true,
+    role: 'artist',
+    isAdmin: false,
+    followersCount: 9900,
+    followingCount: 50,
+    createdAt: '2024-01-20',
+    savedTattooIds: [],
+  }
+];
+
+export const INITIAL_TATTOOS: Tattoo[] = [
+  {
+    id: 'tattoo_1',
+    title: 'Lion & Clock',
+    category: 'realism',
+    categoryName: 'Realizm',
+    description: 'Zamanın izinde... Güç, sabır ve yeniden doğuş. Bu tasarım, hayatın döngüsünü ve içsel gücü simgeliyor.',
+    image: './images/tattoos/lion_clock.jpg',
+    additionalImages: [
+      './images/tattoos/lion_clock.jpg',
+      './images/tattoos/rose_dark.jpg',
+      './images/tattoos/hero_sleeve.jpg',
+    ],
+    creatorId: 'artist_inkedlife',
+    creatorName: 'Marco Vance',
+    creatorHandle: '@inkedlife',
+    creatorPhoto: './images/users/avatar_inkedlife.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-03-12',
+    likesCount: 2420,
+    commentsCount: 186,
+    isFeatured: true,
+    tags: ['Realizm', 'Siyah & Gri', 'Lion', 'Clock'],
+    socialLinks: {
+      instagram: 'https://instagram.com',
+      tiktok: 'https://tiktok.com',
+      discord: 'inkedlife#0001',
+      website: 'https://inkedlife.studio',
+    },
+  },
+  {
+    id: 'tattoo_2',
+    title: 'Butterfly',
+    category: 'minimal',
+    categoryName: 'Minimal',
+    description: 'Hafiflik ve dönüşümün en narin hali. Tek iğne (single needle) tekniğiyle tasarlandı.',
+    image: './images/tattoos/butterfly_ink.jpg',
+    creatorId: 'artist_luna',
+    creatorName: 'Luna Valery',
+    creatorHandle: '@lunatattoos',
+    creatorPhoto: './images/users/avatar_luna.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-03-15',
+    likesCount: 12400,
+    commentsCount: 98,
+    isFeatured: true,
+    tags: ['Minimal', 'Fine Line', 'Butterfly'],
+    socialLinks: {
+      instagram: 'https://instagram.com',
+      tiktok: '',
+      discord: 'luna#7788',
+      website: 'https://luna.tattoos',
+    },
+  },
+  {
+    id: 'tattoo_3',
+    title: 'Snake',
+    category: 'dark',
+    categoryName: 'Seri / Dark',
+    description: 'Derin gölgeler, pulların ritmik dizilimi ve karanlık mitoloji simgeleri.',
+    image: './images/tattoos/snake_serpent.jpg',
+    creatorId: 'artist_darksoul',
+    creatorName: 'Damian Black',
+    creatorHandle: '@darksoul',
+    creatorPhoto: './images/users/avatar_inkedlife.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-03-10',
+    likesCount: 9900,
+    commentsCount: 114,
+    isFeatured: true,
+    tags: ['Dark', 'Serpent', 'Blackwork'],
+    socialLinks: {
+      instagram: 'https://instagram.com',
+      tiktok: '',
+      discord: 'darksoul#666',
+      website: 'https://darksoul.ink',
+    },
+  },
+  {
+    id: 'tattoo_4',
+    title: 'Rose',
+    category: 'realism',
+    categoryName: 'Realizm',
+    description: 'Kadife dokulu yapraklar ve dikenlerin dramatik kontrastı. Yüksek çözünürlüklü gölgelendirme.',
+    image: './images/tattoos/rose_dark.jpg',
+    creatorId: 'artist_inkedlife',
+    creatorName: 'Marco Vance',
+    creatorHandle: '@inkedlife',
+    creatorPhoto: './images/users/avatar_inkedlife.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-02-28',
+    likesCount: 8700,
+    commentsCount: 76,
+    tags: ['Realizm', 'Siyah & Gri', 'Rose'],
+    socialLinks: {
+      instagram: 'https://instagram.com',
+    },
+  },
+  {
+    id: 'tattoo_5',
+    title: 'Cross',
+    category: 'minimal',
+    categoryName: 'Minimal',
+    description: 'Gotik ve geometrik hatların kusursuz birleşimi. İnce çizgiler ve zamansız estetik.',
+    image: './images/tattoos/cross_gothic.jpg',
+    creatorId: 'artist_luna',
+    creatorName: 'Luna Valery',
+    creatorHandle: '@tattoartist',
+    creatorPhoto: './images/users/avatar_luna.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-02-15',
+    likesCount: 7300,
+    commentsCount: 52,
+    tags: ['Minimal', 'Gothic', 'Cross'],
+  },
+  {
+    id: 'tattoo_6',
+    title: 'Wolf',
+    category: 'realism',
+    categoryName: 'Realizm',
+    description: 'Vahşi doğanın asaleti, derin bakışlar ve gerçekçi kürk dokusu.',
+    image: './images/tattoos/wolf_dark.jpg',
+    creatorId: 'artist_darksoul',
+    creatorName: 'Damian Black',
+    creatorHandle: '@blackink',
+    creatorPhoto: './images/users/avatar_inkedlife.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-02-10',
+    likesCount: 6100,
+    commentsCount: 64,
+    tags: ['Realizm', 'Hayvanlar', 'Wolf'],
+  },
+  {
+    id: 'tattoo_7',
+    title: 'Oriental Dragon',
+    category: 'color',
+    categoryName: 'Renkli',
+    description: 'Geleneksel Doğu mitolojisinden esinlenen, canlı renkler ve akıcı dalgalarla bezenmiş ejderha.',
+    image: './images/tattoos/dragon_oriental.jpg',
+    creatorId: 'artist_inkedlife',
+    creatorName: 'Marco Vance',
+    creatorHandle: '@inkedlife',
+    creatorPhoto: './images/users/avatar_inkedlife.jpg',
+    creatorRole: 'Sanatçı',
+    creatorVerified: true,
+    createdAt: '2026-01-20',
+    likesCount: 4890,
+    commentsCount: 45,
+    tags: ['Renkli', 'Oriental', 'Dragon'],
+  },
+];
+
+class TattooStoreService {
+  private tattoos: Tattoo[] = [];
+  private comments: Record<string, Comment[]> = {};
+  private userLikes: Record<string, Set<string>> = {};
+  private currentUser: UserProfile = INITIAL_USER;
+  private follows: Set<string> = new Set(['@inkedlife', '@lunatattoos']);
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage() {
+    try {
+      const storedTattoos = localStorage.getItem(STORAGE_KEYS.TATTOOS);
+      if (storedTattoos) {
+        this.tattoos = JSON.parse(storedTattoos);
+      } else {
+        this.tattoos = [...INITIAL_TATTOOS];
+        this.saveTattoos();
+      }
+
+      const storedComments = localStorage.getItem(STORAGE_KEYS.COMMENTS);
+      if (storedComments) {
+        this.comments = JSON.parse(storedComments);
+      } else {
+        this.comments = {
+          tattoo_1: [
+            {
+              id: 'c1',
+              tattooId: 'tattoo_1',
+              userId: 'u_lover',
+              userName: '@tattoo_lover',
+              userAvatar: './images/users/avatar_luna.jpg',
+              text: 'Gerçekten muhteşem! Hayatımda gördüğüm en detaylı aslan dövmesi. 😍',
+              createdAt: '2 saat önce',
+              likes: 24,
+            },
+            {
+              id: 'c2',
+              tattooId: 'tattoo_1',
+              userId: 'u_dark',
+              userName: '@darkart',
+              userAvatar: './images/users/avatar_inkedlife.jpg',
+              text: 'Bu tarz dövmeler her zaman efsane. Gölgelendirmeler kusursuz. 🔥',
+              createdAt: '3 saat önce',
+              likes: 18,
+            },
+            {
+              id: 'c3',
+              tattooId: 'tattoo_1',
+              userId: 'u_mira',
+              userName: '@mira_ink',
+              userAvatar: './images/users/avatar_luna.jpg',
+              text: 'Harika bir iş! Sanat resmen. Randevu için yazdım! 🔥',
+              createdAt: '5 saat önce',
+              likes: 12,
+            },
+          ],
+        };
+        this.saveComments();
+      }
+
+      const storedLikes = localStorage.getItem(STORAGE_KEYS.LIKES);
+      if (storedLikes) {
+        const parsed = JSON.parse(storedLikes);
+        this.userLikes = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          this.userLikes[k] = new Set(v as string[]);
+        }
+      } else {
+        this.userLikes = {
+          tattoo_1: new Set(['user_default', 'u_lover', 'u_dark']),
+          tattoo_2: new Set(['user_default', 'u_lover']),
+        };
+        this.saveLikes();
+      }
+
+      const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          // Safety: If old mock admin or unauthenticated admin was in localStorage, reset to standard user
+          if (parsed.uid === 'admin_mm2ultimatehub' || (!auth.currentUser && parsed.isAdmin)) {
+            parsed.isAdmin = false;
+            if (parsed.role === 'admin') parsed.role = 'user';
+          }
+          this.currentUser = parsed;
+        } catch {
+          this.currentUser = { ...INITIAL_USER };
+        }
+      } else {
+        this.currentUser = { ...INITIAL_USER };
+        this.saveUser();
+      }
+
+      const storedFollows = localStorage.getItem(STORAGE_KEYS.FOLLOWS);
+      if (storedFollows) {
+        this.follows = new Set(JSON.parse(storedFollows));
+      }
+
+      // Check Firebase Auth state & sync with Firestore
+      try {
+        onAuthStateChanged(auth, async (fbUser) => {
+          if (fbUser) {
+            this.setSessionActive(true);
+            const isAdmin = isUserAdmin(fbUser.email);
+            try {
+              const userRef = doc(db, 'users', fbUser.uid);
+              const snap = await getDoc(userRef);
+              if (snap.exists()) {
+                const remote = snap.data() as Partial<UserProfile>;
+                this.currentUser = {
+                  ...this.currentUser,
+                  ...remote,
+                  uid: fbUser.uid,
+                  email: fbUser.email || this.currentUser.email,
+                  isAdmin,
+                  role: isAdmin ? 'admin' : (remote.role || 'user'),
+                  verified: isAdmin || remote.verified || false,
+                };
+                this.saveUser();
+              } else {
+                this.currentUser = {
+                  ...this.currentUser,
+                  uid: fbUser.uid,
+                  email: fbUser.email || '',
+                  displayName: fbUser.displayName || this.currentUser.displayName,
+                  isAdmin,
+                  role: isAdmin ? 'admin' : 'user',
+                  verified: isAdmin,
+                };
+                this.saveUser();
+              }
+            } catch (err) {
+              console.warn('Auth state Firestore sync notice:', err);
+            }
+          } else {
+            // When not logged into Firebase Auth, never retain admin privileges
+            if (this.currentUser.isAdmin) {
+              this.currentUser.isAdmin = false;
+              if (this.currentUser.role === 'admin') {
+                this.currentUser.role = 'user';
+              }
+              this.saveUser();
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Firebase onAuthStateChanged setup notice:', err);
+      }
+    } catch (e) {
+      console.error('Error loading tattoo store from localStorage', e);
+      this.tattoos = [...INITIAL_TATTOOS];
+      this.currentUser = INITIAL_USER;
+    }
+  }
+
+  private saveTattoos() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TATTOOS, JSON.stringify(this.tattoos));
+    } catch (e) {
+      console.error('Error saving tattoos', e);
+    }
+  }
+
+  private saveComments() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.COMMENTS, JSON.stringify(this.comments));
+    } catch (e) {
+      console.error('Error saving comments', e);
+    }
+  }
+
+  private saveLikes() {
+    try {
+      const serializable: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(this.userLikes)) {
+        serializable[k] = Array.from(v);
+      }
+      localStorage.setItem(STORAGE_KEYS.LIKES, JSON.stringify(serializable));
+    } catch (e) {
+      console.error('Error saving likes', e);
+    }
+  }
+
+  private saveUser() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(this.currentUser));
+    } catch (e) {
+      console.error('Error saving user', e);
+    }
+  }
+
+  private saveFollows() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.FOLLOWS, JSON.stringify(Array.from(this.follows)));
+    } catch (e) {
+      console.error('Error saving follows', e);
+    }
+  }
+
+  // Getters
+  public getTattoos(): Tattoo[] {
+    return this.tattoos;
+  }
+
+  public getTattooById(id: string): Tattoo | undefined {
+    return this.tattoos.find(t => t.id === id);
+  }
+
+  public getCurrentUser(): UserProfile {
+    return this.currentUser;
+  }
+
+  public setCurrentUser(user: UserProfile) {
+    this.currentUser = user;
+    this.saveUser();
+  }
+
+  /**
+   * Check if user has an active, persistent session (no login popup on reload/re-entry)
+   */
+  public hasActiveSession(): boolean {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.SESSION) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Set session active status
+   */
+  public setSessionActive(active: boolean) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SESSION, active ? 'true' : 'false');
+    } catch (e) {
+      console.error('Error saving session status', e);
+    }
+  }
+
+  /**
+   * Sync user document to Firestore users/{uid}
+   * Preserves and merges existing user profile customizations (bio, links, avatar, banner)
+   */
+  public async syncUserToFirestore(user: UserProfile): Promise<UserProfile> {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        const remote = snap.data() as Partial<UserProfile>;
+        const merged: UserProfile = {
+          ...user,
+          ...remote,
+          uid: user.uid,
+          email: user.email || remote.email || '',
+        };
+        this.currentUser = merged;
+        this.saveUser();
+        await setDoc(userRef, {
+          ...merged,
+          lastLoginAt: new Date().toISOString(),
+        }, { merge: true });
+        return merged;
+      } else {
+        await setDoc(userRef, {
+          ...user,
+          createdAt: user.createdAt || new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+        }, { merge: true });
+        return user;
+      }
+    } catch (err) {
+      console.warn('Firestore sync note:', err);
+      return user;
+    }
+  }
+
+  /**
+   * Real Google Authentication via Firebase Auth
+   * With seamless fallback and designated mm2ultimatehub@gmail.com Admin detection
+   */
+  public async loginWithGoogle(manualUser?: Partial<UserProfile>): Promise<UserProfile> {
+    // If manual test user provided
+    if (manualUser && manualUser.email) {
+      const isAdmin = isUserAdmin(manualUser.email);
+      const user: UserProfile = {
+        uid: manualUser.uid || 'user_google_' + Date.now(),
+        displayName: manualUser.displayName || 'Google User',
+        handle: manualUser.handle || ('@' + (manualUser.displayName || 'user').toLowerCase().replace(/\s+/g, '_')),
+        email: manualUser.email,
+        photoURL: manualUser.photoURL || './images/users/avatar_inkedlife.jpg',
+        bio: manualUser.bio || (isAdmin ? 'Tatto\'s World Master Admin' : 'Tattoo explorer & art devotee.'),
+        instagram: manualUser.instagram || '',
+        tiktok: manualUser.tiktok || '',
+        discord: manualUser.discord || '',
+        website: manualUser.website || '',
+        isArtist: isAdmin ? true : (manualUser.isArtist || false),
+        verified: isAdmin ? true : (manualUser.verified || false),
+        role: isAdmin ? 'admin' : 'user',
+        isAdmin,
+        followersCount: manualUser.followersCount || 100,
+        followingCount: manualUser.followingCount || 25,
+        createdAt: new Date().toISOString().split('T')[0],
+        savedTattooIds: ['tattoo_1', 'tattoo_2'],
+      };
+
+      this.currentUser = user;
+      this.saveUser();
+      this.setSessionActive(true);
+      const synced = await this.syncUserToFirestore(user);
+      return synced;
+    }
+
+    try {
+      // Attempt Firebase popup
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+      const isAdmin = isUserAdmin(fbUser.email);
+
+      const userProfile: UserProfile = {
+        uid: fbUser.uid,
+        displayName: fbUser.displayName || 'Google User',
+        handle: '@' + (fbUser.displayName || 'user').toLowerCase().replace(/\s+/g, '_'),
+        email: fbUser.email || '',
+        photoURL: fbUser.photoURL || './images/users/avatar_inkedlife.jpg',
+        bio: isAdmin ? 'Tatto\'s World Master Admin' : 'Tattoo lover and collector.',
+        instagram: '',
+        tiktok: '',
+        discord: '',
+        website: '',
+        isArtist: isAdmin,
+        verified: isAdmin,
+        role: isAdmin ? 'admin' : 'user',
+        isAdmin,
+        followersCount: isAdmin ? 5000 : 50,
+        followingCount: 15,
+        createdAt: new Date().toISOString().split('T')[0],
+        savedTattooIds: ['tattoo_1'],
+      };
+
+      this.currentUser = userProfile;
+      this.saveUser();
+      this.setSessionActive(true);
+      const synced = await this.syncUserToFirestore(userProfile);
+      return synced;
+    } catch (popupError: any) {
+      console.warn('Firebase signInWithPopup note (iframe or restricted mode):', popupError);
+      
+      // If user closed or cancelled the popup manually, rethrow so UI doesn't force a login
+      if (popupError?.code === 'auth/popup-closed-by-user' || popupError?.code === 'auth/cancelled-popup-request') {
+        throw popupError;
+      }
+      
+      // Graceful fallback: create standard Google User
+      const fallbackUser: UserProfile = {
+        uid: 'user_google_' + Date.now(),
+        displayName: 'Google Kullanıcısı',
+        handle: '@google_user',
+        email: 'user@gmail.com',
+        photoURL: './images/users/avatar_luna.jpg',
+        bio: 'Tattoo explorer, ink devotee, passionate collector.',
+        instagram: '',
+        tiktok: '',
+        discord: '',
+        website: '',
+        isArtist: false,
+        verified: false,
+        role: 'user',
+        isAdmin: false,
+        followersCount: 142,
+        followingCount: 37,
+        createdAt: new Date().toISOString().split('T')[0],
+        savedTattooIds: ['tattoo_1', 'tattoo_2'],
+      };
+
+      this.currentUser = fallbackUser;
+      this.saveUser();
+      this.setSessionActive(true);
+      const synced = await this.syncUserToFirestore(fallbackUser);
+      return synced;
+    }
+  }
+
+  public loginAsGuest(): UserProfile {
+    const guestUser: UserProfile = {
+      uid: 'guest_' + Math.floor(Math.random() * 10000),
+      displayName: 'Guest Explorer',
+      handle: '@guest_' + Math.floor(Math.random() * 999),
+      email: 'guest@tattosworld.community',
+      photoURL: './images/users/avatar_inkedlife.jpg',
+      bio: 'Browsing the art and stories of Tatto\'s World.',
+      instagram: '',
+      tiktok: '',
+      discord: '',
+      website: '',
+      isArtist: false,
+      verified: false,
+      role: 'user',
+      isAdmin: false,
+      followersCount: 12,
+      followingCount: 5,
+      createdAt: new Date().toISOString().split('T')[0],
+      savedTattooIds: [],
+      customLinks: [],
+    };
+    this.currentUser = guestUser;
+    this.saveUser();
+    this.setSessionActive(true);
+    this.syncUserToFirestore(this.currentUser).catch(() => {});
+    return this.currentUser;
+  }
+
+  /**
+   * Explicit sign out
+   */
+  public async logout(): Promise<void> {
+    this.setSessionActive(false);
+    try {
+      await fbSignOut(auth);
+    } catch (e) {
+      console.warn('Firebase sign out note:', e);
+    }
+    // Reset user to default clean guest user
+    this.currentUser = { ...INITIAL_USER };
+    this.saveUser();
+  }
+
+  // ================= ADMIN & USER PRIVILEGES =================
+  /**
+   * Checks if current active user is verified Master Admin.
+   * STRICT SECURITY: Only true if Firebase Auth actively confirms the admin's email.
+   */
+  public isCurrentUserAdmin(): boolean {
+    const authEmail = auth.currentUser?.email;
+    if (authEmail && isUserAdmin(authEmail)) {
+      return true;
+    }
+    // Also check if currentUser holds an admin email AND matches the authenticated user
+    if (this.currentUser?.email && isUserAdmin(this.currentUser.email) && authEmail?.toLowerCase() === this.currentUser.email.toLowerCase()) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Everyone can delete their own shared tattoos.
+   * Admin can delete ANY tattoo.
+   */
+  public deleteTattoo(tattooId: string, requester: UserProfile): boolean {
+    const tattoo = this.tattoos.find(t => t.id === tattooId);
+    if (!tattoo) return false;
+
+    const isAdmin = Boolean(
+      requester.isAdmin || requester.role === 'admin' || isUserAdmin(requester.email)
+    );
+
+    const isOwner =
+      tattoo.creatorId === requester.uid ||
+      tattoo.creatorHandle.toLowerCase() === requester.handle.toLowerCase();
+
+    if (!isAdmin && !isOwner) {
+      console.warn('Unauthorized: You can only delete your own tattoos.');
+      return false;
+    }
+
+    this.tattoos = this.tattoos.filter(t => t.id !== tattooId);
+    this.saveTattoos();
+
+    // Clean comments & likes
+    delete this.comments[tattooId];
+    delete this.userLikes[tattooId];
+    this.saveComments();
+    this.saveLikes();
+
+    // Firestore deletion
+    try {
+      deleteDoc(doc(db, 'tattoos', tattooId)).catch(() => {});
+    } catch (e) {}
+
+    return true;
+  }
+
+  /**
+   * Admin: Delete ANY tattoo
+   */
+  public adminDeleteTattoo(tattooId: string): boolean {
+    return this.deleteTattoo(tattooId, this.currentUser);
+  }
+
+  /**
+   * Update current user profile (photoURL, bannerURL, displayName, bio, etc.)
+   */
+  public updateProfile(updates: Partial<UserProfile>): UserProfile {
+    this.currentUser = {
+      ...this.currentUser,
+      ...updates,
+    };
+    this.saveUser();
+
+    // Sync in Firestore
+    try {
+      const userRef = doc(db, 'users', this.currentUser.uid);
+      setDoc(userRef, this.currentUser, { merge: true }).catch(() => {});
+    } catch (e) {}
+
+    return this.currentUser;
+  }
+
+  /**
+   * Admin: Update ANY tattoo
+   */
+  public adminUpdateTattoo(tattooId: string, updates: Partial<Tattoo>): Tattoo | null {
+    if (!this.isCurrentUserAdmin()) return null;
+
+    const index = this.tattoos.findIndex(t => t.id === tattooId);
+    if (index === -1) return null;
+
+    this.tattoos[index] = {
+      ...this.tattoos[index],
+      ...updates,
+    };
+    this.saveTattoos();
+
+    try {
+      updateDoc(doc(db, 'tattoos', tattooId), updates).catch(() => {});
+    } catch (e) {}
+
+    return this.tattoos[index];
+  }
+
+  /**
+   * Admin: Toggle Featured flag
+   */
+  public adminToggleFeatured(tattooId: string): boolean {
+    if (!this.isCurrentUserAdmin()) return false;
+    const tattoo = this.tattoos.find(t => t.id === tattooId);
+    if (!tattoo) return false;
+
+    tattoo.isFeatured = !tattoo.isFeatured;
+    this.saveTattoos();
+    return tattoo.isFeatured;
+  }
+
+  /**
+   * Admin: Delete ANY comment
+   */
+  public adminDeleteComment(tattooId: string, commentId: string): boolean {
+    if (!this.isCurrentUserAdmin()) return false;
+    return this.deleteComment(tattooId, commentId);
+  }
+
+  /**
+   * Admin: Change user role or verification
+   */
+  public adminUpdateUser(uid: string, updates: Partial<UserProfile>): boolean {
+    if (!this.isCurrentUserAdmin()) return false;
+
+    if (this.currentUser.uid === uid) {
+      this.currentUser = { ...this.currentUser, ...updates };
+      this.saveUser();
+    }
+    return true;
+  }
+
+  // ================= COMMUNITY & INTERACTION =================
+  public isLiked(tattooId: string, uid?: string): boolean {
+    const targetUid = uid || this.currentUser.uid;
+    return this.userLikes[tattooId]?.has(targetUid) || false;
+  }
+
+  public toggleLike(tattooId: string): { isLiked: boolean; newCount: number } {
+    const uid = this.currentUser.uid;
+    if (!this.userLikes[tattooId]) {
+      this.userLikes[tattooId] = new Set();
+    }
+
+    const set = this.userLikes[tattooId];
+    let isLikedNow = false;
+
+    if (set.has(uid)) {
+      set.delete(uid);
+      isLikedNow = false;
+    } else {
+      set.add(uid);
+      isLikedNow = true;
+    }
+
+    const tattoo = this.tattoos.find(t => t.id === tattooId);
+    if (tattoo) {
+      tattoo.likesCount = Math.max(0, tattoo.likesCount + (isLikedNow ? 1 : -1));
+      this.saveTattoos();
+    }
+
+    this.saveLikes();
+    return {
+      isLiked: isLikedNow,
+      newCount: tattoo?.likesCount ?? set.size,
+    };
+  }
+
+  public toggleSaveTattoo(tattooId: string): boolean {
+    const saved = new Set(this.currentUser.savedTattooIds || []);
+    let isSavedNow = false;
+    if (saved.has(tattooId)) {
+      saved.delete(tattooId);
+      isSavedNow = false;
+    } else {
+      saved.add(tattooId);
+      isSavedNow = true;
+    }
+    this.currentUser.savedTattooIds = Array.from(saved);
+    this.saveUser();
+    return isSavedNow;
+  }
+
+  public isSaved(tattooId: string): boolean {
+    return this.currentUser.savedTattooIds?.includes(tattooId) || false;
+  }
+
+  public getComments(tattooId: string): Comment[] {
+    return this.comments[tattooId] || [];
+  }
+
+  public addComment(tattooId: string, text: string): Comment {
+    const newComment: Comment = {
+      id: 'comment_' + Date.now(),
+      tattooId,
+      userId: this.currentUser.uid,
+      userName: this.currentUser.handle || this.currentUser.displayName,
+      userAvatar: this.currentUser.photoURL,
+      text: text.trim(),
+      createdAt: 'Az önce',
+      likes: 0,
+    };
+
+    if (!this.comments[tattooId]) {
+      this.comments[tattooId] = [];
+    }
+    this.comments[tattooId].unshift(newComment);
+
+    const tattoo = this.tattoos.find(t => t.id === tattooId);
+    if (tattoo) {
+      tattoo.commentsCount += 1;
+      this.saveTattoos();
+    }
+
+    this.saveComments();
+    return newComment;
+  }
+
+  public deleteComment(tattooId: string, commentId: string): boolean {
+    if (!this.comments[tattooId]) return false;
+    const initialLen = this.comments[tattooId].length;
+    this.comments[tattooId] = this.comments[tattooId].filter(c => c.id !== commentId);
+
+    if (this.comments[tattooId].length !== initialLen) {
+      const tattoo = this.tattoos.find(t => t.id === tattooId);
+      if (tattoo && tattoo.commentsCount > 0) {
+        tattoo.commentsCount -= 1;
+        this.saveTattoos();
+      }
+      this.saveComments();
+      return true;
+    }
+    return false;
+  }
+
+  public createTattoo(data: {
+    title: string;
+    category: CategoryId;
+    categoryName: string;
+    description: string;
+    image: string;
+    tags?: string[];
+    socialLinks?: {
+      instagram?: string;
+      tiktok?: string;
+      discord?: string;
+      website?: string;
+    };
+  }): Tattoo {
+    const newTattoo: Tattoo = {
+      id: 'tattoo_' + Date.now(),
+      title: data.title,
+      category: data.category,
+      categoryName: data.categoryName,
+      description: data.description,
+      image: data.image,
+      creatorId: this.currentUser.uid,
+      creatorName: this.currentUser.displayName,
+      creatorHandle: this.currentUser.handle,
+      creatorPhoto: this.currentUser.photoURL,
+      creatorRole: this.isCurrentUserAdmin() ? 'Master Admin' : (this.currentUser.isArtist ? 'Sanatçı' : 'Koleksiyoner'),
+      creatorVerified: this.currentUser.verified || this.isCurrentUserAdmin(),
+      createdAt: new Date().toISOString().split('T')[0],
+      likesCount: 1,
+      commentsCount: 0,
+      tags: data.tags || [data.categoryName],
+      socialLinks: data.socialLinks || {
+        instagram: this.currentUser.instagram,
+        tiktok: this.currentUser.tiktok,
+        discord: this.currentUser.discord,
+        website: this.currentUser.website,
+      }
+    };
+
+    this.tattoos.unshift(newTattoo);
+    this.saveTattoos();
+
+    // Auto like own published tattoo
+    this.userLikes[newTattoo.id] = new Set([this.currentUser.uid]);
+    this.saveLikes();
+
+    // Firestore sync
+    try {
+      setDoc(doc(db, 'tattoos', newTattoo.id), newTattoo).catch(() => {});
+    } catch (e) {}
+
+    return newTattoo;
+  }
+
+  public isFollowing(handle: string): boolean {
+    return this.follows.has(handle);
+  }
+
+  public toggleFollow(handle: string): boolean {
+    let nowFollowing = false;
+    if (this.follows.has(handle)) {
+      this.follows.delete(handle);
+      nowFollowing = false;
+    } else {
+      this.follows.add(handle);
+      nowFollowing = true;
+    }
+    this.saveFollows();
+    return nowFollowing;
+  }
+
+  public getArtistProfile(handle: string): UserProfile | undefined {
+    if (handle === this.currentUser.handle) {
+      return this.currentUser;
+    }
+    const found = INITIAL_ARTISTS.find(a => a.handle.toLowerCase() === handle.toLowerCase());
+    if (found) {
+      return found;
+    }
+    return {
+      uid: 'artist_' + handle.replace('@', ''),
+      displayName: handle.replace('@', ''),
+      handle,
+      email: `${handle.replace('@', '')}@tattosworld.art`,
+      photoURL: './images/users/avatar_inkedlife.jpg',
+      bio: 'Tattoo Artist & Visionary Creator. Sharing unique body art on Tatto\'s World.',
+      instagram: `https://instagram.com/${handle.replace('@', '')}`,
+      tiktok: '',
+      discord: `${handle.replace('@', '')}#1234`,
+      website: '',
+      isArtist: true,
+      verified: true,
+      role: 'artist',
+      isAdmin: false,
+      followersCount: 1250,
+      followingCount: 42,
+      createdAt: '2025-01-01',
+      savedTattooIds: [],
+    };
+  }
+}
+
+export const tattooStore = new TattooStoreService();
