@@ -1,6 +1,7 @@
 import React from 'react';
-import { 
-  Home, Compass, User, PlusCircle, Heart, MessageSquare, Settings, LogOut, ShieldCheck, Users, Info 
+import {
+  Home, Compass, User, PlusCircle, Heart, MessageSquare, Settings,
+  LogOut, ShieldCheck, Users, Info
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,87 +25,109 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems = [
     { id: 'explore', label: 'Ana Sayfa', icon: Home },
-    { id: 'gallery', label: 'Galeri', icon: Compass },
+    { id: 'gallery', label: 'Keşfet', icon: Compass },
     { id: 'community', label: 'Topluluk', icon: Users },
-    { id: 'profile', label: 'Profilim', icon: User },
-    { id: 'create', label: 'Dövme Ekle', icon: PlusCircle, isAction: true },
-    { id: 'favorites', label: 'Favorilerim', icon: Heart },
     { id: 'messages', label: 'Mesajlar', icon: MessageSquare },
-    { id: 'about', label: 'Hakkımızda', icon: Info },
-    { id: 'settings', label: 'Ayarlar', icon: Settings },
+    { id: 'favorites', label: 'Kaydedilenler', icon: Heart },
+    { id: 'profile', label: 'Profil', icon: User },
   ];
 
   return (
-    <aside className="hidden xl:flex flex-col justify-between w-60 h-screen sticky top-0 bg-[#0a0a0a] border-r border-white/10 p-5 shrink-0 z-30 select-none">
-      
-      {/* Top Branding matching image */}
-      <div className="space-y-6">
+    <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[238px] border-r border-white/10 bg-black z-40 px-4 py-7 flex-col">
+      <button
+        onClick={() => onSelectTab('explore')}
+        className="px-3 mb-9 text-left cursor-pointer group"
+        aria-label="Tattoos World ana sayfa"
+      >
+        <span className="font-brush text-[24px] tracking-wide text-white uppercase group-hover:opacity-80 transition-opacity">
+          TATTOO'S WORLD
+        </span>
+      </button>
+
+      <nav className="space-y-1">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const active = currentTab === item.id || (item.id === 'explore' && currentTab === 'gallery' && false);
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelectTab(item.id)}
+              className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm transition-all cursor-pointer ${
+                active
+                  ? 'bg-white/[0.08] text-white font-semibold'
+                  : 'text-[#b4b4b4] hover:text-white hover:bg-white/[0.05]'
+              }`}
+            >
+              <Icon className={`w-[22px] h-[22px] ${active ? 'stroke-[2.4]' : 'stroke-[1.8]'}`} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+
         <button
-          onClick={() => onSelectTab('explore')}
-          className="block text-left group cursor-pointer"
+          type="button"
+          onClick={onOpenCreate}
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm text-[#b4b4b4] hover:text-white hover:bg-white/[0.05] transition-all cursor-pointer"
         >
-          <span className="font-brush text-2xl tracking-wider text-white uppercase drop-shadow -rotate-2 inline-block group-hover:scale-105 transition-transform">
-            TATTOO'S WORLD
-          </span>
+          <PlusCircle className="w-[22px] h-[22px] stroke-[1.8]" />
+          <span>Oluştur</span>
         </button>
 
-        {/* Navigation Items */}
-        <nav className="space-y-1.5">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentTab === item.id;
+        <button
+          type="button"
+          onClick={() => onSelectTab('about')}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm transition-all cursor-pointer ${
+            currentTab === 'about'
+              ? 'bg-white/[0.08] text-white font-semibold'
+              : 'text-[#b4b4b4] hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <Info className="w-[22px] h-[22px] stroke-[1.8]" />
+          <span>Hakkımızda</span>
+        </button>
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.isAction) {
-                    onOpenCreate();
-                  } else {
-                    onSelectTab(item.id);
-                  }
-                }}
-                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-[#888888] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#777777]'}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+        <button
+          type="button"
+          onClick={() => onSelectTab('settings')}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm transition-all cursor-pointer ${
+            currentTab === 'settings'
+              ? 'bg-white/[0.08] text-white font-semibold'
+              : 'text-[#b4b4b4] hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <Settings className="w-[22px] h-[22px] stroke-[1.8]" />
+          <span>Ayarlar</span>
+        </button>
 
-          {/* Admin Panel Button visible ONLY if the authenticated user is admin */}
-          {isAdmin && onOpenAdmin && (
-            <button
-              onClick={onOpenAdmin}
-              className="w-full mt-3 flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition-all cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Admin Paneli</span>
-            </button>
-          )}
-        </nav>
-      </div>
+        {isAdmin && onOpenAdmin && (
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="w-full mt-2 flex items-center gap-4 px-3 py-3 rounded-xl text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15 transition-all cursor-pointer"
+          >
+            <ShieldCheck className="w-[22px] h-[22px]" />
+            <span>Admin Paneli</span>
+          </button>
+        )}
+      </nav>
 
-      {/* Bottom Logout Button matching image */}
-      <div className="pt-4 border-t border-white/10 space-y-2">
+      <div className="mt-auto space-y-2 border-t border-white/10 pt-4">
         {isAdmin && adminEmail && (
-          <div className="px-2 text-[10px] text-amber-400 font-mono truncate">
-            👑 Yönetici: {adminEmail}
+          <div className="px-3 pb-1 text-[10px] text-amber-300/80 font-mono truncate">
+            {adminEmail}
           </div>
         )}
         <button
+          type="button"
           onClick={onLogout}
-          className="w-full flex items-center gap-3.5 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm text-[#b4b4b4] hover:text-red-300 hover:bg-red-500/10 transition-all cursor-pointer"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-[22px] h-[22px] stroke-[1.8]" />
           <span>Çıkış Yap</span>
         </button>
       </div>
-
     </aside>
   );
 };
