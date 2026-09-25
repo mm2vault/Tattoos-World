@@ -98,7 +98,8 @@ export const Gallery: React.FC<GalleryProps> = ({
         tattoo.description.toLowerCase().includes(query) ||
         tattoo.categoryName.toLowerCase().includes(query) ||
         tattoo.creatorHandle.toLowerCase().includes(query) ||
-        tattoo.creatorName.toLowerCase().includes(query))
+        tattoo.creatorName.toLowerCase().includes(query) ||
+        tattoo.tags.some((tag) => tag.toLowerCase().includes(query)))
     );
   });
 
