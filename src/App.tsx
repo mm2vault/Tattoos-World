@@ -222,7 +222,7 @@ export default function App() {
           />
 
           {/* Main Body */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-20 md:pb-8">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 xl:p-8 max-w-[1440px] w-full mx-auto pb-24 xl:pb-8">
             
             {/* If Showcase Mode is Active: Show all 6 screen surfaces together matching the image! */}
             {showcaseMode ? (
@@ -423,7 +423,7 @@ export default function App() {
 
       {/* Mobile Drawer Navigation when hamburger clicked */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in"
             onClick={() => setMobileMenuOpen(false)}
