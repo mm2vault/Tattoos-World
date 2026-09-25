@@ -1019,6 +1019,27 @@ class TattooStoreService {
   }
 
   // ================= COMMUNITY & INTERACTION =================
+  public async reportTattoo(tattooId: string, reason: string): Promise<boolean> {
+    if (!auth.currentUser || !reason.trim()) return false;
+    try {
+      const reportId = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      await setDoc(doc(db, 'reports', reportId), {
+        id: reportId,
+        type: 'tattoo',
+        targetId: tattooId,
+        reporterUid: auth.currentUser.uid,
+        reporterName: this.currentUser.displayName,
+        reason: reason.trim().slice(0, 500),
+        createdAt: new Date().toISOString(),
+        status: 'open',
+      });
+      return true;
+    } catch (err) {
+      console.warn('Report submission failed:', err);
+      return false;
+    }
+  }
+
   public isLiked(tattooId: string, uid?: string): boolean {
     const targetUid = uid || this.currentUser.uid;
     return this.userLikes[tattooId]?.has(targetUid) || false;
