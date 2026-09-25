@@ -150,7 +150,7 @@ export const ShowcaseBoard: React.FC<ShowcaseBoardProps> = ({
                 <div className="absolute bottom-4 inset-x-4 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs text-white font-bold">
                     <span>Lion & Clock</span>
-                    <span className="text-[11px] text-[#AAAAAA]">• 2.4K Beğeni</span>
+                    <span className="text-[11px] text-[#AAAAAA]">• 0 Beğeni</span>
                   </div>
                   <p className="text-[11px] text-[#888888] line-clamp-2">
                     Zamanın izinde... Güç, sabır ve yeniden doğuş.
@@ -182,8 +182,8 @@ export const ShowcaseBoard: React.FC<ShowcaseBoardProps> = ({
                   tiktok: '@marco_tattoos',
                   discord: 'inkedlife#0001',
                   website: 'https://inkedlife.art',
-                  followersCount: 3420,
-                  followingCount: 184,
+                  followersCount: 0,
+                  followingCount: 0,
                   savedTattooIds: [],
                   createdAt: '2024-01-15',
                 }}
