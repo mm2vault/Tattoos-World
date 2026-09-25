@@ -23,6 +23,7 @@ interface MessageItem {
 export const MessagesView: React.FC<MessagesViewProps> = ({
   currentUser,
   onSelectCreator,
+  initialCreatorHandle,
 }) => {
   const conversations = [
     {
