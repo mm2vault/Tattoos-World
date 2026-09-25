@@ -351,6 +351,7 @@ export default function App() {
         }}
         onOpenCreate={() => setCreateModalOpen(true)}
         currentLanguage={currentLanguage}
+        currentUser={currentUser}
       />
 
       {/* Admin Panel Modal */}
