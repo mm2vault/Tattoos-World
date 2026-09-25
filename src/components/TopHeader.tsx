@@ -26,7 +26,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onToggleShowcaseMode,
 }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(2);
+  const [unreadCount, setUnreadCount] = useState(0);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -133,40 +133,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               </div>
 
               <div className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
-                <div className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-red-500/20 text-red-400 shrink-0 mt-0.5">
-                    <Heart className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-white">
-                      <span className="text-[#CCFF00]">@inkedlife</span> dövmenizi beğendi
-                    </p>
-                    <p className="text-[10px] text-[#777777]">10 dakika önce</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 shrink-0 mt-0.5">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-white">
-                      <span className="text-blue-400">@lunatattoos</span> yeni bir yorum bıraktı
-                    </p>
-                    <p className="text-[10px] text-[#777777]">1 saat önce</p>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-white">
-                      Tatto's World topluluğuna hoş geldiniz!
-                    </p>
-                    <p className="text-[10px] text-[#777777]">Yeni dövmeler ve sanatçıları keşfedin</p>
-                  </div>
+                <div className="py-8 text-center text-[#666666]">
+                  <Bell className="w-7 h-7 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs text-[#888888]">Henüz bildirim yok.</p>
+                  <p className="text-[10px] mt-1">Gerçek beğeni, yorum ve takipler burada görünecek.</p>
                 </div>
               </div>
             </div>
