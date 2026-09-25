@@ -2,7 +2,7 @@ import React from 'react';
 import { Users, Sparkles, Heart, MessageSquare, Flame, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Tattoo, SupportedLanguage, UserProfile } from '../types';
 import { translations } from '../i18n/translations';
-import { INITIAL_ARTISTS, tattooStore } from '../services/tattooStore';
+import { tattooStore } from '../services/tattooStore';
 
 interface CommunityViewProps {
   tattoos: Tattoo[];
@@ -23,7 +23,21 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
 }) => {
   const t = translations[currentLanguage];
 
-  const featuredArtists = INITIAL_ARTISTS;
+  const featuredArtists = React.useMemo(() => {
+    const seen = new Set<string>();
+    return tattoos
+      .slice()
+      .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
+      .map((tattoo) => tattooStore.getArtistProfile(tattoo.creatorHandle))
+      .filter((artist): artist is UserProfile => Boolean(artist) && artist.uid !== currentUser.uid)
+      .filter((artist) => {
+        const key = artist.uid || artist.handle;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 6);
+  }, [tattoos, currentUser.uid]);
   const popularTattoos = [...tattoos].sort((a, b) => b.likesCount - a.likesCount).slice(0, 4);
   const latestTattoos = [...tattoos].slice(0, 6);
 
@@ -61,6 +75,11 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
           </div>
         </div>
 
+        {featuredArtists.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-[#111111] p-8 text-center text-sm text-[#777777]">
+            Henüz topluluk sanatçısı yok. İlk dövmeni paylaş ve topluluğun ilk yaratıcılarından biri ol.
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {featuredArtists.map((artist) => {
             const isFollowing = tattooStore.isFollowing(artist.handle);
@@ -113,6 +132,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Latest & Trending Discussions / Works */}
