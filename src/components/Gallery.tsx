@@ -1,5 +1,5 @@
-import React from 'react';
-import { Heart, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Heart, ArrowRight, MessageCircle, Bookmark, Share2, MoreHorizontal, ChevronLeft, ChevronRight, Grid3X3, LayoutList } from 'lucide-react';
 import { Tattoo, CategoryId, UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 
@@ -27,7 +27,10 @@ export const Gallery: React.FC<GalleryProps> = ({
   onToast,
   onTattooUpdated,
 }) => {
-  // Exact categories matching image
+  const [viewMode, setViewMode] = useState<'feed' | 'grid'>('feed');
+  const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
+  const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
+
   const categoriesList: { id: CategoryId; name: string; image: string }[] = [
     { id: 'realism', name: 'Realizm', image: './images/tattoos/lion_clock.jpg' },
     { id: 'minimal', name: 'Minimal', image: './images/tattoos/butterfly_ink.jpg' },
@@ -37,7 +40,6 @@ export const Gallery: React.FC<GalleryProps> = ({
     { id: 'animals', name: 'Diğer', image: './images/tattoos/cross_gothic.jpg' },
   ];
 
-  // Filter tattoos based on search and category
   const filteredTattoos = tattoos.filter((tattoo) => {
     const matchesCategory = selectedCategory === 'all' || tattoo.category === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
@@ -54,22 +56,37 @@ export const Gallery: React.FC<GalleryProps> = ({
     );
   });
 
-  const handleLikeTattoo = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const toggleLike = (id: string) => {
     const res = tattooStore.toggleLike(id);
     onTattooUpdated();
     onToast(res.isLiked ? 'Beğenildi' : 'Beğeni kaldırıldı');
   };
 
+  const handleShare = async (tattoo: Tattoo) => {
+    try {
+      const shareUrl = window.location.href;
+      if (navigator.share) {
+        await navigator.share({
+          title: tattoo.title,
+          text: `@${tattoo.creatorHandle.replace(/^@/, '')} tarafından paylaşılan dövme`,
+          url: shareUrl,
+        });
+        return;
+      }
+      await navigator.clipboard?.writeText(shareUrl);
+      onToast('Gönderi bağlantısı kopyalandı');
+    } catch {
+      // User closed the share dialog.
+    }
+  };
+
+  const getSlides = (tattoo: Tattoo) => Array.from(new Set([tattoo.image, ...(tattoo.additionalImages || [])].filter(Boolean))).slice(0, 10);
+
   return (
-    <div className="space-y-10 pb-8">
-      
-      {/* 1. KATEGORİLER (Matching Circular Cards in Image) */}
+    <div className="space-y-7 pb-8">
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-bold text-white font-display">
-            Kategoriler
-          </h2>
+          <h2 className="text-base sm:text-lg font-bold text-white font-display">Kategoriler</h2>
           <button
             onClick={() => onSelectCategory('all')}
             className="text-xs text-[#888888] hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
@@ -82,30 +99,19 @@ export const Gallery: React.FC<GalleryProps> = ({
         <div className="flex items-center gap-5 overflow-x-auto pb-2 scrollbar-none">
           {categoriesList.map((cat) => {
             const isSelected = selectedCategory === cat.id;
-
             return (
               <button
                 key={cat.id}
                 onClick={() => onSelectCategory(isSelected ? 'all' : cat.id)}
                 className="group flex flex-col items-center gap-2 cursor-pointer shrink-0"
               >
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border p-0.5 transition-all ${
-                  isSelected ? 'border-white ring-2 ring-white/40 scale-105' : 'border-white/15 hover:border-white/40'
-                }`}>
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border p-0.5 transition-all ${isSelected ? 'border-white ring-2 ring-white/40 scale-105' : 'border-white/15 hover:border-white/40'}`}>
                   <div className="w-full h-full rounded-full overflow-hidden relative">
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
+                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-black/25" />
                   </div>
                 </div>
-
-                <span className={`text-xs font-medium transition-colors ${
-                  isSelected ? 'text-white font-bold' : 'text-[#888888] group-hover:text-white'
-                }`}>
+                <span className={`text-xs font-medium transition-colors ${isSelected ? 'text-white font-bold' : 'text-[#888888] group-hover:text-white'}`}>
                   {cat.name}
                 </span>
               </button>
@@ -114,76 +120,268 @@ export const Gallery: React.FC<GalleryProps> = ({
         </div>
       </section>
 
-      {/* 3. DISCOVER TATTOOS MASONRY STREAM */}
-      <section className="space-y-4 pt-2">
+      <section className="space-y-4 pt-1">
         <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-bold text-white font-display">
-            {searchQuery ? `"${searchQuery}" Sonuçları` : 'Keşfet'}
-          </h2>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-white font-display">
+              {searchQuery ? `"${searchQuery}" Sonuçları` : 'Gönderiler'}
+            </h2>
+            <p className="text-[11px] text-[#666666] mt-1">
+              Instagram/TikTok tarzı akış
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-[#111111] border border-white/10">
+            <button
+              type="button"
+              onClick={() => setViewMode('feed')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'feed' ? 'bg-white text-black' : 'text-[#777777] hover:text-white'}`}
+              title="Akış görünümü"
+              aria-label="Akış görünümü"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-black' : 'text-[#777777] hover:text-white'}`}
+              title="Izgara görünümü"
+              aria-label="Izgara görünümü"
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
-          {filteredTattoos.map((tattoo) => {
-            const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
+        {filteredTattoos.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-[#111111] p-10 text-center">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl">✦</div>
+            <h3 className="text-sm font-bold text-white mt-4">Henüz gönderi yok</h3>
+            <p className="text-xs text-[#666666] mt-1">İlk dövmeni paylaş ve akışı başlat.</p>
+            <button
+              onClick={onOpenCreate}
+              className="mt-4 px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-[#eaeaea] transition-colors"
+            >
+              İlk Gönderiyi Paylaş
+            </button>
+          </div>
+        ) : viewMode === 'feed' ? (
+          <div className="mx-auto w-full max-w-2xl space-y-5">
+            {filteredTattoos.map((tattoo) => {
+              const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
+              const saved = tattooStore.isSaved(tattoo.id);
+              const slides = getSlides(tattoo);
+              const activeIndex = Math.min(activeSlides[tattoo.id] || 0, Math.max(0, slides.length - 1));
+              const captionExpanded = Boolean(expandedCaptions[tattoo.id]);
+              const daysAgo = (() => {
+                const date = new Date(tattoo.createdAt);
+                if (Number.isNaN(date.getTime())) return '';
+                const diff = Math.max(0, Date.now() - date.getTime());
+                const days = Math.floor(diff / 86400000);
+                return days === 0 ? 'Bugün' : days === 1 ? 'Dün' : `${days} gün önce`;
+              })();
 
-            return (
-              <div
-                key={tattoo.id}
-                onClick={() => onSelectTattoo(tattoo)}
-                className="group relative rounded-2xl overflow-hidden bg-[#121212] border border-white/10 hover:border-white/25 transition-all duration-300 cursor-pointer flex flex-col"
-              >
-                {/* Image */}
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
-                  <img
-                    src={tattoo.image}
-                    alt={tattoo.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
+              return (
+                <article
+                  key={tattoo.id}
+                  className="overflow-hidden rounded-3xl bg-[#0e0e0e] border border-white/10 shadow-xl"
+                >
+                  <header className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
+                    <button
+                      type="button"
+                      onClick={() => onSelectCreator(tattoo.creatorHandle)}
+                      className="flex items-center gap-3 min-w-0 text-left cursor-pointer"
+                    >
+                      {tattoo.creatorPhoto ? (
+                        <img src={tattoo.creatorPhoto} alt={tattoo.creatorName} className="w-10 h-10 rounded-full object-cover border border-white/15 shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          {tattoo.creatorName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs sm:text-sm font-bold text-white truncate">{tattoo.creatorHandle}</span>
+                          {tattoo.creatorVerified && <span className="text-[10px] text-blue-400">✓</span>}
+                        </div>
+                        <p className="text-[10px] text-[#777777] truncate">{tattoo.categoryName}{daysAgo ? ` · ${daysAgo}` : ''}</p>
+                      </div>
+                    </button>
 
-                  {/* Like heart */}
-                  <button
-                    onClick={(e) => handleLikeTattoo(e, tattoo.id)}
-                    className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hover:scale-110 transition-transform"
-                    aria-label="Like"
+                    <button
+                      type="button"
+                      className="p-2 rounded-full text-[#666666] hover:text-white hover:bg-white/5"
+                      aria-label="Gönderi seçenekleri"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </header>
+
+                  <div
+                    className="relative aspect-[4/5] sm:aspect-square bg-black overflow-hidden cursor-pointer"
+                    onDoubleClick={() => !liked && toggleLike(tattoo.id)}
+                    onClick={() => onSelectTattoo(tattoo)}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                  </button>
-                </div>
+                    <img
+                      src={slides[activeIndex] || tattoo.image}
+                      alt={tattoo.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
 
-                {/* Details */}
-                <div className="p-3.5 flex flex-col justify-between space-y-2">
-                  <div>
-                    <h4 className="text-sm font-bold text-white leading-tight truncate group-hover:text-[#EAEAEA]">
-                      {tattoo.title}
-                    </h4>
-                    <p
+                    {slides.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlides((prev) => ({ ...prev, [tattoo.id]: activeIndex === 0 ? slides.length - 1 : activeIndex - 1 }));
+                          }}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white border border-white/10"
+                          aria-label="Önceki görsel"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlides((prev) => ({ ...prev, [tattoo.id]: activeIndex === slides.length - 1 ? 0 : activeIndex + 1 }));
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white border border-white/10"
+                          aria-label="Sonraki görsel"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1 rounded-full px-2 py-1 bg-black/35 backdrop-blur-sm">
+                          {slides.map((_, idx) => (
+                            <span key={idx} className={`w-1.5 h-1.5 rounded-full ${idx === activeIndex ? 'bg-white' : 'bg-white/35'}`} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="px-4 sm:px-5 pt-3.5 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleLike(tattoo.id)}
+                          className={`p-2 rounded-full transition-all ${liked ? 'text-red-500' : 'text-white hover:bg-white/5'}`}
+                          aria-label={liked ? 'Beğeniyi kaldır' : 'Beğen'}
+                        >
+                          <Heart className={`w-6 h-6 ${liked ? 'fill-red-500' : ''}`} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectTattoo(tattoo)}
+                          className="p-2 rounded-full text-white hover:bg-white/5"
+                          aria-label="Yorumlar"
+                        >
+                          <MessageCircle className="w-6 h-6" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShare(tattoo)}
+                          className="p-2 rounded-full text-white hover:bg-white/5"
+                          aria-label="Paylaş"
+                        >
+                          <Share2 className="w-6 h-6" />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = tattooStore.toggleSaveTattoo(tattoo.id);
+                          onToast(next ? 'Kaydedildi' : 'Kaydedilenlerden kaldırıldı');
+                        }}
+                        className={`p-2 rounded-full ${saved ? 'text-white' : 'text-white'} hover:bg-white/5`}
+                        aria-label={saved ? 'Kaydı kaldır' : 'Kaydet'}
+                      >
+                        <Bookmark className={`w-6 h-6 ${saved ? 'fill-white' : ''}`} />
+                      </button>
+                    </div>
+
+                    <p className="text-xs font-bold text-white mt-1">
+                      {tattoo.likesCount.toLocaleString()} beğeni
+                    </p>
+
+                    <div className="mt-2 text-sm text-[#e8e8e8] leading-relaxed">
+                      <span className="font-bold mr-2">{tattoo.creatorHandle}</span>
+                      <span className={captionExpanded ? '' : 'line-clamp-2'}>{tattoo.description}</span>
+                      {tattoo.description.length > 100 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCaptions((prev) => ({ ...prev, [tattoo.id]: !captionExpanded }))}
+                          className="text-[#777777] ml-1 cursor-pointer hover:text-white"
+                        >
+                          {captionExpanded ? 'daha az' : 'daha fazla'}
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onSelectTattoo(tattoo)}
+                      className="text-xs text-[#777777] mt-2 hover:text-white cursor-pointer"
+                    >
+                      {tattoo.commentsCount > 0 ? `${tattoo.commentsCount} yorumu gör` : 'Yorum ekle...'}
+                    </button>
+
+                    {tattoo.tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {tattoo.tags.slice(0, 5).map((tag) => (
+                          <span key={tag} className="text-[10px] text-[#777777]">#{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
+            {filteredTattoos.map((tattoo) => {
+              const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
+              return (
+                <div
+                  key={tattoo.id}
+                  onClick={() => onSelectTattoo(tattoo)}
+                  className="group relative rounded-2xl overflow-hidden bg-[#121212] border border-white/10 hover:border-white/25 transition-all duration-300 cursor-pointer flex flex-col"
+                >
+                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+                    <img src={tattoo.image} alt={tattoo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onSelectCreator(tattoo.creatorHandle);
+                        toggleLike(tattoo.id);
                       }}
-                      className="text-xs text-[#888888] hover:text-white transition-colors cursor-pointer truncate mt-0.5"
+                      className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hover:scale-110 transition-transform"
+                      aria-label="Beğen"
                     >
+                      <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                    </button>
+                  </div>
+                  <div className="p-3.5">
+                    <h4 className="text-sm font-bold text-white truncate">{tattoo.title}</h4>
+                    <p onClick={(e) => { e.stopPropagation(); onSelectCreator(tattoo.creatorHandle); }} className="text-xs text-[#888888] hover:text-white cursor-pointer truncate mt-0.5">
                       {tattoo.creatorHandle}
                     </p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-[#666666] pt-1 border-t border-white/5">
-                    <span>{tattoo.categoryName}</span>
-                    <span className="flex items-center gap-1 text-white/80">
-                      <Heart className="w-3 h-3 fill-current" />
-                      {tattoo.likesCount}
-                    </span>
+                    <div className="flex items-center justify-between text-[11px] text-[#666666] pt-2 mt-2 border-t border-white/5">
+                      <span>{tattoo.categoryName}</span>
+                      <span className="flex items-center gap-1 text-white/80"><Heart className="w-3 h-3 fill-current" />{tattoo.likesCount}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
-
     </div>
   );
 };
