@@ -310,40 +310,8 @@ class TattooStoreService {
       if (storedComments) {
         this.comments = JSON.parse(storedComments);
       } else {
-        this.comments = {
-          tattoo_1: [
-            {
-              id: 'c1',
-              tattooId: 'tattoo_1',
-              userId: 'u_lover',
-              userName: '@tattoo_lover',
-              userAvatar: './images/users/avatar_luna.jpg',
-              text: 'Gerçekten muhteşem! Hayatımda gördüğüm en detaylı aslan dövmesi. 😍',
-              createdAt: '2 saat önce',
-              likes: 0,
-            },
-            {
-              id: 'c2',
-              tattooId: 'tattoo_1',
-              userId: 'u_dark',
-              userName: '@darkart',
-              userAvatar: './images/users/avatar_inkedlife.jpg',
-              text: 'Bu tarz dövmeler her zaman efsane. Gölgelendirmeler kusursuz. 🔥',
-              createdAt: '3 saat önce',
-              likes: 0,
-            },
-            {
-              id: 'c3',
-              tattooId: 'tattoo_1',
-              userId: 'u_mira',
-              userName: '@mira_ink',
-              userAvatar: './images/users/avatar_luna.jpg',
-              text: 'Harika bir iş! Sanat resmen. Randevu için yazdım! 🔥',
-              createdAt: '5 saat önce',
-              likes: 0,
-            },
-          ],
-        };
+        // Fresh community starts with zero comments.
+        this.comments = {};
         this.saveComments();
       }
 
@@ -355,10 +323,8 @@ class TattooStoreService {
           this.userLikes[k] = new Set(v as string[]);
         }
       } else {
-        this.userLikes = {
-          tattoo_1: new Set(['user_default', 'u_lover', 'u_dark']),
-          tattoo_2: new Set(['user_default', 'u_lover']),
-        };
+        // No seeded likes: every tattoo starts at zero and grows only from real actions.
+        this.userLikes = {};
         this.saveLikes();
       }
 
@@ -1053,10 +1019,6 @@ class TattooStoreService {
 
     this.tattoos.unshift(newTattoo);
     this.saveTattoos();
-
-    // Auto like own published tattoo
-    this.userLikes[newTattoo.id] = new Set([this.currentUser.uid]);
-    this.saveLikes();
 
     // Firestore sync
     try {
