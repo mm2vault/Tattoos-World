@@ -16,6 +16,7 @@ import { ShowcaseBoard } from './components/ShowcaseBoard';
 import { AdminPanelModal } from './components/AdminPanelModal';
 import { CommunityView } from './components/CommunityView';
 import { AboutView } from './components/AboutView';
+import { FooterBar } from './components/FooterBar';
 import { Toast } from './components/Toast';
 import { 
   X, Home, Compass, Users, User, PlusCircle, Heart, MessageSquare, Info, Settings, ShieldCheck, LogOut 
