@@ -6,7 +6,7 @@ import {
   isUserAdmin, 
   db 
 } from './firebase';
-import { signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
+import { signInWithPopup, signInAnonymously, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
