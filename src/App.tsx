@@ -93,11 +93,7 @@ export default function App() {
       }
       console.warn('Google login note:', err);
       // Fallback to guest so user is not blocked
-      const guest = tattooStore.loginAsGuest();
-      localStorage.setItem('tattos_world_has_entered', 'true');
-      setCurrentUser(guest);
-      setIsAuthenticated(true);
-      setToastMessage('Giriş yapıldı.');
+      setToastMessage('Google ile giriş yapılamadı. Lütfen tekrar deneyin veya misafir olarak devam edin.');
     }
   };
 
@@ -330,6 +326,7 @@ export default function App() {
                   <MessagesView
                     currentUser={currentUser}
                     onSelectCreator={handleSelectCreator}
+                    initialCreatorHandle={selectedCreatorHandle}
                   />
                 )}
 
