@@ -56,6 +56,11 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /system/{docId} {
+      allow read: if signedIn() && isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /messages/{messageId} {
       allow read: if signedIn() &&
         request.auth.uid in resource.data.participants;
