@@ -530,8 +530,11 @@ class TattooStoreService {
         this.comments[tattooId] = Array.from(byId.values()).sort((a, b) =>
           String(b.createdAt).localeCompare(String(a.createdAt))
         );
+        const tattoo = this.tattoos.find((t) => t.id === tattooId);
+        if (tattoo) tattoo.commentsCount = this.comments[tattooId].length;
       });
       this.saveComments();
+      this.saveTattoos();
 
       const remoteLikes: Record<string, Set<string>> = {};
       likeSnap.docs.forEach((d) => {
@@ -546,7 +549,7 @@ class TattooStoreService {
           ...Array.from(users),
         ]);
         const tattoo = this.tattoos.find((t) => t.id === tattooId);
-        if (tattoo) tattoo.likesCount = Math.max(tattoo.likesCount, this.userLikes[tattooId].size);
+        if (tattoo) tattoo.likesCount = this.userLikes[tattooId].size;
       });
       this.saveLikes();
 
