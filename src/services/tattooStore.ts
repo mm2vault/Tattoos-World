@@ -291,6 +291,7 @@ class TattooStoreService {
   private currentUser: UserProfile = INITIAL_USER;
   private follows: Set<string> = new Set();
   private followerCounts: Record<string, number> = {};
+  private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
 
   constructor() {
     this.loadFromStorage();
@@ -356,6 +357,9 @@ class TattooStoreService {
         onAuthStateChanged(auth, async (fbUser) => {
           if (fbUser) {
             this.setSessionActive(true);
+            if (isUserAdmin(fbUser.email)) {
+              await this.resetOldTestInteractions();
+            }
             const isAdmin = isUserAdmin(fbUser.email);
             try {
               const userRef = doc(db, 'users', fbUser.uid);
@@ -496,6 +500,45 @@ class TattooStoreService {
    * Pull public community data from Firestore and merge it with the local cache.
    * Local starter content is preserved; remote content wins when IDs collide.
    */
+  /**
+   * One-time admin cleanup for the old test interaction dataset.
+   * After this runs, likes/comments/follows are created only by current users.
+   */
+  public async resetOldTestInteractions(): Promise<void> {
+    if (!this.isCurrentUserAdmin()) return;
+    try {
+      const alreadyReset = localStorage.getItem(TattooStoreService.INTERACTION_RESET_KEY) === 'done';
+      if (alreadyReset) return;
+
+      const [commentSnap, likeSnap, followSnap] = await Promise.all([
+        getDocs(collection(db, 'comments')),
+        getDocs(collection(db, 'likes')),
+        getDocs(collection(db, 'follows')),
+      ]);
+      await Promise.all([
+        ...commentSnap.docs.map((d) => deleteDoc(d.ref)),
+        ...likeSnap.docs.map((d) => deleteDoc(d.ref)),
+        ...followSnap.docs.map((d) => deleteDoc(d.ref)),
+      ]);
+
+      this.comments = {};
+      this.userLikes = {};
+      this.follows = new Set();
+      this.followerCounts = {};
+      this.tattoos = this.tattoos.map((t) => ({ ...t, likesCount: 0, commentsCount: 0 }));
+      this.currentUser.followersCount = 0;
+      this.currentUser.followingCount = 0;
+      this.saveComments();
+      this.saveLikes();
+      this.saveFollows();
+      this.saveTattoos();
+      this.saveUser();
+      localStorage.setItem(TattooStoreService.INTERACTION_RESET_KEY, 'done');
+    } catch (err) {
+      console.warn('Old interaction cleanup skipped:', err);
+    }
+  }
+
   public async syncCommunityFromFirestore(): Promise<void> {
     try {
       const [tattooSnap, commentSnap, likeSnap] = await Promise.all([
