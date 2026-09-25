@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, LayoutGrid, Smartphone, Check, Sparkles, Heart, MessageSquare } from 'lucide-react';
+import { Search, Bell, Menu, LayoutGrid, Smartphone, Check, Sparkles, Heart, MessageSquare, X } from 'lucide-react';
 import { UserProfile, Notification } from '../types';
 import { tattooStore } from '../services/tattooStore';
 
@@ -70,7 +70,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     return <span className="text-sm">＋</span>;
   };
   return (
-    <header className="w-full bg-[#080808]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sticky top-0 z-20">
+    <header className="w-full bg-[#080808]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sticky top-0 z-20 mb-12 sm:mb-0">
       
       {/* Mobile brand & hamburger */}
       <div className="flex items-center gap-3 lg:hidden">
@@ -97,6 +97,31 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             placeholder="Dövmelerde ara..."
             className="w-full bg-[#121212] border border-white/10 rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30 transition-colors"
           />
+        </div>
+      </div>
+
+      {/* Mobile search is shown below the header row so phone users can always find tattoos. */}
+      <div className="sm:hidden absolute left-3 right-3 top-16 z-30">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Dövme, stil, sanatçı veya etiket ara..."
+            aria-label="Dövme ara"
+            className="w-full bg-[#121212] border border-white/10 rounded-2xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30 shadow-xl transition-colors"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#777777] hover:text-white hover:bg-white/10 cursor-pointer"
+              aria-label="Aramayı temizle"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
