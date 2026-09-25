@@ -48,9 +48,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-[935px] mx-auto space-y-6 pb-12">
       
-      <div className="rounded-3xl bg-[#0d0d0d] border border-white/10 p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="bg-transparent border border-white/10 rounded-xl p-4 sm:p-6 space-y-6">
         
         <div>
           <h2 className="text-xl font-bold text-white font-display">Ayarlar</h2>
@@ -66,7 +66,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Hesap Bilgileri</span>
           </h3>
 
-          <div className="bg-[#141414] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
                 src={currentUser.photoURL || './images/users/avatar_inkedlife.jpg'}
@@ -92,7 +92,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Bildirim Tercihleri</span>
           </h3>
 
-          <div className="bg-[#141414] border border-white/10 rounded-2xl divide-y divide-white/5">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl divide-y divide-white/5">
             <div className="p-4 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-white">Beğeni Bildirimleri</h4>

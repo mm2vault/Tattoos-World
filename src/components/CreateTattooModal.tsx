@@ -146,12 +146,12 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-150">
       
       {/* Modal Container matching center right of image */}
-      <div className="relative w-full max-w-lg bg-[#0e0e0e] border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl p-4 sm:p-7 my-2 sm:my-6 max-h-[calc(100dvh-1rem)] sm:max-h-none overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-[#111111] border border-white/10 rounded-xl overflow-hidden shadow-2xl p-4 sm:p-6 my-2 sm:my-6 max-h-[calc(100dvh-1rem)] sm:max-h-none overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <h2 className="text-base sm:text-lg font-bold text-white font-display">
-            Dövme Paylaş
+            Yeni Dövme Gönderisi
           </h2>
           <button
             onClick={onClose}
@@ -329,7 +329,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 rounded-full bg-[#1e1e1e] border border-white/20 text-white font-semibold text-xs hover:bg-white hover:text-black transition-all cursor-pointer shadow-lg disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-white text-black font-semibold text-xs hover:bg-[#eaeaea] transition-all cursor-pointer shadow-lg disabled:opacity-50"
             >
               {isSubmitting ? 'Paylaşılıyor...' : 'Paylaş'}
             </button>

@@ -238,7 +238,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#666666]" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Sanatçı veya kullanıcı ara..." className="w-full bg-[#151515] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-[11px] text-white placeholder-[#666666] focus:outline-none focus:border-white/25" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Sanatçı veya kullanıcı ara..." className="w-full bg-[#151515] border border-white/10 rounded-lg pl-9 pr-3 py-2 text-[11px] text-white placeholder-[#666666] focus:outline-none focus:border-white/25" />
           </div>
         </div>
 
@@ -300,7 +300,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 </div>
               ) : activeMessages.map((msg) => (
                 <div key={msg.id} className={"flex flex-col " + (msg.isMine ? 'items-end' : 'items-start')}>
-                  <div className={"max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed " + (msg.isMine ? 'bg-white text-black font-medium rounded-br-none' : 'bg-[#1a1a1a] text-[#E0E0E0] border border-white/10 rounded-bl-none')}>
+                  <div className={"max-w-[85%] sm:max-w-[75%] rounded-[18px] px-4 py-2.5 text-xs leading-relaxed " + (msg.isMine ? 'bg-white text-black font-medium rounded-br-none' : 'bg-[#1a1a1a] text-[#E0E0E0] border border-white/10 rounded-bl-none')}>
                     {msg.text}
                   </div>
                   <span className="text-[10px] text-[#666666] mt-1 px-1">{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>

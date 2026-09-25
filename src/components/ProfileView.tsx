@@ -286,7 +286,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayBanner = profileUser.bannerURL || './images/tattoos/hero_sleeve.jpg';
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-[935px] mx-auto space-y-8 pb-12">
       
       {/* Hidden File Inputs for Direct One-Click Change */}
       <input
@@ -305,11 +305,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       />
 
       {/* Profile Header Card */}
-      <div className="relative rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl">
+      <div className="relative overflow-hidden bg-transparent">
         
         {/* Banner Cover Artwork (profilin arkasındaki resim) */}
         <div 
-          className="h-44 sm:h-56 w-full bg-cover bg-center relative transition-all duration-300"
+          className="h-32 sm:h-52 w-full rounded-xl bg-cover bg-center relative transition-all duration-300"
           style={{ backgroundImage: `url('${displayBanner}')` }}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/40 to-black/30" />
@@ -328,7 +328,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* Profile Details Container */}
-        <div className="px-6 sm:px-8 pb-6 -mt-16 sm:-mt-20 relative z-10 flex flex-col items-center text-center">
+        <div className="px-2 sm:px-4 pb-5 -mt-10 sm:-mt-14 relative z-10 flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-7">
           
           {/* Avatar (PP) with verified checkmark & hover camera button */}
           <div className="relative mb-3 group">
@@ -336,7 +336,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               src={profileUser.photoURL || './images/users/avatar_inkedlife.jpg'}
               alt={profileUser.displayName}
               referrerPolicy="no-referrer"
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-[#0d0d0d] shadow-2xl bg-black"
+              className="w-20 h-20 sm:w-36 sm:h-36 rounded-full object-cover border-4 border-black shadow-2xl bg-black"
             />
             
             {/* Blue Verified Badge or Admin Badge */}
@@ -363,11 +363,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Name & Handle & Stats */}
           <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center justify-center gap-1.5 font-display">
+            <h1 className="text-xl sm:text-2xl font-semibold text-white flex items-center sm:justify-start justify-center gap-1.5">
               <span>{profileUser.displayName || profileUser.handle}</span>
             </h1>
             
-            <p className="text-xs text-[#888888] flex items-center justify-center gap-2">
+            <p className="text-xs text-[#888888] flex items-center sm:justify-start justify-center gap-2 flex-wrap">
               <span className="text-[#AAAAAA]">{profileUser.handle}</span>
               <span>•</span>
               <span>{profileUser.isAdmin ? 'Master Admin' : (profileUser.isArtist ? 'Tattoo Artist' : 'Dövme Tutkunu')}</span>
@@ -383,7 +383,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* Action Buttons: Takip Et / Profili Düzenle / Dövme Ekle */}
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-3 flex items-center justify-center sm:justify-start gap-2 flex-wrap">
             {isOwnProfile ? (
               <button
                 onClick={openEditModal}
@@ -430,7 +430,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* ================= AUTO-DETECTED PROFILE LINKS ================= */}
           {/* Automatically recognized buttons (TikTok, Instagram, Facebook, YouTube, etc.) */}
-          <div className="w-full max-w-2xl mt-5 pt-4 border-t border-white/5">
+          <div className="w-full max-w-2xl mt-4 pt-4 border-t border-white/10">
             <div className="flex flex-wrap items-center justify-center gap-2.5">
               {profileDetectedLinks.length > 0 ? (
                 profileDetectedLinks.map((link, idx) => (
@@ -483,10 +483,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Tabs: Paylaşımlar / Hakkında / Favorilerim */}
-      <div className="flex items-center justify-center gap-8 border-b border-white/10 pb-2 text-xs font-semibold">
+      <div className="flex items-center justify-center gap-0 border-b border-white/10 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('creations')}
-          className={`pb-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-6 py-3 transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'creations'
               ? 'text-white border-b-2 border-white'
               : 'text-[#888888] hover:text-white'
@@ -500,7 +500,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         <button
           onClick={() => setActiveTab('about')}
-          className={`pb-2 transition-all cursor-pointer ${
+          className={`px-6 py-3 transition-all cursor-pointer ${
             activeTab === 'about'
               ? 'text-white border-b-2 border-white'
               : 'text-[#888888] hover:text-white'
@@ -526,13 +526,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Tab 1: Paylaşımlar (Creations) with Delete Option */}
       {activeTab === 'creations' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-0 border border-white/10">
           {userTattoos.length > 0 ? (
             userTattoos.map((item) => (
               <div
                 key={item.id}
                 onClick={() => onSelectTattoo(item)}
-                className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-white/10 aspect-[3/3.8] cursor-pointer shadow-lg hover:border-white/30 transition-all"
+                className="group relative relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
               >
                 <img
                   src={item.image}
@@ -580,7 +580,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Tab 2: Hakkında (About) with Active Links */}
       {activeTab === 'about' && (
-        <div className="bg-[#111111] border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6">
+        <div className="bg-transparent border-t border-white/10 p-6 sm:p-8 space-y-6">
           <div>
             <h3 className="text-sm font-bold text-white mb-2">Biyografi</h3>
             <p className="text-xs text-[#AAAAAA] leading-relaxed">
@@ -650,7 +650,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div
                 key={item.id}
                 onClick={() => onSelectTattoo(item)}
-                className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-white/10 aspect-[3/3.8] cursor-pointer"
+                className="group relative relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
               >
                 <img
                   src={item.image}
@@ -675,7 +675,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* PP + Cover Banner + Info + Auto-detected Social Links */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-[#141414] border border-white/20 rounded-3xl max-w-lg w-full p-5 sm:p-7 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+          <div className="bg-[#121212] border border-white/10 rounded-xl max-w-lg w-full p-5 sm:p-7 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
             
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
