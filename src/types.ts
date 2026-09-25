@@ -72,6 +72,7 @@ export interface Comment {
   text: string;
   createdAt: string;
   likes: number;
+  userHandle?: string;
   [key: string]: any;
 }
 
