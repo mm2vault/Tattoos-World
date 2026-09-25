@@ -12,6 +12,8 @@ interface SettingsViewProps {
   onToast: (msg: string) => void;
 }
 
+const SETTINGS_KEY = 'tattos_world_settings_v1';
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   currentLanguage,
@@ -19,10 +21,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onLogout,
   onToast,
 }) => {
-  const [notifyLikes, setNotifyLikes] = useState(true);
-  const [notifyComments, setNotifyComments] = useState(true);
-  const [notifyArtists, setNotifyArtists] = useState(true);
-  const [privateAccount, setPrivateAccount] = useState(false);
+  const [notifyLikes, setNotifyLikes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyLikes ?? true; } catch { return true; }
+  });
+  const [notifyComments, setNotifyComments] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyComments ?? true; } catch { return true; }
+  });
+  const [notifyArtists, setNotifyArtists] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyArtists ?? true; } catch { return true; }
+  });
+
+  const saveSetting = (key: string, value: boolean) => {
+    try {
+      const current = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, [key]: value }));
+    } catch {}
+  };
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 pb-12">
@@ -78,6 +92,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 onClick={() => {
                   setNotifyLikes(!notifyLikes);
+                  saveSetting('notifyLikes', !notifyLikes);
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
@@ -98,6 +113,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 onClick={() => {
                   setNotifyComments(!notifyComments);
+                  saveSetting('notifyComments', !notifyComments);
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
@@ -118,6 +134,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 onClick={() => {
                   setNotifyArtists(!notifyArtists);
+                  saveSetting('notifyArtists', !notifyArtists);
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
