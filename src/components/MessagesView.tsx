@@ -140,7 +140,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           if (!byConversation[conversationId]) byConversation[conversationId] = [];
           byConversation[conversationId].push(message);
 
-          if (partnerUid && data.recipientHandle) {
+          if (partnerUid && partnerUid !== auth.currentUser!.uid && data.recipientId !== auth.currentUser!.uid && data.recipientHandle) {
             partnerMeta.set(partnerUid, {
               uid: partnerUid,
               name: data.recipientName || data.recipientHandle,
