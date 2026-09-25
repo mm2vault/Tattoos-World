@@ -47,6 +47,22 @@ export interface UserProfile {
   [key: string]: any;
 }
 
+export interface Notification {
+  id: string;
+  recipientUid: string;
+  senderUid: string;
+  senderName: string;
+  senderHandle: string;
+  senderAvatar: string;
+  type: 'like' | 'comment' | 'follow';
+  tattooId?: string;
+  tattooTitle?: string;
+  text: string;
+  createdAt: string;
+  read: boolean;
+  [key: string]: any;
+}
+
 export interface Comment {
   id: string;
   tattooId: string;
