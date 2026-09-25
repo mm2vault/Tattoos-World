@@ -568,6 +568,14 @@ class TattooStoreService {
       });
       this.saveTattoos();
 
+      // Remote Firestore is the source of truth for interaction counts.
+      this.comments = {};
+      this.userLikes = {};
+      this.tattoos.forEach((t) => {
+        t.likesCount = 0;
+        t.commentsCount = 0;
+      });
+
       const remoteComments: Record<string, Comment[]> = {};
       commentSnap.docs.forEach((d) => {
         const value = d.data() as Comment;
