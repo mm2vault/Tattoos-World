@@ -509,6 +509,11 @@ class TattooStoreService {
     try {
       const alreadyReset = localStorage.getItem(TattooStoreService.INTERACTION_RESET_KEY) === 'done';
       if (alreadyReset) return;
+      const resetMarker = await getDoc(doc(db, 'system', 'interaction_reset_v2'));
+      if (resetMarker.exists()) {
+        localStorage.setItem(TattooStoreService.INTERACTION_RESET_KEY, 'done');
+        return;
+      }
 
       const [commentSnap, likeSnap, followSnap] = await Promise.all([
         getDocs(collection(db, 'comments')),
@@ -533,6 +538,10 @@ class TattooStoreService {
       this.saveFollows();
       this.saveTattoos();
       this.saveUser();
+      await setDoc(doc(db, 'system', 'interaction_reset_v2'), {
+        completedAt: new Date().toISOString(),
+        version: 2,
+      });
       localStorage.setItem(TattooStoreService.INTERACTION_RESET_KEY, 'done');
     } catch (err) {
       console.warn('Old interaction cleanup skipped:', err);
