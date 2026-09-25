@@ -24,7 +24,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CategoryId>('realism');
   const [description, setDescription] = useState('');
@@ -50,25 +50,43 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
   ];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Lütfen geçerli bir görsel dosyası seçin.');
+    const available = Math.max(0, 10 - imagePreviews.length);
+    if (available === 0) {
+      setErrorMsg('Bir dövme için en fazla 10 fotoğraf ekleyebilirsiniz.');
+      e.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      setImagePreview(uploadEvent.target?.result as string);
+    const selected = files.slice(0, available);
+    const invalid = selected.find((file) => !file.type.startsWith('image/'));
+    if (invalid) {
+      setErrorMsg('Lütfen yalnızca geçerli görsel dosyaları seçin.');
+      e.target.value = '';
+      return;
+    }
+
+    Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }))).then((results) => {
+      setImagePreviews((prev) => [...prev, ...results].slice(0, 10));
       setErrorMsg('');
-    };
-    reader.readAsDataURL(file);
+      e.target.value = '';
+    }).catch(() => setErrorMsg('Görseller yüklenirken bir hata oluştu.'));
+  };
+
+  const removeImage = (index: number) => {
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imagePreview) {
+    if (imagePreviews.length === 0) {
       setErrorMsg('Lütfen bir dövme görseli yükleyin.');
       return;
     }
@@ -86,7 +104,8 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
         category,
         categoryName: categoryObj?.name || 'Realizm',
         description: description.trim(),
-        image: imagePreview,
+        image: imagePreviews[0],
+        additionalImages: imagePreviews.slice(1),
         socialLinks: {
           instagram: instagram.trim() || undefined,
           tiktok: tiktok.trim() || undefined,
@@ -134,10 +153,11 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
               ref={fileInputRef}
               onChange={handleFileChange}
               accept="image/*"
+              multiple
               className="hidden"
             />
 
-            {!imagePreview ? (
+            {imagePreviews.length === 0 ? (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-white/15 rounded-2xl p-6 text-center hover:border-white/30 bg-[#141414] cursor-pointer transition-all flex flex-col items-center justify-center space-y-2 group"
@@ -149,7 +169,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
                   Dövme fotoğrafını yükle
                 </h4>
                 <p className="text-[11px] text-[#777777]">
-                  JPG, PNG (Max 10MB)
+                  JPG, PNG (en fazla 10 fotoğraf)
                 </p>
                 <button
                   type="button"
@@ -163,19 +183,34 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="relative rounded-2xl overflow-hidden border border-white/20 aspect-[16/10] bg-black">
-                <img
-                  src={imagePreview}
-                  alt="Önizleme"
-                  className="w-full h-full object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-3 right-3 px-3 py-1 rounded-lg bg-black/70 backdrop-blur-md border border-white/20 text-xs text-white hover:border-white"
-                >
-                  Değiştir
-                </button>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {imagePreviews.map((img, index) => (
+                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-white/15 bg-black">
+                      <img src={img} alt={`Dövme fotoğrafı ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/75 text-white text-xs border border-white/20 hover:bg-red-500/80"
+                        aria-label={`Fotoğrafı sil ${index + 1}`}
+                      >×</button>
+                      <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] text-white">
+                        {index + 1}
+                      </span>
+                    </div>
+                  ))}
+                  {imagePreviews.length < 10 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="aspect-square rounded-xl border border-dashed border-white/20 bg-[#141414] text-[#999999] hover:text-white hover:border-white/40 flex flex-col items-center justify-center gap-1"
+                    >
+                      <ImageIcon className="w-5 h-5" />
+                      <span className="text-[10px]">Fotoğraf ekle</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#777777]">{imagePreviews.length}/10 fotoğraf · İlk fotoğraf kapak olarak kullanılır.</p>
               </div>
             )}
           </div>
