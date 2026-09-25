@@ -1011,6 +1011,7 @@ class TattooStoreService {
     categoryName: string;
     description: string;
     image: string;
+    additionalImages?: string[];
     tags?: string[];
     socialLinks?: {
       instagram?: string;
@@ -1026,6 +1027,7 @@ class TattooStoreService {
       categoryName: data.categoryName,
       description: data.description,
       image: data.image,
+      additionalImages: data.additionalImages || [],
       creatorId: this.currentUser.uid,
       creatorName: this.currentUser.displayName,
       creatorHandle: this.currentUser.handle,
@@ -1097,6 +1099,36 @@ class TattooStoreService {
     if (found) {
       return found;
     }
+
+    // Community users who are not in the starter artist list still get a real profile
+    // built from their published tattoo data instead of being shown as a generic artist.
+    const userTattoo = this.tattoos.find(
+      (t) => t.creatorHandle.toLowerCase() === handle.toLowerCase()
+    );
+    if (userTattoo) {
+      return {
+        uid: userTattoo.creatorId,
+        displayName: userTattoo.creatorName,
+        handle: userTattoo.creatorHandle,
+        email: '',
+        photoURL: userTattoo.creatorPhoto || './images/users/avatar_inkedlife.jpg',
+        bio: 'Tattoos-World topluluk üyesi.',
+        instagram: userTattoo.socialLinks?.instagram || '',
+        tiktok: userTattoo.socialLinks?.tiktok || '',
+        discord: userTattoo.socialLinks?.discord || '',
+        website: userTattoo.socialLinks?.website || '',
+        customLinks: [],
+        isArtist: userTattoo.creatorRole.toLowerCase().includes('sanat') || userTattoo.creatorRole.toLowerCase().includes('artist'),
+        verified: userTattoo.creatorVerified,
+        role: userTattoo.creatorRole || 'user',
+        isAdmin: false,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: userTattoo.createdAt,
+        savedTattooIds: [],
+      };
+    }
+
     return {
       uid: 'artist_' + handle.replace('@', ''),
       displayName: handle.replace('@', ''),
