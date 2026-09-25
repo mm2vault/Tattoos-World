@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, LayoutGrid, Smartphone, Check, Sparkles, Heart, MessageSquare } from 'lucide-react';
-import { UserProfile } from '../types';
+import { UserProfile, Notification } from '../types';
+import { tattooStore } from '../services/tattooStore';
 
 interface TopHeaderProps {
   searchQuery: string;
@@ -26,8 +27,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onToggleShowcaseMode,
 }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>(() => tattooStore.getNotifications());
+  const [unreadCount, setUnreadCount] = useState(() => tattooStore.getUnreadNotificationCount());
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const refreshNotifications = () => {
+      setNotifications(tattooStore.getNotifications());
+      setUnreadCount(tattooStore.getUnreadNotificationCount());
+    };
+    refreshNotifications();
+    tattooStore.syncNotificationsFromFirestore().catch(() => {});
+    window.addEventListener('tattoos-world-notifications', refreshNotifications);
+    return () => window.removeEventListener('tattoos-world-notifications', refreshNotifications);
+  }, [currentUser.uid]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -41,11 +54,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [notificationsOpen]);
 
-  const handleToggleNotifications = () => {
-    setNotificationsOpen(prev => !prev);
-    if (!notificationsOpen) {
+  const handleToggleNotifications = async () => {
+    const nextOpen = !notificationsOpen;
+    setNotificationsOpen(nextOpen);
+    if (nextOpen) {
+      await tattooStore.markNotificationsRead();
+      setNotifications(tattooStore.getNotifications());
       setUnreadCount(0);
     }
+  };
+
+  const notificationIcon = (type: Notification['type']) => {
+    if (type === 'like') return <Heart className="w-4 h-4 text-red-400" />;
+    if (type === 'comment') return <MessageSquare className="w-4 h-4 text-sky-400" />;
+    return <span className="text-sm">＋</span>;
   };
   return (
     <header className="w-full bg-[#080808]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sticky top-0 z-20">
@@ -133,11 +155,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               </div>
 
               <div className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
-                <div className="py-8 text-center text-[#666666]">
-                  <Bell className="w-7 h-7 mx-auto mb-2 opacity-40" />
-                  <p className="text-xs text-[#888888]">Henüz bildirim yok.</p>
-                  <p className="text-[10px] mt-1">Gerçek beğeni, yorum ve takipler burada görünecek.</p>
-                </div>
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-[#666666]">
+                    <Bell className="w-7 h-7 mx-auto mb-2 opacity-40" />
+                    <p className="text-xs text-[#888888]">Henüz bildirim yok.</p>
+                    <p className="text-[10px] mt-1">Beğeni, yorum ve takipler burada görünecek.</p>
+                  </div>
+                ) : (
+                  <>
+                    {notifications.slice(0, 30).map((notification) => (
+                      <div key={notification.id} className="flex items-start gap-3 rounded-xl px-2.5 py-2.5 hover:bg-white/5 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 overflow-hidden">
+                          {notification.senderAvatar ? <img src={notification.senderAvatar} alt="" className="w-full h-full object-cover" /> : notificationIcon(notification.type)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] text-white leading-relaxed">{notification.text}</p>
+                          {notification.tattooTitle && <p className="text-[10px] text-[#666666] mt-0.5 truncate">{notification.tattooTitle}</p>}
+                          <p className="text-[9px] text-[#555555] mt-1">{new Date(notification.createdAt).toLocaleString()}</p>
+                        </div>
+                        {!notification.read && <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" />}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => tattooStore.clearNotifications()}
+                      className="w-full py-2 mt-1 text-[10px] text-[#777777] hover:text-white border-t border-white/5 cursor-pointer"
+                    >
+                      Bildirimleri temizle
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
