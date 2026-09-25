@@ -85,7 +85,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-xl flex items-center justify-center p-0 md:p-6 lg:p-8 animate-in fade-in duration-150">
       
       {/* Modal Container matching bottom left of image */}
-      <div className="relative w-full max-w-6xl h-full md:h-[92vh] bg-[#0c0c0c] border border-white/10 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+      <div className="relative w-full max-w-6xl h-[100dvh] md:h-[92vh] bg-[#0c0c0c] border border-white/10 rounded-none md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
         
         {/* Top Left Close 'X' Button */}
         <button
@@ -97,7 +97,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
         </button>
 
         {/* LEFT COLUMN: Large High-Resolution Tattoo Artwork */}
-        <div className="relative w-full md:w-3/5 h-[50vh] sm:h-[60vh] md:h-full bg-black flex items-center justify-center overflow-hidden select-none">
+        <div className="relative w-full md:w-3/5 h-[38dvh] sm:h-[48dvh] md:h-full bg-black flex items-center justify-center overflow-hidden select-none shrink-0">
           <img
             src={currentImg}
             alt={tattoo.title}
@@ -144,10 +144,10 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Details, Comments, Input matching image */}
-        <div className="w-full md:w-2/5 flex flex-col justify-between bg-[#111111] overflow-y-auto max-h-[50vh] md:max-h-full">
+        <div className="w-full md:w-2/5 flex-1 min-h-0 flex flex-col justify-between bg-[#111111] overflow-hidden">
           
           {/* Top Bar: < Detaylar & Sparkle */}
-          <div className="p-6 border-b border-white/10 space-y-4">
+          <div className="p-4 sm:p-6 border-b border-white/10 space-y-3 sm:space-y-4 shrink-0">
             <div className="flex items-center justify-between text-xs text-[#888888]">
               <button
                 onClick={onClose}
@@ -277,7 +277,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
           </div>
 
           {/* Comments Feed matching image */}
-          <div className="p-6 flex-1 overflow-y-auto space-y-4">
+          <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-y-auto space-y-4">
             <h3 className="text-xs font-bold text-[#888888]">
               Yorumlar ({comments.length})
             </h3>
@@ -327,7 +327,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
           {/* Bottom Bar: Input with >> send button */}
           <form
             onSubmit={handleAddComment}
-            className="p-4 bg-[#0a0a0a] border-t border-white/10 flex items-center gap-2"
+            className="p-3 sm:p-4 bg-[#0a0a0a] border-t border-white/10 flex items-center gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           >
             <input
               type="text"
