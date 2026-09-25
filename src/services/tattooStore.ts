@@ -21,190 +21,31 @@ const STORAGE_KEYS = {
 };
 
 export const INITIAL_USER: UserProfile = {
-  uid: 'user_default',
-  displayName: 'Alex Rivers',
-  handle: '@alexinked',
-  email: 'alex@tattosworld.community',
-  photoURL: './images/users/avatar_inkedlife.jpg',
-  bio: 'Tattoo collector & aesthetic seeker. Living canvas.',
-  instagram: 'https://instagram.com/alexinked',
-  tiktok: 'https://tiktok.com/@alexinked',
-  discord: 'alex#2026',
-  website: 'https://tattosworld.com',
-  customLinks: [
-    'https://www.tiktok.com/@alexinked',
-    'https://www.instagram.com/alexinked',
-    'https://www.facebook.com/alexrivers.ink'
-  ],
+  uid: 'guest_local',
+  displayName: 'Guest Explorer',
+  handle: '@guest_explorer',
+  email: 'guest@tattosworld.community',
+  photoURL: '',
+  bio: 'Tattoos World topluluğunu keşfediyor.',
+  instagram: '',
+  tiktok: '',
+  discord: '',
+  website: '',
+  customLinks: [],
   isArtist: false,
   verified: false,
   role: 'user',
   isAdmin: false,
   followersCount: 0,
   followingCount: 0,
-  createdAt: '2025-11-12',
-  savedTattooIds: ['tattoo_1', 'tattoo_3'],
+  createdAt: new Date().toISOString().split('T')[0],
+  savedTattooIds: [],
 };
 
 export const INITIAL_ARTISTS: UserProfile[] = [];
 
-export const INITIAL_TATTOOS: Tattoo[] = [
-  {
-    id: 'tattoo_1',
-    title: 'Lion & Clock',
-    category: 'realism',
-    categoryName: 'Realizm',
-    description: 'Zamanın izinde... Güç, sabır ve yeniden doğuş. Bu tasarım, hayatın döngüsünü ve içsel gücü simgeliyor.',
-    image: './images/tattoos/lion_clock.jpg',
-    additionalImages: [
-      './images/tattoos/lion_clock.jpg',
-      './images/tattoos/rose_dark.jpg',
-      './images/tattoos/hero_sleeve.jpg',
-    ],
-    creatorId: 'artist_inkedlife',
-    creatorName: 'Marco Vance',
-    creatorHandle: '@inkedlife',
-    creatorPhoto: './images/users/avatar_inkedlife.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-03-12',
-    likesCount: 0,
-    commentsCount: 0,
-    isFeatured: true,
-    tags: ['Realizm', 'Siyah & Gri', 'Lion', 'Clock'],
-    socialLinks: {
-      instagram: 'https://instagram.com',
-      tiktok: 'https://tiktok.com',
-      discord: 'inkedlife#0001',
-      website: 'https://inkedlife.studio',
-    },
-  },
-  {
-    id: 'tattoo_2',
-    title: 'Butterfly',
-    category: 'minimal',
-    categoryName: 'Minimal',
-    description: 'Hafiflik ve dönüşümün en narin hali. Tek iğne (single needle) tekniğiyle tasarlandı.',
-    image: './images/tattoos/butterfly_ink.jpg',
-    creatorId: 'artist_luna',
-    creatorName: 'Luna Valery',
-    creatorHandle: '@lunatattoos',
-    creatorPhoto: './images/users/avatar_luna.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-03-15',
-    likesCount: 0,
-    commentsCount: 0,
-    isFeatured: true,
-    tags: ['Minimal', 'Fine Line', 'Butterfly'],
-    socialLinks: {
-      instagram: 'https://instagram.com',
-      tiktok: '',
-      discord: 'luna#7788',
-      website: 'https://luna.tattoos',
-    },
-  },
-  {
-    id: 'tattoo_3',
-    title: 'Snake',
-    category: 'dark',
-    categoryName: 'Seri / Dark',
-    description: 'Derin gölgeler, pulların ritmik dizilimi ve karanlık mitoloji simgeleri.',
-    image: './images/tattoos/snake_serpent.jpg',
-    creatorId: 'artist_darksoul',
-    creatorName: 'Damian Black',
-    creatorHandle: '@darksoul',
-    creatorPhoto: './images/users/avatar_inkedlife.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-03-10',
-    likesCount: 0,
-    commentsCount: 0,
-    isFeatured: true,
-    tags: ['Dark', 'Serpent', 'Blackwork'],
-    socialLinks: {
-      instagram: 'https://instagram.com',
-      tiktok: '',
-      discord: 'darksoul#666',
-      website: 'https://darksoul.ink',
-    },
-  },
-  {
-    id: 'tattoo_4',
-    title: 'Rose',
-    category: 'realism',
-    categoryName: 'Realizm',
-    description: 'Kadife dokulu yapraklar ve dikenlerin dramatik kontrastı. Yüksek çözünürlüklü gölgelendirme.',
-    image: './images/tattoos/rose_dark.jpg',
-    creatorId: 'artist_inkedlife',
-    creatorName: 'Marco Vance',
-    creatorHandle: '@inkedlife',
-    creatorPhoto: './images/users/avatar_inkedlife.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-02-28',
-    likesCount: 0,
-    commentsCount: 0,
-    tags: ['Realizm', 'Siyah & Gri', 'Rose'],
-    socialLinks: {
-      instagram: 'https://instagram.com',
-    },
-  },
-  {
-    id: 'tattoo_5',
-    title: 'Cross',
-    category: 'minimal',
-    categoryName: 'Minimal',
-    description: 'Gotik ve geometrik hatların kusursuz birleşimi. İnce çizgiler ve zamansız estetik.',
-    image: './images/tattoos/cross_gothic.jpg',
-    creatorId: 'artist_luna',
-    creatorName: 'Luna Valery',
-    creatorHandle: '@tattoartist',
-    creatorPhoto: './images/users/avatar_luna.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-02-15',
-    likesCount: 0,
-    commentsCount: 0,
-    tags: ['Minimal', 'Gothic', 'Cross'],
-  },
-  {
-    id: 'tattoo_6',
-    title: 'Wolf',
-    category: 'realism',
-    categoryName: 'Realizm',
-    description: 'Vahşi doğanın asaleti, derin bakışlar ve gerçekçi kürk dokusu.',
-    image: './images/tattoos/wolf_dark.jpg',
-    creatorId: 'artist_darksoul',
-    creatorName: 'Damian Black',
-    creatorHandle: '@blackink',
-    creatorPhoto: './images/users/avatar_inkedlife.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-02-10',
-    likesCount: 0,
-    commentsCount: 0,
-    tags: ['Realizm', 'Hayvanlar', 'Wolf'],
-  },
-  {
-    id: 'tattoo_7',
-    title: 'Oriental Dragon',
-    category: 'color',
-    categoryName: 'Renkli',
-    description: 'Geleneksel Doğu mitolojisinden esinlenen, canlı renkler ve akıcı dalgalarla bezenmiş ejderha.',
-    image: './images/tattoos/dragon_oriental.jpg',
-    creatorId: 'artist_inkedlife',
-    creatorName: 'Marco Vance',
-    creatorHandle: '@inkedlife',
-    creatorPhoto: './images/users/avatar_inkedlife.jpg',
-    creatorRole: 'Sanatçı',
-    creatorVerified: true,
-    createdAt: '2026-01-20',
-    likesCount: 0,
-    commentsCount: 0,
-    tags: ['Renkli', 'Oriental', 'Dragon'],
-  },
-];
+// No fake community tattoos are seeded. Real posts come from authenticated users.
+export const INITIAL_TATTOOS: Tattoo[] = [];
 
 class TattooStoreService {
   private tattoos: Tattoo[] = [];
@@ -215,6 +56,7 @@ class TattooStoreService {
   private followerCounts: Record<string, number> = {};
   private notifications: Notification[] = [];
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
+  private static readonly SEED_CLEANUP_KEY = 'tattos_world_seed_cleanup_v3';
 
   constructor() {
     this.loadFromStorage();
@@ -222,6 +64,7 @@ class TattooStoreService {
 
   private loadFromStorage() {
     try {
+      this.cleanupLegacyDemoCache();
       const storedTattoos = localStorage.getItem(STORAGE_KEYS.TATTOOS);
       if (storedTattoos) {
         this.tattoos = JSON.parse(storedTattoos);
@@ -349,6 +192,34 @@ class TattooStoreService {
       console.error('Error loading tattoo store from localStorage', e);
       this.tattoos = [...INITIAL_TATTOOS];
       this.currentUser = INITIAL_USER;
+    }
+  }
+
+  /** Remove legacy demo users/tattoos from older builds without touching real user content. */
+  private cleanupLegacyDemoCache() {
+    try {
+      if (localStorage.getItem(TattooStoreService.SEED_CLEANUP_KEY) === 'done') return;
+      const legacyIds = new Set(['tattoo_1','tattoo_2','tattoo_3','tattoo_4','tattoo_5','tattoo_6','tattoo_7']);
+      const legacyCreators = new Set(['artist_inkedlife','artist_luna','artist_darksoul','@inkedlife','@lunatattoos','@darksoul','@tattoartist','@blackink']);
+      const stored = localStorage.getItem(STORAGE_KEYS.TATTOOS);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Tattoo[];
+        this.tattoos = parsed.filter((t) => !legacyIds.has(t.id) && !legacyCreators.has(t.creatorId) && !legacyCreators.has(t.creatorHandle));
+        localStorage.setItem(STORAGE_KEYS.TATTOOS, JSON.stringify(this.tattoos));
+      }
+      const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+      if (storedUser) {
+        const u = JSON.parse(storedUser) as UserProfile;
+        if (u.handle === '@alexinked' || u.uid === 'user_default' || u.email === 'alex@tattosworld.community') {
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          localStorage.removeItem(STORAGE_KEYS.FOLLOWS);
+          localStorage.removeItem(STORAGE_KEYS.LIKES);
+          localStorage.removeItem(STORAGE_KEYS.COMMENTS);
+        }
+      }
+      localStorage.setItem(TattooStoreService.SEED_CLEANUP_KEY, 'done');
+    } catch (err) {
+      console.warn('Legacy demo cleanup skipped:', err);
     }
   }
 
@@ -509,7 +380,9 @@ class TattooStoreService {
       ]);
       const followSnap = await getDocs(collection(db, 'follows')).catch(() => null);
 
-      const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo);
+      const legacyIds = new Set(['tattoo_1','tattoo_2','tattoo_3','tattoo_4','tattoo_5','tattoo_6','tattoo_7']);
+      const legacyCreators = new Set(['artist_inkedlife','artist_luna','artist_darksoul','@inkedlife','@lunatattoos','@darksoul','@tattoartist','@blackink']);
+      const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo).filter((t) => !legacyIds.has(t.id) && !legacyCreators.has(t.creatorId) && !legacyCreators.has(t.creatorHandle));
       const merged = new Map<string, Tattoo>();
       this.tattoos.forEach((t) => merged.set(t.id, t));
       remoteTattoos.forEach((t) => merged.set(t.id, t));
@@ -698,9 +571,19 @@ class TattooStoreService {
     }
   }
 
-  public loginAsGuest(): UserProfile {
+  public async loginAsGuest(): Promise<UserProfile> {
+    let firebaseUid = auth.currentUser?.uid || '';
+    if (!auth.currentUser) {
+      try {
+        const result = await signInAnonymously(auth);
+        firebaseUid = result.user.uid;
+      } catch (err) {
+        console.warn('Anonymous auth unavailable; using local guest mode:', err);
+      }
+    }
+
     const guestUser: UserProfile = {
-      uid: 'guest_' + Math.floor(Math.random() * 10000),
+      uid: firebaseUid || ('guest_' + Math.floor(Math.random() * 10000)),
       displayName: 'Guest Explorer',
       handle: '@guest_' + Math.floor(Math.random() * 999),
       email: 'guest@tattosworld.community',
@@ -1235,26 +1118,7 @@ class TattooStoreService {
       };
     }
 
-    return {
-      uid: 'artist_' + handle.replace('@', ''),
-      displayName: handle.replace('@', ''),
-      handle,
-      email: `${handle.replace('@', '')}@tattosworld.art`,
-      photoURL: './images/users/avatar_inkedlife.jpg',
-      bio: 'Tattoo Artist & Visionary Creator. Sharing unique body art on Tatto\'s World.',
-      instagram: `https://instagram.com/${handle.replace('@', '')}`,
-      tiktok: '',
-      discord: `${handle.replace('@', '')}#1234`,
-      website: '',
-      isArtist: true,
-      verified: true,
-      role: 'artist',
-      isAdmin: false,
-      followersCount: this.getFollowerCount(handle),
-      followingCount: this.getFollowingCount(),
-      createdAt: '2025-01-01',
-      savedTattooIds: [],
-    };
+    return undefined;;
   }
 }
 
