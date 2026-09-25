@@ -69,16 +69,39 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
       return;
     }
 
-    Promise.all(selected.map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    }))).then((results) => {
+    // Camera/gallery images can be several MB each. Compress them before storing
+    // them in the browser/Firestore so shared tattoos survive reloads reliably.
+    const compressImage = (file: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = reject;
+          img.onload = () => {
+            const maxSide = 1100;
+            const scale = Math.min(1, maxSide / img.width, maxSide / img.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('canvas'));
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.68));
+          };
+          img.src = reader.result as string;
+        };
+        reader.readAsDataURL(file);
+      });
+
+    Promise.all(selected.map(compressImage)).then((results) => {
       setImagePreviews((prev) => [...prev, ...results].slice(0, 10));
       setErrorMsg('');
       e.target.value = '';
-    }).catch(() => setErrorMsg('Görseller yüklenirken bir hata oluştu.'));
+    }).catch(() => {
+      setErrorMsg('Görseller yüklenirken bir hata oluştu.');
+      e.target.value = '';
+    });
   };
 
   const removeImage = (index: number) => {
@@ -120,10 +143,10 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-150">
       
       {/* Modal Container matching center right of image */}
-      <div className="relative w-full max-w-lg bg-[#0e0e0e] border border-white/10 rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-7 my-6">
+      <div className="relative w-full max-w-lg bg-[#0e0e0e] border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl p-4 sm:p-7 my-2 sm:my-6 max-h-[calc(100dvh-1rem)] sm:max-h-none overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
