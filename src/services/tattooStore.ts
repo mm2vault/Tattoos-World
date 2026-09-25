@@ -585,12 +585,18 @@ class TattooStoreService {
       this.saveLikes();
 
       if (followSnap) {
-        const remoteFollowHandles = followSnap.docs
-          .map((d) => d.data() as { uid?: string; handle?: string })
-          .filter((x) => x.uid === this.currentUser.uid && x.handle)
-          .map((x) => x.handle as string);
-        remoteFollowHandles.forEach((h) => this.follows.add(h));
+        this.followerCounts = {};
+        const myFollows = new Set<string>();
+        followSnap.docs.forEach((d) => {
+          const value = d.data() as { uid?: string; handle?: string };
+          if (!value.handle) return;
+          this.followerCounts[value.handle] = (this.followerCounts[value.handle] || 0) + 1;
+          if (value.uid === this.currentUser.uid) myFollows.add(value.handle);
+        });
+        this.follows = myFollows;
+        this.currentUser.followingCount = this.follows.size;
         this.saveFollows();
+        this.saveUser();
       }
     } catch (err) {
       console.warn('Community Firestore sync skipped:', err);
