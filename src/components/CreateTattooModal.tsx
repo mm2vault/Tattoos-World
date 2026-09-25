@@ -10,6 +10,7 @@ interface CreateTattooModalProps {
     categoryName: string;
     description: string;
     image: string;
+    additionalImages?: string[];
     socialLinks?: {
       instagram?: string;
       tiktok?: string;
