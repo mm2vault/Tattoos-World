@@ -27,55 +27,6 @@ export const Gallery: React.FC<GalleryProps> = ({
   onToast,
   onTattooUpdated,
 }) => {
-  // Exact 5 popular items matching the image
-  const popularTattoos = [
-    {
-      id: 'pop_butterfly',
-      title: 'Butterfly',
-      handle: '@lunatattoos',
-      category: 'Minimal',
-      likes: '0',
-      image: './images/tattoos/butterfly_ink.jpg',
-      fullTattoo: tattoos.find(t => t.id === 'tattoo_2') || tattoos[1],
-    },
-    {
-      id: 'pop_snake',
-      title: 'Snake',
-      handle: '@darksoul',
-      category: 'Seri',
-      likes: '0',
-      image: './images/tattoos/snake_serpent.jpg',
-      fullTattoo: tattoos.find(t => t.id === 'tattoo_3') || tattoos[2],
-    },
-    {
-      id: 'pop_rose',
-      title: 'Rose',
-      handle: '@inkedlife',
-      category: 'Realizm',
-      likes: '0',
-      image: './images/tattoos/rose_dark.jpg',
-      fullTattoo: tattoos.find(t => t.id === 'tattoo_4') || tattoos[3],
-    },
-    {
-      id: 'pop_cross',
-      title: 'Cross',
-      handle: '@tattoartist',
-      category: 'Minimal',
-      likes: '0',
-      image: './images/tattoos/cross_gothic.jpg',
-      fullTattoo: tattoos.find(t => t.id === 'tattoo_5') || tattoos[4],
-    },
-    {
-      id: 'pop_wolf',
-      title: 'Wolf',
-      handle: '@blackink',
-      category: 'Realizm',
-      likes: '0',
-      image: './images/tattoos/wolf_dark.jpg',
-      fullTattoo: tattoos.find(t => t.id === 'tattoo_6') || tattoos[5],
-    },
-  ];
-
   // Exact categories matching image
   const categoriesList: { id: CategoryId; name: string; image: string }[] = [
     { id: 'realism', name: 'Realizm', image: './images/tattoos/lion_clock.jpg' },
@@ -113,74 +64,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   return (
     <div className="space-y-10 pb-8">
       
-      {/* 1. POPÜLER DÖVMELER (Matching Mockup Top Section) */}
-      {!searchQuery && selectedCategory === 'all' && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-white font-display">
-              Popüler Dövmeler
-            </h2>
-            <button
-              onClick={() => onSelectCategory('all')}
-              className="text-xs text-[#888888] hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <span>Tümünü Gör</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* 5 Cards Row matching image */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {popularTattoos.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => {
-                  if (item.fullTattoo) onSelectTattoo(item.fullTattoo);
-                }}
-                className="group relative rounded-2xl overflow-hidden bg-[#121212] border border-white/10 hover:border-white/30 transition-all duration-300 cursor-pointer flex flex-col aspect-[3/4.5]"
-              >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-
-                {/* Dark gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90" />
-
-                {/* Bottom Details matching image */}
-                <div className="absolute bottom-0 inset-x-0 p-3.5 z-10 space-y-0.5">
-                  <div className="flex items-center gap-1 text-[11px] text-white font-semibold mb-1">
-                    <Heart className="w-3 h-3 text-white fill-white" />
-                    <span>{item.likes}</span>
-                  </div>
-
-                  <h3 className="text-sm font-bold text-white leading-tight truncate">
-                    {item.title}
-                  </h3>
-
-                  <p 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectCreator(item.handle);
-                    }}
-                    className="text-xs text-[#888888] hover:text-white transition-colors cursor-pointer truncate"
-                  >
-                    {item.handle}
-                  </p>
-
-                  <p className="text-[11px] text-[#666666]">
-                    {item.category}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 2. KATEGORİLER (Matching Circular Cards in Image) */}
+      {/* 1. KATEGORİLER (Matching Circular Cards in Image) */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-white font-display">
@@ -238,7 +122,7 @@ export const Gallery: React.FC<GalleryProps> = ({
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
           {filteredTattoos.map((tattoo) => {
             const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
 
