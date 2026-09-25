@@ -170,7 +170,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
           {/* Notifications Dropdown */}
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-88 bg-[#121212] border border-white/15 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in duration-150">
+            <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] bg-[#121212] border border-white/15 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in duration-150">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 px-1">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Bell className="w-3.5 h-3.5 text-[#CCFF00]" />
