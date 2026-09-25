@@ -73,7 +73,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     <header className="w-full bg-[#080808]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sticky top-0 z-20 mb-12 sm:mb-0">
       
       {/* Mobile brand & hamburger */}
-      <div className="flex items-center gap-3 lg:hidden">
+      <div className="flex items-center gap-3 xl:hidden">
         <button
           onClick={onToggleMobileMenu}
           className="p-1.5 rounded-lg text-[#888888] hover:text-white"
