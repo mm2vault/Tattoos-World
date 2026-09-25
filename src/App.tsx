@@ -69,8 +69,10 @@ export default function App() {
     localStorage.setItem('tattos_world_lang_v1', lang);
   };
 
-  const handleEnterApp = () => {
+  const handleEnterApp = async () => {
+    const guest = await tattooStore.loginAsGuest();
     localStorage.setItem('tattos_world_has_entered', 'true');
+    setCurrentUser(guest);
     tattooStore.setSessionActive(true);
     setIsAuthenticated(true);
   };
@@ -97,8 +99,8 @@ export default function App() {
     }
   };
 
-  const handleLoginAsGuest = () => {
-    const guest = tattooStore.loginAsGuest();
+  const handleLoginAsGuest = async () => {
+    const guest = await tattooStore.loginAsGuest();
     localStorage.setItem('tattos_world_has_entered', 'true');
     setCurrentUser(guest);
     setIsAuthenticated(true);
@@ -107,7 +109,7 @@ export default function App() {
 
   const handleLogout = async () => {
     await tattooStore.logout();
-    const guest = tattooStore.loginAsGuest();
+    const guest = await tattooStore.loginAsGuest();
     setCurrentUser(guest);
     setToastMessage('Çıkış yapıldı. Konuk olarak devam ediyorsunuz.');
   };
