@@ -28,6 +28,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [editTitle, setEditTitle] = useState('');
   const [editCategory, setEditCategory] = useState<CategoryId>('realism');
   const [editDesc, setEditDesc] = useState('');
+  const [editImage, setEditImage] = useState('');
   const [tattooToDelete, setTattooToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const categories: { id: CategoryId; name: string }[] = [
@@ -81,6 +82,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setEditTitle(tattoo.title);
     setEditCategory(tattoo.category);
     setEditDesc(tattoo.description);
+    setEditImage(tattoo.image);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
@@ -90,6 +92,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     const catObj = categories.find((c) => c.id === editCategory);
     tattooStore.adminUpdateTattoo(editingTattoo.id, {
       title: editTitle.trim(),
+      image: editImage,
       category: editCategory,
       categoryName: catObj?.name || 'Realizm',
       description: editDesc.trim(),
@@ -387,6 +390,29 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   onChange={(e) => setEditTitle(e.target.value)}
                   className="w-full bg-[#202020] border border-white/15 rounded-xl px-3.5 py-2 text-white"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[#888888] mb-1">Dövme Görseli</label>
+                <div className="flex items-center gap-3 bg-[#202020] border border-white/15 rounded-xl p-3">
+                  <img src={editImage} alt="Önizleme" className="w-16 h-16 rounded-xl object-cover border border-white/10 bg-black shrink-0" />
+                  <label className="px-3 py-2 rounded-xl bg-white text-black font-bold cursor-pointer hover:bg-[#EAEAEA]">
+                    Görsel Değiştir
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setEditImage(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
               <div>
