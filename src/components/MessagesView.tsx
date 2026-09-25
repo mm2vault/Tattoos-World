@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Send, CheckCircle2, Phone, Video, Info } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Send, CheckCircle2, Info, Search } from 'lucide-react';
 import { UserProfile } from '../types';
+import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
-import { collection, getDocs, query, where, setDoc, doc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 
 interface MessagesViewProps {
   currentUser: UserProfile;
@@ -12,15 +13,28 @@ interface MessagesViewProps {
   onPrefillConsumed?: () => void;
 }
 
-interface MessageItem {
+interface ChatMessage {
   id: string;
+  senderId: string;
   senderHandle: string;
   text: string;
-  time: string;
+  createdAt: string;
   isMine: boolean;
-  senderId?: string;
-  createdAt?: string;
 }
+
+interface ChatPartner {
+  uid: string;
+  name: string;
+  handle: string;
+  photo: string;
+  verified: boolean;
+  role: string;
+  lastMessage: string;
+  time: string;
+  conversationId: string;
+}
+
+const buildConversationId = (a: string, b: string) => [a, b].sort().join('__');
 
 export const MessagesView: React.FC<MessagesViewProps> = ({
   currentUser,
@@ -29,101 +43,43 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   initialMessage = '',
   onPrefillConsumed,
 }) => {
-  const conversations = [
-    {
-      id: 'c1',
-      artistUid: 'artist_inkedlife',
-      artistName: 'Marco Vance',
-      artistHandle: '@inkedlife',
-      artistPhoto: './images/users/avatar_inkedlife.jpg',
-      verified: true,
-      role: 'Tattoo Artist',
-      lastMessage: 'Kol kaplama tasarımınız için randevu oluşturdum!',
-      time: '14:20',
-      unread: 1,
-      initialMessages: [
-        {
-          id: 'm1',
-          senderHandle: '@inkedlife',
-          text: 'Merhaba! Lion & Clock dövme tasarımını beğendiğiniz için teşekkürler.',
-          time: '12:30',
-          isMine: false,
-        },
-        {
-          id: 'm2',
-          senderHandle: currentUser.handle,
-          text: 'Merhaba Marco! Gerçekten harika bir işçilik. Ben de benzer bir kol sleeve dövmesi yaptırmak istiyorum, randevu durumunuz nedir?',
-          time: '13:15',
-          isMine: true,
-        },
-        {
-          id: 'm3',
-          senderHandle: '@inkedlife',
-          text: 'Önümüzdeki ayın ilk haftasında boş yerim var. Stüdyomuz Kadıköy\'de. Kol kaplama tasarımınız için randevu oluşturdum!',
-          time: '14:20',
-          isMine: false,
-        },
-      ],
-    },
-    {
-      id: 'c2',
-      artistUid: 'artist_luna',
-      artistName: 'Luna Valery',
-      artistHandle: '@lunatattoos',
-      artistPhoto: './images/users/avatar_luna.jpg',
-      verified: true,
-      role: 'Fine Line Specialist',
-      lastMessage: 'Minimal kelebek çizimi hazır! Önümüzdeki hafta uygun musunuz?',
-      time: 'Dün',
-      unread: 0,
-      initialMessages: [
-        {
-          id: 'm21',
-          senderHandle: '@lunatattoos',
-          text: 'Minimal kelebek çizimi hazır! Önümüzdeki hafta uygun musunuz?',
-          time: 'Dün 18:45',
-          isMine: false,
-        },
-      ],
-    },
-    {
-      id: 'c3',
-      artistUid: 'artist_darksoul',
-      artistName: 'Damian Black',
-      artistHandle: '@darksoul',
-      artistPhoto: './images/users/avatar_inkedlife.jpg',
-      verified: true,
-      role: 'Dark / Blackwork',
-      lastMessage: 'Yeni serpent eskizlerini profilimde paylaştım, göz atabilirsiniz.',
-      time: '2 gün önce',
-      unread: 0,
-      initialMessages: [
-        {
-          id: 'm31',
-          senderHandle: '@darksoul',
-          text: 'Yeni serpent eskizlerini profilimde paylaştım, göz atabilirsiniz.',
-          time: '2 gün önce',
-          isMine: false,
-        },
-      ],
-    },
-  ];
+  const tattooCreators = useMemo(() => {
+    const map = new Map<string, ChatPartner>();
+    tattooStore.getTattoos().forEach((tattoo) => {
+      if (!tattoo.creatorId || !tattoo.creatorHandle || tattoo.creatorId === currentUser.uid) return;
+      if (map.has(tattoo.creatorId)) return;
+      map.set(tattoo.creatorId, {
+        uid: tattoo.creatorId,
+        name: tattoo.creatorName,
+        handle: tattoo.creatorHandle,
+        photo: tattoo.creatorPhoto || '',
+        verified: Boolean(tattoo.creatorVerified),
+        role: tattoo.creatorRole || 'Topluluk üyesi',
+        lastMessage: 'Yeni bir sohbet başlat',
+        time: '',
+        conversationId: buildConversationId(currentUser.uid, tattoo.creatorId),
+      });
+    });
+    return map;
+  }, [currentUser.uid]);
 
-  const [selectedConvId, setSelectedConvId] = useState(conversations[0].id);
-  const [messages, setMessages] = useState<Record<string, MessageItem[]>>({
-    c1: conversations[0].initialMessages,
-    c2: conversations[1].initialMessages,
-    c3: conversations[2].initialMessages,
-  });
+  const [partners, setPartners] = useState<ChatPartner[]>([]);
+  const [selectedPartnerUid, setSelectedPartnerUid] = useState<string>('');
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [newMessageText, setNewMessageText] = useState('');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    setPartners(Array.from(tattooCreators.values()));
+  }, [tattooCreators]);
 
   useEffect(() => {
     if (!initialCreatorHandle) return;
-    const target = conversations.find(
-      (conv) => conv.artistHandle.toLowerCase() === initialCreatorHandle.toLowerCase()
+    const match = Array.from(tattooCreators.values()).find(
+      (p) => p.handle.toLowerCase() === initialCreatorHandle.toLowerCase()
     );
-    if (target) setSelectedConvId(target.id);
-  }, [initialCreatorHandle]);
+    if (match) setSelectedPartnerUid(match.uid);
+  }, [initialCreatorHandle, tattooCreators]);
 
   useEffect(() => {
     if (initialMessage) {
@@ -135,146 +91,187 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   useEffect(() => {
     if (!auth.currentUser) return;
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const snap = await getDocs(
-          query(collection(db, 'messages'), where('participants', 'array-contains', auth.currentUser!.uid))
-        );
+    const messageQuery = query(
+      collection(db, 'messages'),
+      where('participants', 'array-contains', auth.currentUser.uid)
+    );
 
-        const remoteByConv: Record<string, MessageItem[]> = {};
+    const unsubscribe = onSnapshot(
+      messageQuery,
+      (snap) => {
+        const byConversation: Record<string, ChatMessage[]> = {};
+        const partnerMeta = new Map<string, ChatPartner>();
+
         snap.docs.forEach((item) => {
           const data = item.data() as {
-            conversationId: string;
+            conversationId?: string;
             senderId: string;
             senderHandle: string;
             text: string;
             createdAt?: string;
+            participants?: string[];
+            recipientId?: string;
+            recipientHandle?: string;
+            recipientName?: string;
+            recipientPhoto?: string;
+            recipientVerified?: boolean;
+            recipientRole?: string;
           };
-          const convId = data.conversationId;
-          if (!remoteByConv[convId]) remoteByConv[convId] = [];
-          remoteByConv[convId].push({
+
+          const participants = data.participants || [];
+          const partnerUid =
+            participants.find((uid) => uid !== auth.currentUser!.uid) ||
+            data.recipientId ||
+            '';
+          const conversationId =
+            data.conversationId ||
+            (partnerUid ? buildConversationId(auth.currentUser!.uid, partnerUid) : item.id);
+
+          const createdAt = data.createdAt || '';
+          const message: ChatMessage = {
             id: item.id,
+            senderId: data.senderId,
             senderHandle: data.senderHandle,
             text: data.text,
-            time: data.createdAt
-              ? new Date(data.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : '',
+            createdAt,
             isMine: data.senderId === auth.currentUser!.uid,
-            senderId: data.senderId,
-            createdAt: data.createdAt,
-          });
+          };
+
+          if (!byConversation[conversationId]) byConversation[conversationId] = [];
+          byConversation[conversationId].push(message);
+
+          if (partnerUid && data.recipientHandle) {
+            partnerMeta.set(partnerUid, {
+              uid: partnerUid,
+              name: data.recipientName || data.recipientHandle,
+              handle: data.recipientHandle,
+              photo: data.recipientPhoto || '',
+              verified: Boolean(data.recipientVerified),
+              role: data.recipientRole || 'Topluluk üyesi',
+              lastMessage: data.text,
+              time: createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+              conversationId,
+            });
+          }
         });
 
-        if (!cancelled) {
-          setMessages((prev) => {
-            const next = { ...prev };
-            Object.entries(remoteByConv).forEach(([convId, remote]) => {
-              const local = next[convId] || [];
-              const byId = new Map(local.map((m) => [m.id, m]));
-              remote.forEach((m) => byId.set(m.id, m));
-              next[convId] = Array.from(byId.values()).sort(
-                (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '')
-              );
-            });
-            return next;
-          });
-        }
-      } catch (err) {
-        console.warn('Messages could not be loaded from Firestore:', err);
-      }
-    })();
+        Object.entries(byConversation).forEach(([conversationId, list]) => {
+          list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+          const last = list[list.length - 1];
+          const partnerUid = conversationId.split('__').find((uid) => uid !== auth.currentUser!.uid) || '';
+          if (partnerUid && !partnerMeta.has(partnerUid)) {
+            const fallback = tattooCreators.get(partnerUid);
+            if (fallback) {
+              partnerMeta.set(partnerUid, {
+                ...fallback,
+                lastMessage: last?.text || fallback.lastMessage,
+                time: last?.createdAt
+                  ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : fallback.time,
+              });
+            }
+          }
+        });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUser.uid]);
+        const mergedPartners = new Map<string, ChatPartner>(tattooCreators);
+        partnerMeta.forEach((value, key) => mergedPartners.set(key, value));
+        const sortedPartners = Array.from(mergedPartners.values()).sort((a, b) =>
+          String(b.time).localeCompare(String(a.time))
+        );
 
-  const activeConv = conversations.find((c) => c.id === selectedConvId) || conversations[0];
-  const activeMessages = messages[selectedConvId] || [];
+        setPartners(sortedPartners);
+        setMessages(byConversation);
+        setSelectedPartnerUid((current) => current || sortedPartners[0]?.uid || '');
+      },
+      (error) => console.warn('Realtime messages could not be loaded:', error)
+    );
 
-  const handleSendMessage = (e: React.FormEvent) => {
+    return unsubscribe;
+  }, [currentUser.uid, tattooCreators]);
+
+  const filteredPartners = partners.filter((partner) => {
+    const q = search.trim().toLowerCase();
+    return !q || partner.name.toLowerCase().includes(q) || partner.handle.toLowerCase().includes(q);
+  });
+
+  const activePartner = partners.find((partner) => partner.uid === selectedPartnerUid) || null;
+  const activeConversationId = activePartner ? buildConversationId(currentUser.uid, activePartner.uid) : '';
+  const activeMessages = messages[activeConversationId] || [];
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessageText.trim()) return;
+    if (!auth.currentUser || !activePartner || !newMessageText.trim()) return;
 
     const text = newMessageText.trim();
-    const messageId = 'msg_' + Date.now();
     const createdAt = new Date().toISOString();
-    const newMsg: MessageItem = {
-      id: messageId,
-      senderHandle: currentUser.handle,
-      text,
-      time: new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMine: true,
-      senderId: currentUser.uid,
-      createdAt,
-    };
+    const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
-    setMessages((prev) => ({
-      ...prev,
-      [selectedConvId]: [...(prev[selectedConvId] || []), newMsg],
-    }));
-    setNewMessageText('');
-
-    if (auth.currentUser) {
-      setDoc(doc(db, 'messages', messageId), {
-        conversationId: selectedConvId,
+    try {
+      await setDoc(doc(db, 'messages', messageId), {
+        id: messageId,
+        conversationId: activeConversationId,
         senderId: auth.currentUser.uid,
         senderHandle: currentUser.handle,
+        recipientId: activePartner.uid,
+        recipientHandle: activePartner.handle,
+        recipientName: activePartner.name,
+        recipientPhoto: activePartner.photo,
+        recipientVerified: activePartner.verified,
+        recipientRole: activePartner.role,
         text,
-        participants: [auth.currentUser.uid, activeConv.artistUid],
+        participants: [auth.currentUser.uid, activePartner.uid],
         createdAt,
-      }).catch((err) => {
-        console.warn('Message was not saved to Firestore:', err);
       });
+      setNewMessageText('');
+    } catch (error) {
+      console.warn('Message was not saved:', error);
     }
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7rem)] md:h-[72vh] min-h-[520px]">
-      
-      {/* Left Conversations List */}
+    <div className="w-full max-w-6xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7rem)] md:h-[72vh] min-h-[520px]">
       <div className="w-full md:w-64 lg:w-80 border-b md:border-b-0 md:border-r border-white/10 flex flex-col bg-[#0a0a0a]">
-        <div className="p-4 border-b border-white/10">
-          <h2 className="text-base font-bold text-white font-display">Mesajlar</h2>
-          <p className="text-[11px] text-[#777777]">Sanatçılar ve Dövme Tutkunları</p>
+        <div className="p-4 border-b border-white/10 space-y-3">
+          <div>
+            <h2 className="text-base font-bold text-white font-display">Mesajlar</h2>
+            <p className="text-[11px] text-[#777777]">Gerçek topluluk sohbetleri</p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#666666]" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Sanatçı veya kullanıcı ara..." className="w-full bg-[#151515] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-[11px] text-white placeholder-[#666666] focus:outline-none focus:border-white/25" />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-white/5">
-          {conversations.map((conv) => {
-            const isSelected = conv.id === selectedConvId;
+          {filteredPartners.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-xs text-[#777777] leading-relaxed">
+                Henüz mesajlaşabileceğin bir topluluk üyesi yok.
+                <br />
+                Bir sanatçının dövmesine girip <span className="text-white">Randevu Mesajı</span> butonuna bas.
+              </p>
+            </div>
+          ) : filteredPartners.map((partner) => {
+            const selected = partner.uid === selectedPartnerUid;
+            const conversation = messages[partner.conversationId] || [];
+            const last = conversation[conversation.length - 1];
             return (
               <button
-                key={conv.id}
-                onClick={() => setSelectedConvId(conv.id)}
-                className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors cursor-pointer ${
-                  isSelected ? 'bg-white/10' : 'hover:bg-white/5'
-                }`}
+                key={partner.uid}
+                onClick={() => setSelectedPartnerUid(partner.uid)}
+                className={"w-full text-left p-3.5 flex items-start gap-3 transition-colors cursor-pointer " + (selected ? 'bg-white/10' : 'hover:bg-white/5')}
               >
                 <div className="relative shrink-0">
-                  <img
-                    src={conv.artistPhoto}
-                    alt={conv.artistName}
-                    className="w-10 h-10 rounded-full object-cover border border-white/15"
-                  />
-                  {conv.verified && (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 bg-black rounded-full absolute -bottom-0.5 -right-0.5" />
-                  )}
+                  {partner.photo ? <img src={partner.photo} alt={partner.name} className="w-10 h-10 rounded-full object-cover border border-white/15" /> : <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xs font-bold">{partner.name.charAt(0).toUpperCase()}</div>}
+                  {partner.verified && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 bg-black rounded-full absolute -bottom-0.5 -right-0.5" />}
                 </div>
-
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-white truncate">
-                      {conv.artistName}
-                    </h4>
-                    <span className="text-[10px] text-[#777777]">{conv.time}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-white truncate">{partner.name}</h4>
+                    <span className="text-[10px] text-[#777777] shrink-0">{last?.createdAt ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : partner.time}</span>
                   </div>
-                  <p className="text-[11px] text-[#888888] font-mono truncate">
-                    {conv.artistHandle}
-                  </p>
-                  <p className="text-[11px] text-[#AAAAAA] truncate mt-0.5">
-                    {conv.lastMessage}
-                  </p>
+                  <p className="text-[11px] text-[#888888] font-mono truncate">{partner.handle}</p>
+                  <p className="text-[11px] text-[#AAAAAA] truncate mt-0.5">{last?.text || partner.lastMessage}</p>
                 </div>
               </button>
             );
@@ -282,103 +279,56 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         </div>
       </div>
 
-      {/* Right Active Chat Pane */}
-      <div className="flex-1 flex flex-col justify-between bg-[#0e0e0e]">
-        
-        {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0d0d0d]">
-          <div
-            onClick={() => onSelectCreator(activeConv.artistHandle)}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <img
-              src={activeConv.artistPhoto}
-              alt={activeConv.artistName}
-              className="w-9 h-9 rounded-full object-cover border border-white/20"
-            />
+      <div className="flex-1 flex flex-col justify-between bg-[#0e0e0e] min-w-0">
+        {activePartner ? (
+          <>
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0d0d0d]">
+              <button onClick={() => onSelectCreator(activePartner.handle)} className="flex items-center gap-3 cursor-pointer group min-w-0 text-left">
+                {activePartner.photo ? <img src={activePartner.photo} alt={activePartner.name} className="w-9 h-9 rounded-full object-cover border border-white/20 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xs font-bold shrink-0">{activePartner.name.charAt(0).toUpperCase()}</div>}
+                <div className="min-w-0">
+                  <h3 className="text-xs font-bold text-white group-hover:underline truncate flex items-center gap-1.5">{activePartner.name}{activePartner.verified && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</h3>
+                  <p className="text-[10px] text-[#888888] truncate">{activePartner.role}</p>
+                </div>
+              </button>
+              <button onClick={() => onSelectCreator(activePartner.handle)} className="p-2 rounded-full text-[#888888] hover:bg-white/5 hover:text-white transition-colors" title="Profili Aç" aria-label="Profili Aç"><Info className="w-4 h-4" /></button>
+            </div>
+
+            <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3.5">
+              {activeMessages.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-center px-6">
+                  <p className="text-xs text-[#666666] leading-relaxed">{activePartner.name} ile yeni bir sohbet başlat.</p>
+                </div>
+              ) : activeMessages.map((msg) => (
+                <div key={msg.id} className={"flex flex-col " + (msg.isMine ? 'items-end' : 'items-start')}>
+                  <div className={"max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed " + (msg.isMine ? 'bg-white text-black font-medium rounded-br-none' : 'bg-[#1a1a1a] text-[#E0E0E0] border border-white/10 rounded-bl-none')}>
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-[#666666] mt-1 px-1">{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="p-3.5 bg-[#0a0a0a] border-t border-white/10 flex items-center gap-2 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+              <input
+                type="text"
+                value={newMessageText}
+                onChange={(e) => setNewMessageText(e.target.value)}
+                placeholder={'@' + activePartner.handle.replace(/^@/, '') + ' kullanıcısına mesaj yaz...'}
+                className="flex-1 bg-[#161616] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30"
+              />
+              <button type="submit" disabled={!newMessageText.trim()} className="p-2.5 rounded-full bg-white text-black hover:bg-[#EAEAEA] disabled:opacity-40 transition-all cursor-pointer shrink-0" aria-label="Gönder"><Send className="w-4 h-4" /></button>
+            </form>
+          </>
+        ) : (
+          <div className="h-full flex items-center justify-center p-8 text-center">
             <div>
-              <h3 className="text-xs font-bold text-white group-hover:underline flex items-center gap-1.5">
-                {activeConv.artistName}
-                {activeConv.verified && (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                )}
-              </h3>
-              <p className="text-[10px] text-[#888888]">{activeConv.role}</p>
+              <Info className="w-8 h-8 mx-auto mb-3 text-[#555555]" />
+              <p className="text-sm text-white">Henüz bir sohbet seçilmedi.</p>
+              <p className="text-xs text-[#666666] mt-1">Bir sanatçının profilinden mesaj başlatabilirsin.</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 text-[#888888]">
-            <button
-              type="button"
-              onClick={() => window.alert('Sesli arama özelliği henüz bağlı değil.')}
-              className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors"
-              title="Ara"
-            >
-              <Phone className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => window.alert('Görüntülü arama özelliği henüz bağlı değil.')}
-              className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors"
-              title="Video"
-            >
-              <Video className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onSelectCreator(activeConv.artistHandle)}
-              className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors"
-              title="Profil"
-            >
-              <Info className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Message Thread */}
-        <div className="flex-1 p-5 overflow-y-auto space-y-3.5">
-          {activeMessages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${msg.isMine ? 'items-end' : 'items-start'}`}
-            >
-              <div
-                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                  msg.isMine
-                    ? 'bg-white text-black font-medium rounded-br-none shadow'
-                    : 'bg-[#1a1a1a] text-[#E0E0E0] border border-white/10 rounded-bl-none'
-                }`}
-              >
-                {msg.text}
-              </div>
-              <span className="text-[10px] text-[#666666] mt-1 px-1">{msg.time}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Send Input Bar */}
-        <form
-          onSubmit={handleSendMessage}
-          className="p-3.5 bg-[#0a0a0a] border-t border-white/10 flex items-center gap-2"
-        >
-          <input
-            type="text"
-            value={newMessageText}
-            onChange={(e) => setNewMessageText(e.target.value)}
-            placeholder="Mesajınızı yazın..."
-            className="flex-1 bg-[#161616] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30"
-          />
-          <button
-            type="submit"
-            disabled={!newMessageText.trim()}
-            className="p-2.5 rounded-full bg-white text-black hover:bg-[#EAEAEA] disabled:opacity-40 transition-all cursor-pointer"
-            aria-label="Gönder"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-
+        )}
       </div>
-
     </div>
   );
 };
