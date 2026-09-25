@@ -319,7 +319,7 @@ class TattooStoreService {
               userAvatar: './images/users/avatar_luna.jpg',
               text: 'Gerçekten muhteşem! Hayatımda gördüğüm en detaylı aslan dövmesi. 😍',
               createdAt: '2 saat önce',
-              likes: 24,
+              likes: 0,
             },
             {
               id: 'c2',
@@ -329,7 +329,7 @@ class TattooStoreService {
               userAvatar: './images/users/avatar_inkedlife.jpg',
               text: 'Bu tarz dövmeler her zaman efsane. Gölgelendirmeler kusursuz. 🔥',
               createdAt: '3 saat önce',
-              likes: 18,
+              likes: 0,
             },
             {
               id: 'c3',
@@ -339,7 +339,7 @@ class TattooStoreService {
               userAvatar: './images/users/avatar_luna.jpg',
               text: 'Harika bir iş! Sanat resmen. Randevu için yazdım! 🔥',
               createdAt: '5 saat önce',
-              likes: 12,
+              likes: 0,
             },
           ],
         };
