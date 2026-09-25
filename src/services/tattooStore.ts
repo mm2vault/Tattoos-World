@@ -1103,13 +1103,21 @@ class TattooStoreService {
     return nowFollowing;
   }
 
+  public getFollowerCount(handle: string): number {
+    return this.followerCounts[handle] || 0;
+  }
+
+  public getFollowingCount(): number {
+    return this.follows.size;
+  }
+
   public getArtistProfile(handle: string): UserProfile | undefined {
     if (handle === this.currentUser.handle) {
-      return this.currentUser;
+      return { ...this.currentUser, followersCount: this.getFollowerCount(handle), followingCount: this.getFollowingCount() };
     }
     const found = INITIAL_ARTISTS.find(a => a.handle.toLowerCase() === handle.toLowerCase());
     if (found) {
-      return found;
+      return { ...found, followersCount: this.getFollowerCount(found.handle), followingCount: this.getFollowingCount() };
     }
 
     // Community users who are not in the starter artist list still get a real profile
@@ -1134,8 +1142,8 @@ class TattooStoreService {
         verified: userTattoo.creatorVerified,
         role: userTattoo.creatorRole || 'user',
         isAdmin: false,
-        followersCount: 0,
-        followingCount: 0,
+        followersCount: this.getFollowerCount(userTattoo.creatorHandle),
+        followingCount: this.getFollowingCount(),
         createdAt: userTattoo.createdAt,
         savedTattooIds: [],
       };
@@ -1156,8 +1164,8 @@ class TattooStoreService {
       verified: true,
       role: 'artist',
       isAdmin: false,
-      followersCount: 0,
-      followingCount: 0,
+      followersCount: this.getFollowerCount(handle),
+      followingCount: this.getFollowingCount(),
       createdAt: '2025-01-01',
       savedTattooIds: [],
     };
