@@ -289,7 +289,8 @@ class TattooStoreService {
   private comments: Record<string, Comment[]> = {};
   private userLikes: Record<string, Set<string>> = {};
   private currentUser: UserProfile = INITIAL_USER;
-  private follows: Set<string> = new Set(['@inkedlife', '@lunatattoos']);
+  private follows: Set<string> = new Set();
+  private followerCounts: Record<string, number> = {};
 
   constructor() {
     this.loadFromStorage();
