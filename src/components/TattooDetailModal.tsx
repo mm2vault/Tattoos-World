@@ -10,6 +10,7 @@ interface TattooDetailModalProps {
   tattoo: Tattoo;
   onClose: () => void;
   onSelectCreator: (handle: string) => void;
+  onOpenMessages?: (handle: string, prefill?: string) => void;
   currentLanguage: SupportedLanguage;
   currentUser: UserProfile;
   onToast: (msg: string) => void;
@@ -20,6 +21,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   tattoo,
   onClose,
   onSelectCreator,
+  onOpenMessages,
   currentUser,
   onToast,
   onTattooUpdated,
@@ -202,6 +204,12 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                 </div>
               </div>
 
+              {onOpenMessages && (
+                <button
+                  onClick={() => onOpenMessages(tattoo.creatorHandle, `Merhaba ${tattoo.creatorHandle}, bu dövmeniz hakkında bilgi almak ve randevu oluşturmak istiyorum. Uygun gün ve saatleriniz nedir?`)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-black hover:bg-[#e8e8e8] transition-all cursor-pointer"
+                >Randevu Mesajı</button>
+              )}
               <button
                 onClick={handleToggleFollow}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
@@ -285,15 +293,22 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
             <div className="space-y-3.5">
               {comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-2.5 text-xs">
-                  <img
+                  <button
+                    type="button"
+                    onClick={() => c.userHandle && onSelectCreator(c.userHandle)}
+                    className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer"
+                    title="Profili aç"
+                  >
+                    <img
                     src={c.userAvatar || './images/users/avatar_inkedlife.jpg'}
                     alt={c.userName}
                     referrerPolicy="no-referrer"
-                    className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0 mt-0.5"
-                  />
+                    className="w-7 h-7 rounded-full object-cover border border-white/10"
+                    />
+                  </button>
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-white">{c.userName}</span>
+                      <button type="button" onClick={() => c.userHandle && onSelectCreator(c.userHandle)} className="font-bold text-white hover:underline text-left cursor-pointer">{c.userName}</button>
                       {(currentUser.isAdmin || currentUser.uid === c.userId) && (
                         <button
                           onClick={() => {
