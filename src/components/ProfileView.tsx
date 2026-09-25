@@ -3,7 +3,7 @@ import {
   CheckCircle2, Globe, Sparkles, 
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
-  ExternalLink, Link as LinkIcon, Check, AlertCircle
+  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle
 } from 'lucide-react';
 import { Tattoo, UserProfile, SupportedLanguage } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -20,6 +20,7 @@ interface ProfileViewProps {
   tattoos: Tattoo[];
   onSelectTattoo: (tattoo: Tattoo) => void;
   onOpenCreate: () => void;
+  onOpenMessages?: (handle: string) => void;
   currentLanguage: SupportedLanguage;
   onToast: (msg: string) => void;
   onUserUpdated: (user: UserProfile) => void;
@@ -33,6 +34,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   tattoos,
   onSelectTattoo,
   onOpenCreate,
+  onOpenMessages,
   onToast,
   onUserUpdated,
   onTattooUpdated,
@@ -361,6 +363,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <span>Profili Düzenle</span>
               </button>
             ) : (
+              <>
               <button
                 onClick={handleToggleFollow}
                 className={`px-8 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md ${
@@ -371,6 +374,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               >
                 {isFollowing ? 'Takip Ediliyor' : 'Takip Et'}
               </button>
+              {profileUser.isArtist && onOpenMessages && (
+                <button
+                  type="button"
+                  onClick={() => onOpenMessages(profileUser.handle)}
+                  className="flex items-center gap-2 px-6 py-2 rounded-full bg-[#CCFF00] text-black text-xs font-bold hover:bg-[#b4f309] transition-all cursor-pointer shadow-md"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Konuş</span>
+                </button>
+              )}
+              </>
             )}
 
             {isOwnProfile && (
