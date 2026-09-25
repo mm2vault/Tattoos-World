@@ -537,9 +537,7 @@ class TattooStoreService {
         getDocs(collection(db, 'comments')),
         getDocs(collection(db, 'likes')),
       ]);
-      const followSnap = auth.currentUser
-        ? await getDocs(collection(db, 'follows')).catch(() => null)
-        : null;
+      const followSnap = await getDocs(collection(db, 'follows')).catch(() => null);
 
       const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo);
       const merged = new Map<string, Tattoo>();
