@@ -7,7 +7,7 @@ import {
   db 
 } from './firebase';
 import { signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   TATTOOS: 'tattos_world_tattoos_v1',
@@ -421,16 +421,16 @@ class TattooStoreService {
               console.warn('Auth state Firestore sync notice:', err);
             }
           } else {
-            // When not logged into Firebase Auth, never retain admin privileges
+            // When not logged into Firebase Auth, never retain admin privileges.
             if (this.currentUser.isAdmin) {
               this.currentUser.isAdmin = false;
-              if (this.currentUser.role === 'admin') {
-                this.currentUser.role = 'user';
-              }
+              if (this.currentUser.role === 'admin') this.currentUser.role = 'user';
               this.saveUser();
             }
           }
         });
+        // Public community data can be read even before a user logs in.
+        this.syncCommunityFromFirestore().catch(() => {});
       } catch (err) {
         console.warn('Firebase onAuthStateChanged setup notice:', err);
       }
@@ -522,6 +522,79 @@ class TattooStoreService {
       localStorage.setItem(STORAGE_KEYS.SESSION, active ? 'true' : 'false');
     } catch (e) {
       console.error('Error saving session status', e);
+    }
+  }
+
+  /**
+   * Pull public community data from Firestore and merge it with the local cache.
+   * Local starter content is preserved; remote content wins when IDs collide.
+   */
+  public async syncCommunityFromFirestore(): Promise<void> {
+    try {
+      const [tattooSnap, commentSnap, likeSnap, followSnap] = await Promise.all([
+        getDocs(collection(db, 'tattoos')),
+        getDocs(collection(db, 'comments')),
+        getDocs(collection(db, 'likes')),
+        this.currentUser?.uid
+          ? getDocs(collection(db, 'follows'))
+          : Promise.resolve(null as any),
+      ]);
+
+      const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo);
+      const merged = new Map<string, Tattoo>();
+      this.tattoos.forEach((t) => merged.set(t.id, t));
+      remoteTattoos.forEach((t) => merged.set(t.id, t));
+      this.tattoos = Array.from(merged.values()).sort((a, b) => {
+        const ad = new Date(a.createdAt).getTime() || 0;
+        const bd = new Date(b.createdAt).getTime() || 0;
+        return bd - ad;
+      });
+      this.saveTattoos();
+
+      const remoteComments: Record<string, Comment[]> = {};
+      commentSnap.docs.forEach((d) => {
+        const value = d.data() as Comment;
+        if (!remoteComments[value.tattooId]) remoteComments[value.tattooId] = [];
+        remoteComments[value.tattooId].push(value);
+      });
+      Object.entries(remoteComments).forEach(([tattooId, values]) => {
+        const local = this.comments[tattooId] || [];
+        const byId = new Map<string, Comment>();
+        local.forEach((x) => byId.set(x.id, x));
+        values.forEach((x) => byId.set(x.id, x));
+        this.comments[tattooId] = Array.from(byId.values()).sort((a, b) =>
+          String(b.createdAt).localeCompare(String(a.createdAt))
+        );
+      });
+      this.saveComments();
+
+      const remoteLikes: Record<string, Set<string>> = {};
+      likeSnap.docs.forEach((d) => {
+        const value = d.data() as { tattooId?: string; uid?: string };
+        if (!value.tattooId || !value.uid) return;
+        if (!remoteLikes[value.tattooId]) remoteLikes[value.tattooId] = new Set();
+        remoteLikes[value.tattooId].add(value.uid);
+      });
+      Object.entries(remoteLikes).forEach(([tattooId, users]) => {
+        this.userLikes[tattooId] = new Set([
+          ...(this.userLikes[tattooId] ? Array.from(this.userLikes[tattooId]) : []),
+          ...Array.from(users),
+        ]);
+        const tattoo = this.tattoos.find((t) => t.id === tattooId);
+        if (tattoo) tattoo.likesCount = Math.max(tattoo.likesCount, this.userLikes[tattooId].size);
+      });
+      this.saveLikes();
+
+      if (followSnap) {
+        const remoteFollowHandles = followSnap.docs
+          .map((d) => d.data() as { uid?: string; handle?: string })
+          .filter((x) => x.uid === this.currentUser.uid && x.handle)
+          .map((x) => x.handle as string);
+        remoteFollowHandles.forEach((h) => this.follows.add(h));
+        this.saveFollows();
+      }
+    } catch (err) {
+      console.warn('Community Firestore sync skipped:', err);
     }
   }
 
@@ -631,40 +704,9 @@ class TattooStoreService {
       const synced = await this.syncUserToFirestore(userProfile);
       return synced;
     } catch (popupError: any) {
-      console.warn('Firebase signInWithPopup note (iframe or restricted mode):', popupError);
-      
-      // If user closed or cancelled the popup manually, rethrow so UI doesn't force a login
-      if (popupError?.code === 'auth/popup-closed-by-user' || popupError?.code === 'auth/cancelled-popup-request') {
-        throw popupError;
-      }
-      
-      // Graceful fallback: create standard Google User
-      const fallbackUser: UserProfile = {
-        uid: 'user_google_' + Date.now(),
-        displayName: 'Google Kullanıcısı',
-        handle: '@google_user',
-        email: 'user@gmail.com',
-        photoURL: './images/users/avatar_luna.jpg',
-        bio: 'Tattoo explorer, ink devotee, passionate collector.',
-        instagram: '',
-        tiktok: '',
-        discord: '',
-        website: '',
-        isArtist: false,
-        verified: false,
-        role: 'user',
-        isAdmin: false,
-        followersCount: 142,
-        followingCount: 37,
-        createdAt: new Date().toISOString().split('T')[0],
-        savedTattooIds: ['tattoo_1', 'tattoo_2'],
-      };
-
-      this.currentUser = fallbackUser;
-      this.saveUser();
-      this.setSessionActive(true);
-      const synced = await this.syncUserToFirestore(fallbackUser);
-      return synced;
+      console.warn('Firebase signInWithPopup failed:', popupError);
+      // Never pretend a failed Google authentication succeeded.
+      throw popupError;
     }
   }
 
@@ -879,6 +921,14 @@ class TattooStoreService {
     }
 
     this.saveLikes();
+
+    const likeRef = doc(db, 'likes', `${tattooId}_${uid}`);
+    if (isLikedNow) {
+      setDoc(likeRef, { tattooId, uid, createdAt: new Date().toISOString() }).catch(() => {});
+    } else {
+      deleteDoc(likeRef).catch(() => {});
+    }
+
     return {
       isLiked: isLikedNow,
       newCount: tattoo?.likesCount ?? set.size,
@@ -932,6 +982,8 @@ class TattooStoreService {
     }
 
     this.saveComments();
+
+    setDoc(doc(db, 'comments', newComment.id), newComment).catch(() => {});
     return newComment;
   }
 
@@ -947,6 +999,7 @@ class TattooStoreService {
         this.saveTattoos();
       }
       this.saveComments();
+      deleteDoc(doc(db, 'comments', commentId)).catch(() => {});
       return true;
     }
     return false;
@@ -1020,6 +1073,19 @@ class TattooStoreService {
       nowFollowing = true;
     }
     this.saveFollows();
+
+    const followId = `${this.currentUser.uid}_${encodeURIComponent(handle)}`;
+    const followRef = doc(db, 'follows', followId);
+    if (nowFollowing) {
+      setDoc(followRef, {
+        uid: this.currentUser.uid,
+        handle,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    } else {
+      deleteDoc(followRef).catch(() => {});
+    }
+
     return nowFollowing;
   }
 
