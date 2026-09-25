@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  X, Heart, MessageSquare, Share2, Bookmark, 
+  X, Heart, MessageSquare, Share2, Bookmark, Flag, 
   ChevronLeft, ChevronRight, Sparkles, Trash2, ShieldCheck 
 } from 'lucide-react';
 import { Tattoo, Comment, SupportedLanguage, UserProfile } from '../types';
@@ -60,6 +60,14 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
       navigator.clipboard.writeText(window.location.href);
       onToast('Bağlantı kopyalandı');
     }
+  };
+
+  const handleReport = async () => {
+    if (!window.confirm('Bu dövmeyi uygunsuz veya kurallara aykırı bulduğunuz için bildirmek istiyor musunuz?')) return;
+    const reason = window.prompt('Kısa bir neden yazın (spam, uygunsuz içerik, telif vb.):', 'Uygunsuz içerik');
+    if (!reason?.trim()) return;
+    const sent = await tattooStore.reportTattoo(tattoo.id, reason);
+    onToast(sent ? 'Bildirim moderasyona gönderildi' : 'Rapor göndermek için Google ile giriş yapmalısınız');
   };
 
   const handleAddComment = (e: React.FormEvent) => {
@@ -260,6 +268,9 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                 </button>
                 <button onClick={handleToggleSave} className="hover:text-white cursor-pointer" title="Kaydet">
                   <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-white text-white' : ''}`} />
+                </button>
+                <button onClick={handleReport} className="hover:text-red-400 cursor-pointer" title="Bildir">
+                  <Flag className="w-4 h-4" />
                 </button>
               </div>
             </div>
