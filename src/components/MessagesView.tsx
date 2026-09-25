@@ -7,6 +7,7 @@ import { collection, getDocs, query, where, setDoc, doc } from 'firebase/firesto
 interface MessagesViewProps {
   currentUser: UserProfile;
   onSelectCreator: (handle: string) => void;
+  initialCreatorHandle?: string | null;
 }
 
 interface MessageItem {
@@ -110,6 +111,14 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     c3: conversations[2].initialMessages,
   });
   const [newMessageText, setNewMessageText] = useState('');
+
+  useEffect(() => {
+    if (!initialCreatorHandle) return;
+    const target = conversations.find(
+      (conv) => conv.artistHandle.toLowerCase() === initialCreatorHandle.toLowerCase()
+    );
+    if (target) setSelectedConvId(target.id);
+  }, [initialCreatorHandle]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
