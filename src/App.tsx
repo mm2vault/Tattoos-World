@@ -137,9 +137,10 @@ export default function App() {
     setCurrentTab('profile');
   };
 
-  const handleOpenMessagesWithCreator = (handle: string) => {
+  const handleOpenMessagesWithCreator = (handle: string, prefill?: string) => {
     setSelectedCreatorHandle(handle);
     setCurrentTab('messages');
+    if (prefill) sessionStorage.setItem('tattos_world_message_prefill', prefill);
   };
 
   const handleTattooUpdated = () => {
@@ -328,6 +329,8 @@ export default function App() {
                     currentUser={currentUser}
                     onSelectCreator={handleSelectCreator}
                     initialCreatorHandle={selectedCreatorHandle}
+                    initialMessage={sessionStorage.getItem('tattos_world_message_prefill') || ''}
+                    onPrefillConsumed={() => sessionStorage.removeItem('tattos_world_message_prefill')}
                   />
                 )}
 
@@ -388,6 +391,7 @@ export default function App() {
           currentUser={currentUser}
           onToast={(msg) => setToastMessage(msg)}
           onTattooUpdated={handleTattooUpdated}
+          onOpenMessages={handleOpenMessagesWithCreator}
         />
       )}
 
