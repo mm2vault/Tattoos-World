@@ -531,14 +531,14 @@ class TattooStoreService {
    */
   public async syncCommunityFromFirestore(): Promise<void> {
     try {
-      const [tattooSnap, commentSnap, likeSnap, followSnap] = await Promise.all([
+      const [tattooSnap, commentSnap, likeSnap] = await Promise.all([
         getDocs(collection(db, 'tattoos')),
         getDocs(collection(db, 'comments')),
         getDocs(collection(db, 'likes')),
-        this.currentUser?.uid
-          ? getDocs(collection(db, 'follows'))
-          : Promise.resolve(null as any),
       ]);
+      const followSnap = auth.currentUser
+        ? await getDocs(collection(db, 'follows')).catch(() => null)
+        : null;
 
       const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo);
       const merged = new Map<string, Tattoo>();
