@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Send, CheckCircle2, Phone, Video, Info } from 'lucide-react';
 import { UserProfile } from '../types';
+import { db, auth } from '../services/firebase';
+import { collection, getDocs, query, where, setDoc, doc } from 'firebase/firestore';
 
 interface MessagesViewProps {
   currentUser: UserProfile;
@@ -13,6 +15,8 @@ interface MessageItem {
   text: string;
   time: string;
   isMine: boolean;
+  senderId?: string;
+  createdAt?: string;
 }
 
 export const MessagesView: React.FC<MessagesViewProps> = ({
@@ -22,6 +26,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const conversations = [
     {
       id: 'c1',
+      artistUid: 'artist_inkedlife',
       artistName: 'Marco Vance',
       artistHandle: '@inkedlife',
       artistPhoto: './images/users/avatar_inkedlife.jpg',
@@ -56,6 +61,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     },
     {
       id: 'c2',
+      artistUid: 'artist_luna',
       artistName: 'Luna Valery',
       artistHandle: '@lunatattoos',
       artistPhoto: './images/users/avatar_luna.jpg',
@@ -76,6 +82,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     },
     {
       id: 'c3',
+      artistUid: 'artist_darksoul',
       artistName: 'Damian Black',
       artistHandle: '@darksoul',
       artistPhoto: './images/users/avatar_inkedlife.jpg',
@@ -104,6 +111,64 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   });
   const [newMessageText, setNewMessageText] = useState('');
 
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'messages'), where('participants', 'array-contains', auth.currentUser!.uid))
+        );
+
+        const remoteByConv: Record<string, MessageItem[]> = {};
+        snap.docs.forEach((item) => {
+          const data = item.data() as {
+            conversationId: string;
+            senderId: string;
+            senderHandle: string;
+            text: string;
+            createdAt?: string;
+          };
+          const convId = data.conversationId;
+          if (!remoteByConv[convId]) remoteByConv[convId] = [];
+          remoteByConv[convId].push({
+            id: item.id,
+            senderHandle: data.senderHandle,
+            text: data.text,
+            time: data.createdAt
+              ? new Date(data.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '',
+            isMine: data.senderId === auth.currentUser!.uid,
+            senderId: data.senderId,
+            createdAt: data.createdAt,
+          });
+        });
+
+        if (!cancelled) {
+          setMessages((prev) => {
+            const next = { ...prev };
+            Object.entries(remoteByConv).forEach(([convId, remote]) => {
+              const local = next[convId] || [];
+              const byId = new Map(local.map((m) => [m.id, m]));
+              remote.forEach((m) => byId.set(m.id, m));
+              next[convId] = Array.from(byId.values()).sort(
+                (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '')
+              );
+            });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.warn('Messages could not be loaded from Firestore:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser.uid]);
+
   const activeConv = conversations.find((c) => c.id === selectedConvId) || conversations[0];
   const activeMessages = messages[selectedConvId] || [];
 
@@ -111,35 +176,37 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     e.preventDefault();
     if (!newMessageText.trim()) return;
 
+    const text = newMessageText.trim();
+    const messageId = 'msg_' + Date.now();
+    const createdAt = new Date().toISOString();
     const newMsg: MessageItem = {
-      id: 'msg_' + Date.now(),
+      id: messageId,
       senderHandle: currentUser.handle,
-      text: newMessageText.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text,
+      time: new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMine: true,
+      senderId: currentUser.uid,
+      createdAt,
     };
 
     setMessages((prev) => ({
       ...prev,
       [selectedConvId]: [...(prev[selectedConvId] || []), newMsg],
     }));
-
     setNewMessageText('');
 
-    // Simulated quick artist reply
-    setTimeout(() => {
-      const replyMsg: MessageItem = {
-        id: 'reply_' + Date.now(),
-        senderHandle: activeConv.artistHandle,
-        text: 'Mesajınızı aldım! Detayları en kısa sürede netleştirelim.',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isMine: false,
-      };
-      setMessages((prev) => ({
-        ...prev,
-        [selectedConvId]: [...(prev[selectedConvId] || []), replyMsg],
-      }));
-    }, 1200);
+    if (auth.currentUser) {
+      setDoc(doc(db, 'messages', messageId), {
+        conversationId: selectedConvId,
+        senderId: auth.currentUser.uid,
+        senderHandle: currentUser.handle,
+        text,
+        participants: [auth.currentUser.uid, activeConv.artistUid],
+        createdAt,
+      }).catch((err) => {
+        console.warn('Message was not saved to Firestore:', err);
+      });
+    }
   };
 
   return (
@@ -220,10 +287,20 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 text-[#888888]">
-            <button className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors" title="Ara">
+            <button
+              type="button"
+              onClick={() => window.alert('Sesli arama özelliği henüz bağlı değil.')}
+              className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors"
+              title="Ara"
+            >
               <Phone className="w-4 h-4" />
             </button>
-            <button className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors" title="Video">
+            <button
+              type="button"
+              onClick={() => window.alert('Görüntülü arama özelliği henüz bağlı değil.')}
+              className="p-2 rounded-full hover:bg-white/5 hover:text-white transition-colors"
+              title="Video"
+            >
               <Video className="w-4 h-4" />
             </button>
             <button
