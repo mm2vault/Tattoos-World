@@ -129,6 +129,7 @@ class TattooStoreService {
           if (fbUser) {
             this.setSessionActive(true);
             if (isUserAdmin(fbUser.email)) {
+              await this.cleanupLegacyDemoFirestore();
               await this.resetOldTestInteractions();
             }
             const isAdmin = isUserAdmin(fbUser.email);
@@ -192,6 +193,31 @@ class TattooStoreService {
       console.error('Error loading tattoo store from localStorage', e);
       this.tattoos = [...INITIAL_TATTOOS];
       this.currentUser = INITIAL_USER;
+    }
+  }
+
+  /** Remove the old demo tattoo/user documents from Firestore when an admin signs in. */
+  private async cleanupLegacyDemoFirestore(): Promise<void> {
+    if (!this.isCurrentUserAdmin()) return;
+    try {
+      const markerRef = doc(db, 'system', 'demo_cleanup_v3');
+      const markerSnap = await getDoc(markerRef);
+      if (markerSnap.exists()) return;
+
+      const legacyTattooIds = new Set(['tattoo_1','tattoo_2','tattoo_3','tattoo_4','tattoo_5','tattoo_6','tattoo_7']);
+      await Promise.all(Array.from(legacyTattooIds).map((id) => deleteDoc(doc(db, 'tattoos', id)).catch(() => {})));
+
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const legacyUserIds = new Set(['artist_inkedlife','artist_luna','artist_darksoul']);
+      await Promise.all(
+        usersSnap.docs
+          .filter((d) => legacyUserIds.has(d.id) || legacyUserIds.has(String(d.data()?.handle || '')))
+          .map((d) => deleteDoc(d.ref).catch(() => {}))
+      );
+
+      await setDoc(markerRef, { completedAt: new Date().toISOString(), version: 3 });
+    } catch (err) {
+      console.warn('Legacy Firestore demo cleanup skipped:', err);
     }
   }
 
