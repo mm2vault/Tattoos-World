@@ -140,6 +140,11 @@ export default function App() {
     setCurrentTab('profile');
   };
 
+  const handleOpenMessagesWithCreator = (handle: string) => {
+    setSelectedCreatorHandle(handle);
+    setCurrentTab('messages');
+  };
+
   const handleTattooUpdated = () => {
     setTattoos(tattooStore.getTattoos());
     if (selectedTattoo) {
@@ -290,6 +295,7 @@ export default function App() {
                     tattoos={tattoos}
                     onSelectTattoo={(t) => setSelectedTattoo(t)}
                     onOpenCreate={() => setCreateModalOpen(true)}
+                    onOpenMessages={handleOpenMessagesWithCreator}
                     currentLanguage={currentLanguage}
                     onToast={(msg) => setToastMessage(msg)}
                     onUserUpdated={(u) => setCurrentUser(u)}
