@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, Search, Plus, MessageCircle, User } from 'lucide-react';
-import { SupportedLanguage } from '../types';
+import { SupportedLanguage, UserProfile } from '../types';
 import { translations } from '../i18n/translations';
 
 interface BottomNavProps {
@@ -8,6 +8,7 @@ interface BottomNavProps {
   onSelectTab: (tab: string) => void;
   onOpenCreate: () => void;
   currentLanguage: SupportedLanguage;
+  currentUser: UserProfile;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -15,6 +16,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectTab,
   onOpenCreate,
   currentLanguage,
+  currentUser,
 }) => {
   const t = translations[currentLanguage];
 
@@ -71,7 +73,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className={`rounded-full p-[2px] ${currentTab === 'profile' ? 'ring-2 ring-white' : ''}`}>
           <div className="w-7 h-7 rounded-full overflow-hidden border border-white/20">
             <img
-              src="./images/users/avatar_inkedlife.jpg"
+              src={currentUser.photoURL || './images/users/avatar_inkedlife.jpg'}
               alt="Profil"
               className="w-full h-full object-cover"
             />
