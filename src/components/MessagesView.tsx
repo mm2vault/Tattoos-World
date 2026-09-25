@@ -8,6 +8,8 @@ interface MessagesViewProps {
   currentUser: UserProfile;
   onSelectCreator: (handle: string) => void;
   initialCreatorHandle?: string | null;
+  initialMessage?: string;
+  onPrefillConsumed?: () => void;
 }
 
 interface MessageItem {
@@ -24,6 +26,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   currentUser,
   onSelectCreator,
   initialCreatorHandle,
+  initialMessage = '',
+  onPrefillConsumed,
 }) => {
   const conversations = [
     {
@@ -120,6 +124,13 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     );
     if (target) setSelectedConvId(target.id);
   }, [initialCreatorHandle]);
+
+  useEffect(() => {
+    if (initialMessage) {
+      setNewMessageText(initialMessage);
+      onPrefillConsumed?.();
+    }
+  }, [initialMessage, onPrefillConsumed]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -220,7 +231,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[72vh] min-h-[550px]">
+    <div className="w-full max-w-5xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7rem)] md:h-[72vh] min-h-[520px]">
       
       {/* Left Conversations List */}
       <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/10 flex flex-col bg-[#0a0a0a]">
