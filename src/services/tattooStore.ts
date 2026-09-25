@@ -368,6 +368,7 @@ class TattooStoreService {
               await this.resetOldTestInteractions();
             }
             const isAdmin = isUserAdmin(fbUser.email);
+            this.syncNotificationsFromFirestore().catch(() => {});
             try {
               const userRef = doc(db, 'users', fbUser.uid);
               const snap = await getDoc(userRef);
