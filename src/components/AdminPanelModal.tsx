@@ -163,7 +163,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="px-6 border-b border-white/10 flex items-center gap-6 text-xs font-semibold">
+        <div className="px-4 sm:px-6 border-b border-white/10 flex items-center gap-4 sm:gap-6 text-xs font-semibold overflow-x-auto">
           <button
             onClick={() => setActiveTab('tattoos')}
             className={`py-3.5 transition-all cursor-pointer flex items-center gap-2 ${
@@ -285,11 +285,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               <div className="divide-y divide-white/10 border border-white/10 rounded-2xl bg-[#111111] overflow-hidden text-xs">
-                {[
-                  { name: currentUser.displayName || 'Master Admin', handle: currentUser.handle || '@admin', email: currentUser.email || 'Admin', role: 'Master Admin', verified: true },
-                  { name: 'Marco Vance', handle: '@inkedlife', email: 'marco@inkedlife.art', role: 'Doğrulanmış Sanatçı', verified: true },
-                  { name: 'Luna Valery', handle: '@lunatattoos', email: 'luna@lunatattoos.art', role: 'Doğrulanmış Sanatçı', verified: true },
-                  { name: 'Damian Black', handle: '@darksoul', email: 'damian@darksoul.ink', role: 'Sanatçı', verified: true },
+                [
+                  { name: currentUser.displayName || 'Master Admin', handle: currentUser.handle || '@admin', email: currentUser.email || 'Admin', role: currentUser.isAdmin ? 'Master Admin' : 'Kullanıcı', verified: Boolean(currentUser.verified || currentUser.isAdmin) },
                 ].map((user, idx) => (
                   <div key={idx} className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
