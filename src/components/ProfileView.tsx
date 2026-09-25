@@ -109,58 +109,88 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     onToast(following ? `${profileUser.handle} takip ediliyor` : 'Takipten çıkıldı');
   };
 
-  // Direct banner upload from cover button
-  const handleDirectBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Convert uploaded images to compact JPEG data so they survive reloads without
+  // filling localStorage/Firestore with huge original camera files.
+  const compressProfileImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('image-read-failed'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('image-decode-failed'));
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width, maxHeight / img.height);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error('canvas-failed'));
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  // Direct banner upload from cover button — persisted through updateProfile.
+  const handleDirectBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
+    try {
+      const result = await compressProfileImage(file, 1400, 600);
       const updated = tattooStore.updateProfile({ bannerURL: result });
       onUserUpdated(updated);
       setEditBannerURL(result);
-      onToast('Kapak fotoğrafı güncellendi');
-    };
-    reader.readAsDataURL(file);
+      onToast('Kapak fotoğrafı güncellendi ve kaydedildi');
+    } catch {
+      onToast('Kapak fotoğrafı yüklenemedi');
+    } finally {
+      e.target.value = '';
+    }
   };
 
-  // Direct avatar (PP) upload from avatar overlay
-  const handleDirectAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Direct avatar (PP) upload from avatar overlay — persisted through updateProfile.
+  const handleDirectAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
+    try {
+      const result = await compressProfileImage(file, 700, 700);
       const updated = tattooStore.updateProfile({ photoURL: result });
       onUserUpdated(updated);
       setEditPhotoURL(result);
-      onToast('Profil fotoğrafı güncellendi');
-    };
-    reader.readAsDataURL(file);
+      onToast('Profil fotoğrafı güncellendi ve kaydedildi');
+    } catch {
+      onToast('Profil fotoğrafı yüklenemedi');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Upload avatar inside modal
-  const handleModalAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleModalAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditPhotoURL(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setEditPhotoURL(await compressProfileImage(file, 700, 700));
+    } catch {
+      onToast('Profil fotoğrafı yüklenemedi');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Upload banner inside modal
-  const handleModalBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleModalBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditBannerURL(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setEditBannerURL(await compressProfileImage(file, 1400, 600));
+    } catch {
+      onToast('Kapak fotoğrafı yüklenemedi');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Add a link from input to custom links list
