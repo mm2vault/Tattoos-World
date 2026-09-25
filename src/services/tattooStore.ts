@@ -1,4 +1,4 @@
-import { Tattoo, Comment, UserProfile, CategoryId } from '../types';
+import { Tattoo, Comment, UserProfile, CategoryId, Notification } from '../types';
 import { 
   auth, 
   googleProvider, 
@@ -10,6 +10,7 @@ import { signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'fireb
 import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
+  NOTIFICATIONS: 'tattos_world_notifications_v1',
   TATTOOS: 'tattos_world_tattoos_v1',
   COMMENTS: 'tattos_world_comments_v1',
   LIKES: 'tattos_world_likes_v1',
@@ -291,6 +292,7 @@ class TattooStoreService {
   private currentUser: UserProfile = INITIAL_USER;
   private follows: Set<string> = new Set();
   private followerCounts: Record<string, number> = {};
+  private notifications: Notification[] = [];
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
 
   constructor() {
@@ -345,6 +347,11 @@ class TattooStoreService {
       } else {
         this.currentUser = { ...INITIAL_USER };
         this.saveUser();
+      }
+
+      const storedNotifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      if (storedNotifications) {
+        this.notifications = JSON.parse(storedNotifications);
       }
 
       const storedFollows = localStorage.getItem(STORAGE_KEYS.FOLLOWS);
@@ -446,6 +453,18 @@ class TattooStoreService {
     } catch (e) {
       console.error('Error saving user', e);
     }
+  }
+
+  private saveNotifications() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(this.notifications.slice(0, 100)));
+    } catch (e) {
+      console.error('Error saving notifications', e);
+    }
+  }
+
+  private emitNotificationUpdate() {
+    try { window.dispatchEvent(new CustomEvent('tattoos-world-notifications')); } catch {}
   }
 
   private saveFollows() {
@@ -702,6 +721,7 @@ class TattooStoreService {
       this.saveUser();
       this.setSessionActive(true);
       const synced = await this.syncUserToFirestore(user);
+      this.syncNotificationsFromFirestore().catch(() => {});
       return synced;
     }
 
@@ -736,6 +756,7 @@ class TattooStoreService {
       this.saveUser();
       this.setSessionActive(true);
       const synced = await this.syncUserToFirestore(userProfile);
+      this.syncNotificationsFromFirestore().catch(() => {});
       return synced;
     } catch (popupError: any) {
       console.warn('Firebase signInWithPopup failed:', popupError);
@@ -925,6 +946,77 @@ class TattooStoreService {
     return true;
   }
 
+  // ================= NOTIFICATIONS =================
+  public getNotifications(): Notification[] {
+    return [...this.notifications].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
+  public getUnreadNotificationCount(): number {
+    return this.notifications.filter((n) => !n.read).length;
+  }
+
+  public async syncNotificationsFromFirestore(): Promise<void> {
+    if (!auth.currentUser) return;
+    try {
+      const snap = await getDocs(collection(db, 'notifications'));
+      this.notifications = snap.docs
+        .map((d) => d.data() as Notification)
+        .filter((n) => n.recipientUid === auth.currentUser?.uid)
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(0, 100);
+      this.saveNotifications();
+      this.emitNotificationUpdate();
+    } catch (err) {
+      console.warn('Notification sync skipped:', err);
+    }
+  }
+
+  public async markNotificationsRead(): Promise<void> {
+    const unread = this.notifications.filter((n) => !n.read);
+    this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+    this.saveNotifications();
+    this.emitNotificationUpdate();
+    if (!auth.currentUser) return;
+    await Promise.all(unread.map((n) => updateDoc(doc(db, 'notifications', n.id), { read: true }).catch(() => {})));
+  }
+
+  public async clearNotifications(): Promise<void> {
+    const current = [...this.notifications];
+    this.notifications = [];
+    this.saveNotifications();
+    this.emitNotificationUpdate();
+    if (!auth.currentUser) return;
+    await Promise.all(current.map((n) => deleteDoc(doc(db, 'notifications', n.id)).catch(() => {})));
+  }
+
+  private createNotification(
+    recipientUid: string,
+    type: Notification['type'],
+    text: string,
+    tattoo?: Tattoo
+  ) {
+    if (!auth.currentUser || !recipientUid || recipientUid === auth.currentUser.uid) return;
+    const notification: Notification = {
+      id: 'notification_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      recipientUid,
+      senderUid: auth.currentUser.uid,
+      senderName: this.currentUser.displayName,
+      senderHandle: this.currentUser.handle,
+      senderAvatar: this.currentUser.photoURL,
+      type,
+      tattooId: tattoo?.id,
+      tattooTitle: tattoo?.title,
+      text,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    this.notifications.unshift(notification);
+    this.notifications = this.notifications.slice(0, 100);
+    this.saveNotifications();
+    setDoc(doc(db, 'notifications', notification.id), notification).catch(() => {});
+    this.emitNotificationUpdate();
+  }
+
   // ================= COMMUNITY & INTERACTION =================
   public isLiked(tattooId: string, uid?: string): boolean {
     const targetUid = uid || this.currentUser.uid;
@@ -961,6 +1053,10 @@ class TattooStoreService {
       setDoc(likeRef, { tattooId, uid, createdAt: new Date().toISOString() }).catch(() => {});
     } else {
       deleteDoc(likeRef).catch(() => {});
+    }
+
+    if (isLikedNow && tattoo && tattoo.creatorId !== uid) {
+      this.createNotification(tattoo.creatorId, 'like', `${this.currentUser.handle} gönderini beğendi.`, tattoo);
     }
 
     return {
@@ -1018,6 +1114,9 @@ class TattooStoreService {
     this.saveComments();
 
     setDoc(doc(db, 'comments', newComment.id), newComment).catch(() => {});
+    if (tattoo && tattoo.creatorId !== this.currentUser.uid) {
+      this.createNotification(tattoo.creatorId, 'comment', `${this.currentUser.handle} gönderine yorum yaptı.`, tattoo);
+    }
     return newComment;
   }
 
@@ -1123,6 +1222,13 @@ class TattooStoreService {
       }).catch(() => {});
     } else {
       deleteDoc(followRef).catch(() => {});
+    }
+
+    if (nowFollowing) {
+      const profile = this.getArtistProfile(handle);
+      if (profile && profile.uid !== this.currentUser.uid) {
+        this.createNotification(profile.uid, 'follow', `${this.currentUser.handle} seni takip etmeye başladı.`);
+      }
     }
 
     return nowFollowing;
