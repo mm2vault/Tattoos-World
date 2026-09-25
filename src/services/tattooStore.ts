@@ -7,7 +7,7 @@ import {
   db 
 } from './firebase';
 import { signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
-import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   NOTIFICATIONS: 'tattos_world_notifications_v1',
@@ -959,7 +959,7 @@ class TattooStoreService {
   public async syncNotificationsFromFirestore(): Promise<void> {
     if (!auth.currentUser) return;
     try {
-      const snap = await getDocs(collection(db, 'notifications'));
+      const snap = await getDocs(query(collection(db, 'notifications'), where('recipientUid', '==', auth.currentUser.uid)));
       this.notifications = snap.docs
         .map((d) => d.data() as Notification)
         .filter((n) => n.recipientUid === auth.currentUser?.uid)
