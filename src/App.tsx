@@ -5,7 +5,6 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { BottomNav } from './components/BottomNav';
-import { Hero } from './components/Hero';
 import { Gallery } from './components/Gallery';
 import { TattooDetailModal } from './components/TattooDetailModal';
 import { ProfileView } from './components/ProfileView';
@@ -17,7 +16,6 @@ import { ShowcaseBoard } from './components/ShowcaseBoard';
 import { AdminPanelModal } from './components/AdminPanelModal';
 import { CommunityView } from './components/CommunityView';
 import { AboutView } from './components/AboutView';
-import { FooterBar } from './components/FooterBar';
 import { Toast } from './components/Toast';
 import { 
   X, Home, Compass, Users, User, PlusCircle, Heart, MessageSquare, Info, Settings, ShieldCheck, LogOut 
@@ -187,7 +185,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#080808] text-[#F5F5F5] flex flex-col selection:bg-white selection:text-black">
       
-      <div className="flex-1 flex w-full">
+      <div className="flex-1 flex w-full lg:pl-[238px]">
         {/* Left Desktop Sidebar matching image */}
         <Sidebar
           currentTab={currentTab}
@@ -224,7 +222,7 @@ export default function App() {
           />
 
           {/* Main Body */}
-          <main className="flex-1 p-3 sm:p-4 md:p-6 xl:p-8 max-w-[1440px] w-full mx-auto pb-24 xl:pb-8">
+          <main className="flex-1 w-full px-0 sm:px-2 lg:px-6 pb-24 lg:pb-8">
             
             {/* If Showcase Mode is Active: Show all 6 screen surfaces together matching the image! */}
             {showcaseMode ? (
@@ -241,21 +239,10 @@ export default function App() {
               />
             ) : (
               <>
-                {/* Explore Tab: Hero + Popular 5 cards + Categories + Grid */}
+                {/* Explore Tab: Instagram-style social feed */}
                 {currentTab === 'explore' && (
-                  <div>
-                    {!searchQuery && (
-                      <Hero
-                        onExplore={() => {
-                          const el = document.getElementById('gallery-section');
-                          if (el) el.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        onShare={() => setCreateModalOpen(true)}
-                      />
-                    )}
-
-                    <div id="gallery-section">
-                      <Gallery
+                  <div id="gallery-section" className="mx-auto w-full max-w-[860px]">
+                    <Gallery
                         tattoos={tattoos}
                         onSelectTattoo={(t) => setSelectedTattoo(t)}
                         onSelectCreator={handleSelectCreator}
@@ -350,12 +337,6 @@ export default function App() {
             )}
 
           </main>
-
-          {/* Footer Bar Across Bottom */}
-          <FooterBar
-            currentLanguage={currentLanguage}
-            onLanguageChange={handleLanguageChange}
-          />
 
         </div>
       </div>
