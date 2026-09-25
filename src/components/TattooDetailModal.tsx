@@ -28,23 +28,11 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<Comment[]>(() => tattooStore.getComments(tattoo.id));
 
-  // Dynamic thumbnails that always prioritize the actual tattoo's image
+  // Show the cover plus the extra photos uploaded with this tattoo (max 10 total).
   const thumbnails = React.useMemo(() => {
-    const list = [tattoo.image];
-    const alternates = [
-      './images/tattoos/lion_clock.jpg',
-      './images/tattoos/rose_dark.jpg',
-      './images/tattoos/hero_sleeve.jpg',
-      './images/tattoos/wolf_dark.jpg',
-      './images/tattoos/dragon_oriental.jpg',
-    ];
-    for (const alt of alternates) {
-      if (!list.includes(alt) && list.length < 5) {
-        list.push(alt);
-      }
-    }
-    return list;
-  }, [tattoo.image]);
+    const list = [tattoo.image, ...(tattoo.additionalImages || [])];
+    return Array.from(new Set(list.filter(Boolean))).slice(0, 10);
+  }, [tattoo.image, tattoo.additionalImages]);
 
   const currentImg = thumbnails[activeImageIndex] || tattoo.image;
   const isLiked = tattooStore.isLiked(tattoo.id, currentUser.uid);
@@ -316,7 +304,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                       <span>·</span>
                       <span className="flex items-center gap-0.5">
                         <Heart className="w-2.5 h-2.5" />
-                        {c.likes || 12}
+                        {c.likes || 0}
                       </span>
                     </div>
                   </div>
