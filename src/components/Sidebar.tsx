@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col justify-between w-60 h-screen sticky top-0 bg-[#0a0a0a] border-r border-white/10 p-5 shrink-0 z-30 select-none">
+    <aside className="hidden xl:flex flex-col justify-between w-60 h-screen sticky top-0 bg-[#0a0a0a] border-r border-white/10 p-5 shrink-0 z-30 select-none">
       
       {/* Top Branding matching image */}
       <div className="space-y-6">
