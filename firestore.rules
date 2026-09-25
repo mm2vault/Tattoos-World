@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.email == 'mm2ultimatehub@gmail.com' ||
+        request.auth.token.email == 'huseynoveleddin87@gmail.com'
+      );
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /tattoos/{tattooId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.creatorId == request.auth.uid || isAdmin()
+      );
+      allow delete: if signedIn() && (
+        resource.data.creatorId == request.auth.uid || isAdmin()
+      );
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /follows/{followId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /messages/{messageId} {
+      allow read: if signedIn() &&
+        request.auth.uid in resource.data.participants;
+      allow create: if signedIn() &&
+        request.auth.uid == request.resource.data.senderId &&
+        request.auth.uid in request.resource.data.participants;
+      allow update, delete: if signedIn() &&
+        request.auth.uid == resource.data.senderId;
+    }
+  }
+}
