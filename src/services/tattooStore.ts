@@ -1127,6 +1127,7 @@ class TattooStoreService {
       tattooId,
       userId: this.currentUser.uid,
       userName: this.currentUser.handle || this.currentUser.displayName,
+      userHandle: this.currentUser.handle,
       userAvatar: this.currentUser.photoURL,
       text: text.trim(),
       createdAt: 'Az önce',
