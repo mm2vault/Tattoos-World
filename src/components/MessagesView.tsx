@@ -234,7 +234,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     <div className="w-full max-w-5xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7rem)] md:h-[72vh] min-h-[520px]">
       
       {/* Left Conversations List */}
-      <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/10 flex flex-col bg-[#0a0a0a]">
+      <div className="w-full md:w-64 lg:w-80 border-b md:border-b-0 md:border-r border-white/10 flex flex-col bg-[#0a0a0a]">
         <div className="p-4 border-b border-white/10">
           <h2 className="text-base font-bold text-white font-display">Mesajlar</h2>
           <p className="text-[11px] text-[#777777]">Sanatçılar ve Dövme Tutkunları</p>
@@ -342,7 +342,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               className={`flex flex-col ${msg.isMine ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                   msg.isMine
                     ? 'bg-white text-black font-medium rounded-br-none shadow'
                     : 'bg-[#1a1a1a] text-[#E0E0E0] border border-white/10 rounded-bl-none'
