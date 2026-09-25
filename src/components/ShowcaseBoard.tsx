@@ -41,7 +41,7 @@ export const ShowcaseBoard: React.FC<ShowcaseBoardProps> = ({
     categoryName: 'Realizm',
     image: './images/tattoos/lion_clock.jpg',
     description: 'Zamanın izinde... Güç, sabır ve yeniden doğuş. Bu tasarım, hayatın döngüsünü ve içsel gücü simgeliyor.',
-    likesCount: 2400,
+    likesCount: 0,
     tags: ['realizm', 'siyah_gri', 'aslan', 'saat'],
     createdAt: '2 gün önce',
   };
