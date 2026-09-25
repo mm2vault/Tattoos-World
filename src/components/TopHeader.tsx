@@ -117,22 +117,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            className="hidden sm:inline-flex p-2.5 rounded-full text-white hover:bg-white/10 cursor-pointer"
-            aria-label="Beğeniler"
-          >
-            <Heart className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            className="hidden sm:inline-flex p-2.5 rounded-full text-white hover:bg-white/10 cursor-pointer"
-            aria-label="Mesajlar"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
-
           <div className="relative" ref={popoverRef}>
             <button
               type="button"
