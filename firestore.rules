@@ -56,6 +56,12 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /notifications/{notificationId} {
       allow read: if signedIn() && resource.data.recipientUid == request.auth.uid;
       allow create: if signedIn() &&
