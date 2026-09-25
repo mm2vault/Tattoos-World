@@ -82,53 +82,66 @@ export const Gallery: React.FC<GalleryProps> = ({
 
   const getSlides = (tattoo: Tattoo) => Array.from(new Set([tattoo.image, ...(tattoo.additionalImages || [])].filter(Boolean))).slice(0, 10);
 
-  return (
-    <div className="space-y-7 pb-8">
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-bold text-white font-display">Kategoriler</h2>
-          <button
-            onClick={() => onSelectCategory('all')}
-            className="text-xs text-[#888888] hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            <span>Tüm Kategoriler</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+  const storyCreators = React.useMemo(() => {
+    const result: { handle: string; name: string; image: string; isCurrentUser?: boolean }[] = [
+      {
+        handle: currentUser.handle || '@sen',
+        name: 'Sen',
+        image: currentUser.photoURL || './images/users/avatar_inkedlife.jpg',
+        isCurrentUser: true,
+      },
+    ];
+    const seen = new Set<string>([String(currentUser.handle || '@sen').toLowerCase()]);
 
-        <div className="flex items-center gap-5 overflow-x-auto pb-2 scrollbar-none">
-          {categoriesList.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
+    tattoos.forEach((tattoo) => {
+      const handle = tattoo.creatorHandle || '@tattoo';
+      const key = handle.toLowerCase();
+      if (seen.has(key) || result.length >= 9) return;
+      seen.add(key);
+      result.push({
+        handle,
+        name: tattoo.creatorName || handle,
+        image: tattoo.creatorPhoto || tattoo.image,
+      });
+    });
+
+    return result;
+  }, [currentUser.handle, currentUser.photoURL, tattoos]);
+
+  return (
+    <div className="space-y-5 pb-8">
+      <section className="border-b border-white/10 pb-5">
+        <div className="mx-auto w-full max-w-2xl overflow-x-auto scrollbar-none">
+          <div className="flex gap-4 px-3 sm:px-0">
+            {storyCreators.map((creator) => (
               <button
-                key={cat.id}
-                onClick={() => onSelectCategory(isSelected ? 'all' : cat.id)}
-                className="group flex flex-col items-center gap-2 cursor-pointer shrink-0"
+                key={creator.handle}
+                type="button"
+                onClick={() => creator.isCurrentUser ? onOpenCreate() : onSelectCreator(creator.handle)}
+                className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer"
               >
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border p-0.5 transition-all ${isSelected ? 'border-white ring-2 ring-white/40 scale-105' : 'border-white/15 hover:border-white/40'}`}>
-                  <div className="w-full h-full rounded-full overflow-hidden relative">
-                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-black/25" />
+                <div className="rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-fuchsia-500 to-purple-600">
+                  <div className="w-[58px] h-[58px] rounded-full bg-black p-[2px]">
+                    <img
+                      src={creator.image}
+                      alt={creator.name}
+                      className="w-full h-full rounded-full object-cover border border-black"
+                    />
                   </div>
                 </div>
-                <span className={`text-xs font-medium transition-colors ${isSelected ? 'text-white font-bold' : 'text-[#888888] group-hover:text-white'}`}>
-                  {cat.name}
-                </span>
+                <span className="w-full truncate text-[11px] text-[#c7c7c7]">{creator.name}</span>
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="space-y-4 pt-1">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-white font-display">
-              {searchQuery ? `"${searchQuery}" Sonuçları` : 'Gönderiler'}
+            <h2 className="text-sm sm:text-base font-semibold text-white">
+              {searchQuery ? `"${searchQuery}" Sonuçları` : 'Akış'}
             </h2>
-            <p className="text-[11px] text-[#666666] mt-1">
-              Instagram/TikTok tarzı akış
-            </p>
           </div>
 
           <div className="flex items-center gap-1 p-1 rounded-xl bg-[#111111] border border-white/10">
@@ -166,7 +179,7 @@ export const Gallery: React.FC<GalleryProps> = ({
             </button>
           </div>
         ) : viewMode === 'feed' ? (
-          <div className="mx-auto w-full max-w-2xl space-y-5">
+          <div className="mx-auto w-full max-w-[630px] space-y-0">
             {filteredTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               const saved = tattooStore.isSaved(tattoo.id);
@@ -184,7 +197,7 @@ export const Gallery: React.FC<GalleryProps> = ({
               return (
                 <article
                   key={tattoo.id}
-                  className="overflow-hidden rounded-3xl bg-[#0e0e0e] border border-white/10 shadow-xl"
+                  className="overflow-hidden bg-black border-b border-white/10 pb-6 mb-6"
                 >
                   <header className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
                     <button
@@ -218,7 +231,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                   </header>
 
                   <div
-                    className="relative aspect-[4/5] sm:aspect-square bg-black overflow-hidden cursor-pointer"
+                    className="relative aspect-[4/5] sm:aspect-square rounded-[4px] bg-black overflow-hidden cursor-pointer border border-white/10"
                     onDoubleClick={() => !liked && toggleLike(tattoo.id)}
                     onClick={() => onSelectTattoo(tattoo)}
                   >
@@ -264,11 +277,11 @@ export const Gallery: React.FC<GalleryProps> = ({
 
                   <div className="px-4 sm:px-5 pt-3.5 pb-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         <button
                           type="button"
                           onClick={() => toggleLike(tattoo.id)}
-                          className={`p-2 rounded-full transition-all ${liked ? 'text-red-500' : 'text-white hover:bg-white/5'}`}
+                          className={`p-2 rounded-full transition-all ${liked ? 'text-red-500' : 'text-white hover:bg-white/10'}`}
                           aria-label={liked ? 'Beğeniyi kaldır' : 'Beğen'}
                         >
                           <Heart className={`w-6 h-6 ${liked ? 'fill-red-500' : ''}`} />
