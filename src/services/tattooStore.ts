@@ -1079,7 +1079,14 @@ class TattooStoreService {
       this.follows.add(handle);
       nowFollowing = true;
     }
+
+    this.currentUser.followingCount = Math.max(0, this.follows.size);
+    this.followerCounts[handle] = Math.max(
+      0,
+      (this.followerCounts[handle] || 0) + (nowFollowing ? 1 : -1)
+    );
     this.saveFollows();
+    this.saveUser();
 
     const followId = `${this.currentUser.uid}_${encodeURIComponent(handle)}`;
     const followRef = doc(db, 'follows', followId);
