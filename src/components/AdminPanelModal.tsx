@@ -285,7 +285,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               </div>
 
               <div className="divide-y divide-white/10 border border-white/10 rounded-2xl bg-[#111111] overflow-hidden text-xs">
-                [
+                {[
                   { name: currentUser.displayName || 'Master Admin', handle: currentUser.handle || '@admin', email: currentUser.email || 'Admin', role: currentUser.isAdmin ? 'Master Admin' : 'Kullanıcı', verified: Boolean(currentUser.verified || currentUser.isAdmin) },
                 ].map((user, idx) => (
                   <div key={idx} className="p-4 flex items-center justify-between">
