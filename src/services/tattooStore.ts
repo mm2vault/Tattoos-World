@@ -374,9 +374,20 @@ class TattooStoreService {
               const snap = await getDoc(userRef);
               if (snap.exists()) {
                 const remote = snap.data() as Partial<UserProfile>;
+                // Keep locally selected profile images when an older Firestore document
+                // has no image (or still contains the starter image). This prevents a
+                // reload/auth-state race from making a newly uploaded avatar/banner disappear.
+                const localPhoto = this.currentUser.photoURL;
+                const localBanner = this.currentUser.bannerURL;
+                const remotePhoto = remote.photoURL;
+                const remoteBanner = remote.bannerURL;
+                const keepLocalPhoto = Boolean(localPhoto?.startsWith('data:image/'));
+                const keepLocalBanner = Boolean(localBanner?.startsWith('data:image/'));
                 this.currentUser = {
                   ...this.currentUser,
                   ...remote,
+                  photoURL: keepLocalPhoto ? localPhoto : (remotePhoto || localPhoto || './images/users/avatar_inkedlife.jpg'),
+                  bannerURL: keepLocalBanner ? localBanner : (remoteBanner || localBanner || ''),
                   uid: fbUser.uid,
                   email: fbUser.email || this.currentUser.email,
                   isAdmin,
