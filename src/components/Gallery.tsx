@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, ArrowRight, MessageCircle, Bookmark, Share2, MoreHorizontal, ChevronLeft, ChevronRight, Grid3X3, LayoutList } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, ChevronLeft, ChevronRight, Grid3X3, LayoutList, Link2, Flag, Trash2 } from 'lucide-react';
 import { Tattoo, CategoryId, UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 
@@ -30,6 +30,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>('feed');
   const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
   const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const categoriesList: { id: CategoryId; name: string; image: string }[] = [
     { id: 'realism', name: 'Realizm', image: './images/tattoos/lion_clock.jpg' },
@@ -66,9 +67,15 @@ export const Gallery: React.FC<GalleryProps> = ({
     onToast(res.isLiked ? 'Beğenildi' : 'Beğeni kaldırıldı');
   };
 
+  const buildPostUrl = (tattooId: string) => {
+    const url = new URL(window.location.href);
+    url.hash = `post=${encodeURIComponent(tattooId)}`;
+    return url.toString();
+  };
+
   const handleShare = async (tattoo: Tattoo) => {
     try {
-      const shareUrl = window.location.href;
+      const shareUrl = buildPostUrl(tattoo.id);
       if (navigator.share) {
         await navigator.share({
           title: tattoo.title,
@@ -77,10 +84,53 @@ export const Gallery: React.FC<GalleryProps> = ({
         });
         return;
       }
-      await navigator.clipboard?.writeText(shareUrl);
-      onToast('Gönderi bağlantısı kopyalandı');
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        onToast('Gönderi bağlantısı kopyalandı');
+        return;
+      }
+      onToast('Bağlantı kopyalanamadı');
     } catch {
       // User closed the share dialog.
+    }
+  };
+
+  const handlePostAction = async (action: 'copy' | 'report' | 'delete' | 'open', tattoo: Tattoo) => {
+    setOpenMenuId(null);
+    if (action === 'open') {
+      onSelectTattoo(tattoo);
+      return;
+    }
+    if (action === 'copy') {
+      try {
+        const url = buildPostUrl(tattoo.id);
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          onToast('Gönderi bağlantısı kopyalandı');
+        } else {
+          onToast('Bağlantı kopyalanamadı');
+        }
+      } catch {
+        onToast('Bağlantı kopyalanamadı');
+      }
+      return;
+    }
+    if (action === 'report') {
+      const reason = window.prompt('Bu gönderiyi neden bildirmek istiyorsun?');
+      if (!reason?.trim()) return;
+      const ok = await tattooStore.reportTattoo(tattoo.id, reason);
+      onToast(ok ? 'Bildirim alındı.' : 'Bildirim gönderilemedi.');
+      return;
+    }
+
+    const confirmed = window.confirm('Bu gönderiyi silmek istediğine emin misin?');
+    if (!confirmed) return;
+    const deleted = tattooStore.deleteTattoo(tattoo.id, currentUser);
+    if (deleted) {
+      onTattooUpdated();
+      onToast('Gönderi silindi.');
+    } else {
+      onToast('Bu gönderiyi silme yetkin yok.');
     }
   };
 
@@ -225,13 +275,45 @@ export const Gallery: React.FC<GalleryProps> = ({
                       </div>
                     </button>
 
-                    <button
-                      type="button"
-                      className="p-2 rounded-full text-[#666666] hover:text-white hover:bg-white/5"
-                      aria-label="Gönderi seçenekleri"
-                    >
-                      <MoreHorizontal className="w-5 h-5" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId((current) => current === tattoo.id ? null : tattoo.id);
+                        }}
+                        className="p-2 rounded-full text-[#666666] hover:text-white hover:bg-white/5 cursor-pointer"
+                        aria-label="Gönderi seçenekleri"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+
+                      {openMenuId === tattoo.id && (
+                        <div
+                          className="absolute right-0 top-10 z-30 w-48 rounded-2xl border border-white/10 bg-[#151515] shadow-2xl overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button type="button" onClick={() => handlePostAction('open', tattoo)} className="w-full px-4 py-3 text-left text-xs text-white hover:bg-white/5 flex items-center gap-2 cursor-pointer">
+                            <ArrowRight className="w-4 h-4" />
+                            Gönderiyi aç
+                          </button>
+                          <button type="button" onClick={() => handlePostAction('copy', tattoo)} className="w-full px-4 py-3 text-left text-xs text-white hover:bg-white/5 flex items-center gap-2 cursor-pointer">
+                            <Link2 className="w-4 h-4" />
+                            Bağlantıyı kopyala
+                          </button>
+                          <button type="button" onClick={() => handlePostAction('report', tattoo)} className="w-full px-4 py-3 text-left text-xs text-[#f0c6c6] hover:bg-white/5 flex items-center gap-2 cursor-pointer">
+                            <Flag className="w-4 h-4" />
+                            Bildir
+                          </button>
+                          {(tattoo.creatorId === currentUser.uid || tattoo.creatorHandle.toLowerCase() === currentUser.handle.toLowerCase() || tattooStore.isCurrentUserAdmin()) && (
+                            <button type="button" onClick={() => handlePostAction('delete', tattoo)} className="w-full px-4 py-3 text-left text-xs text-red-300 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer">
+                              <Trash2 className="w-4 h-4" />
+                              Gönderiyi sil
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </header>
 
                   <div
