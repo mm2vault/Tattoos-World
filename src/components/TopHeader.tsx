@@ -14,6 +14,7 @@ interface TopHeaderProps {
   onToggleMobileMenu?: () => void;
   onMessagesClick?: () => void;
   onFavoritesClick?: () => void;
+  onOpenNotification?: (notification: Notification) => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -25,6 +26,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onToggleMobileMenu,
   onMessagesClick,
   onFavoritesClick,
+  onOpenNotification,
 }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(() => tattooStore.getNotifications());
@@ -151,7 +153,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                     </div>
                   ) : (
                     notifications.slice(0, 30).map((notification) => (
-                      <div key={notification.id} className="flex gap-3 px-4 py-3 hover:bg-white/[0.04]">
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => {
+                          setNotificationsOpen(false);
+                          onOpenNotification?.(notification);
+                        }}
+                        className="w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer"
+                      >
                         <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
                           {notification.senderAvatar
                             ? <img src={notification.senderAvatar} alt="" className="w-full h-full object-cover" />
@@ -162,8 +172,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                           {notification.tattooTitle && <p className="text-[11px] text-[#666] mt-0.5 truncate">{notification.tattooTitle}</p>}
                           <p className="text-[10px] text-[#555] mt-1">{new Date(notification.createdAt).toLocaleString()}</p>
                         </div>
-                        {!notification.read && <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2" />}
-                      </div>
+                        {!notification.read && <span className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2 shrink-0" />}
+                      </button>
                     ))
                   )}
                 </div>
