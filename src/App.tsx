@@ -69,6 +69,12 @@ export default function App() {
     };
     window.addEventListener('focus', handleFocus);
 
+    // Run one explicit sync after listeners are attached so the initial Firestore
+    // load cannot be missed if the store finished before React mounted.
+    tattooStore.syncCommunityFromFirestore()
+      .then(() => refreshCommunity())
+      .catch(() => {});
+
     return () => {
       window.removeEventListener('tattoos-world-user-updated', refreshUser);
       window.removeEventListener('tattoos-world-community-updated', refreshCommunity);
