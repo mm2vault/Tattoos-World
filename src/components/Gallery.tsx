@@ -14,6 +14,7 @@ interface GalleryProps {
   currentUser: UserProfile;
   onToast: (msg: string) => void;
   onTattooUpdated: () => void;
+  initialViewMode?: 'feed' | 'grid';
 }
 
 export const Gallery: React.FC<GalleryProps> = ({
@@ -26,8 +27,9 @@ export const Gallery: React.FC<GalleryProps> = ({
   currentUser,
   onToast,
   onTattooUpdated,
+  initialViewMode = 'feed',
 }) => {
-  const [viewMode, setViewMode] = useState<'feed' | 'grid'>('feed');
+  const [viewMode, setViewMode] = useState<'feed' | 'grid'>(initialViewMode);
   const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
   const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -187,6 +189,29 @@ export const Gallery: React.FC<GalleryProps> = ({
               </button>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="px-3 sm:px-0">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+          <button
+            type="button"
+            onClick={() => onSelectCategory('all')}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${selectedCategory === 'all' ? 'bg-white text-black border-white' : 'bg-[#111111] text-[#999999] border-white/10 hover:text-white'}`}
+          >
+            Tümü
+          </button>
+          {categoriesList.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onSelectCategory(category.id)}
+              className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${selectedCategory === category.id ? 'bg-white text-black border-white' : 'bg-[#111111] text-[#999999] border-white/10 hover:text-white'}`}
+            >
+              <img src={category.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+              <span>{category.name}</span>
+            </button>
+          ))}
         </div>
       </section>
 
