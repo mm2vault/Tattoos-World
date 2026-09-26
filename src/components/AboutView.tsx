@@ -17,7 +17,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
   const t = translations[currentLanguage];
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+    <div className="w-full max-w-[935px] mx-auto px-3 sm:px-4 py-8 space-y-8">
       
       {/* Hero Mission */}
       <div className="text-center space-y-4 max-w-2xl mx-auto">
@@ -38,7 +38,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
       {/* 3 Main Pillars: Discover, Create, Connect */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Pillar 1: Discover */}
-        <div className="rounded-3xl bg-[#111111] border border-white/10 p-6 sm:p-8 space-y-4 flex flex-col justify-between">
+        <div className="rounded-xl bg-[#101010] border border-white/10 p-5 sm:p-6 space-y-4 flex flex-col justify-between">
           <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-[#CCFF00]">
             <Compass className="w-6 h-6" />
           </div>
@@ -54,7 +54,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
         </div>
 
         {/* Pillar 2: Create */}
-        <div className="rounded-3xl bg-[#111111] border border-white/10 p-6 sm:p-8 space-y-4 flex flex-col justify-between">
+        <div className="rounded-xl bg-[#101010] border border-white/10 p-5 sm:p-6 space-y-4 flex flex-col justify-between">
           <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-[#CCFF00]">
             <Share2 className="w-6 h-6" />
           </div>
@@ -70,7 +70,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
         </div>
 
         {/* Pillar 3: Connect */}
-        <div className="rounded-3xl bg-[#111111] border border-white/10 p-6 sm:p-8 space-y-4 flex flex-col justify-between">
+        <div className="rounded-xl bg-[#101010] border border-white/10 p-5 sm:p-6 space-y-4 flex flex-col justify-between">
           <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-[#CCFF00]">
             <Users className="w-6 h-6" />
           </div>
@@ -87,7 +87,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
       </div>
 
       {/* Big Visual Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-white/10 bg-[#151515] p-8 sm:p-12">
+      <div className="relative rounded-xl overflow-hidden border border-white/10 bg-[#151515] p-8 sm:p-12">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{ backgroundImage: `url('./images/tattoos/lion_clock.jpg')` }}

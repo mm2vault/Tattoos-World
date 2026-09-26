@@ -78,10 +78,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 flex-1 flex items-center justify-center">
         
         {/* Main Card with Split View exactly matching image */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden border border-white/10 bg-[#0d0d0d] shadow-2xl min-h-[660px]">
+        <div className="w-full max-w-[935px] grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] rounded-xl overflow-hidden border border-white/10 bg-black shadow-2xl min-h-[640px]">
           
           {/* LEFT PANEL: Face Tattoo Background + Brush Logo + Auth Buttons */}
-          <div className="lg:col-span-7 relative p-8 sm:p-12 flex flex-col justify-between overflow-hidden group">
+          <div className="relative p-7 sm:p-10 flex flex-col justify-between overflow-hidden group">
             
             {/* High-contrast Face Tattoo Portrait Artwork */}
             <div 
@@ -112,7 +112,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 </button>
 
                 {langDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-40 rounded-2xl bg-[#151515]/95 backdrop-blur-xl border border-white/15 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute right-0 mt-2 w-40 rounded-xl bg-[#151515]/95 backdrop-blur-xl border border-white/15 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                     {LANGUAGES.map((l) => (
                       <button
                         key={l.code}
@@ -140,7 +140,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               
               {/* Slanted Brush Title */}
               <div className="inline-block transform -rotate-3 mb-2 select-none">
-                <h1 className="font-brush text-5xl sm:text-6xl md:text-7xl text-white tracking-wide leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+                <h1 className="font-brush text-4xl sm:text-5xl md:text-6xl text-white tracking-wide leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
                   TATTOO'S<br />WORLD
                 </h1>
                 {/* Brush underline accent */}
@@ -162,7 +162,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 {/* White Button: Google ile Giriş Yap */}
                 <button
                   onClick={onLoginWithGoogle}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-full bg-white text-black font-semibold text-xs sm:text-sm hover:bg-[#EAEAEA] transition-all duration-200 transform hover:-translate-y-0.5 shadow-xl cursor-pointer"
+                  className="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-lg bg-white text-black font-semibold text-xs sm:text-sm hover:bg-[#EAEAEA] transition-all duration-200 transform hover:-translate-y-0.5 shadow-xl cursor-pointer"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -193,7 +193,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 {/* Dark Button: Hesap Oluştur */}
                 <button
                   onClick={onLoginAsGuest}
-                  className="w-full flex items-center justify-center py-3 px-6 rounded-full bg-black/60 border border-white/20 text-white font-medium text-xs sm:text-sm hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center py-3 px-6 rounded-lg bg-black/60 border border-white/20 text-white font-medium text-xs sm:text-sm hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer"
                 >
                   Hesap Oluştur
                 </button>
@@ -235,7 +235,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           </div>
 
           {/* RIGHT PANEL: Neler Sunuyoruz? + 6 Feature Rows + Signature */}
-          <div className="lg:col-span-5 bg-[#0f0f0f] border-t lg:border-t-0 lg:border-l border-white/10 p-8 sm:p-10 flex flex-col justify-between">
+          <div className="bg-[#0f0f0f] border-t lg:border-t-0 lg:border-l border-white/10 p-7 sm:p-8 flex flex-col justify-between">
             
             <div className="space-y-6">
               <div>
