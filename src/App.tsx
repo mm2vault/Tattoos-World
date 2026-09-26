@@ -11,8 +11,6 @@ import { ProfileView } from './components/ProfileView';
 import { CreateTattooModal } from './components/CreateTattooModal';
 import { MessagesView } from './components/MessagesView';
 import { SettingsView } from './components/SettingsView';
-import { MobileDeviceFrame } from './components/MobileDeviceFrame';
-import { ShowcaseBoard } from './components/ShowcaseBoard';
 import { AdminPanelModal } from './components/AdminPanelModal';
 import { CommunityView } from './components/CommunityView';
 import { AboutView } from './components/AboutView';
@@ -35,8 +33,6 @@ export default function App() {
 
   // Navigation state
   const [currentTab, setCurrentTab] = useState<string>('explore');
-  const [showcaseMode, setShowcaseMode] = useState<boolean>(false);
-  const [mobileFrameOpen, setMobileFrameOpen] = useState<boolean>(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState<boolean>(false);
 
   // Search & Filters
@@ -163,7 +159,7 @@ export default function App() {
   const isUserAdminActive = tattooStore.isCurrentUserAdmin();
 
   // 1. WELCOME SCREEN (When not logged in and never entered before)
-  if (!isAuthenticated && !showcaseMode) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col justify-between selection:bg-white selection:text-black">
         <WelcomeScreen
@@ -191,7 +187,6 @@ export default function App() {
         <Sidebar
           currentTab={currentTab}
           onSelectTab={(tab) => {
-            setShowcaseMode(false);
             setCurrentTab(tab);
             if (tab !== 'profile') setSelectedCreatorHandle(null);
           }}
@@ -211,35 +206,25 @@ export default function App() {
             onSearchChange={(q) => setSearchQuery(q)}
             currentUser={currentUser}
             onProfileClick={() => {
-              setShowcaseMode(false);
-              setSelectedCreatorHandle(null);
+                setSelectedCreatorHandle(null);
               setCurrentTab('profile');
             }}
             onLoginWithGoogle={handleLoginWithGoogle}
             onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
-            onOpenMobileFrame={() => setMobileFrameOpen(true)}
-            showcaseMode={showcaseMode}
-            onToggleShowcaseMode={() => setShowcaseMode(!showcaseMode)}
+            onMessagesClick={() => {
+              setSelectedCreatorHandle(null);
+              setCurrentTab('messages');
+            }}
+            onFavoritesClick={() => {
+              setSelectedCreatorHandle(null);
+              setCurrentTab('favorites');
+            }}
           />
 
           {/* Main Body */}
           <main className="flex-1 w-full px-0 sm:px-2 lg:px-6 pb-24 lg:pb-8">
             
-            {/* If Showcase Mode is Active: Show all 6 screen surfaces together matching the image! */}
-            {showcaseMode ? (
-              <ShowcaseBoard
-                tattoos={tattoos}
-                currentUser={currentUser}
-                currentLanguage={currentLanguage}
-                onLanguageChange={handleLanguageChange}
-                onSelectTattoo={(t) => setSelectedTattoo(t)}
-                onSelectCreator={handleSelectCreator}
-                onOpenCreate={() => setCreateModalOpen(true)}
-                onOpenMobileFrame={() => setMobileFrameOpen(true)}
-                onSwitchToLive={() => setShowcaseMode(false)}
-              />
-            ) : (
-              <>
+            <>
                 {/* Explore Tab: Instagram-style social feed */}
                 {currentTab === 'explore' && (
                   <div id="gallery-section" className="mx-auto w-full max-w-[860px]">
@@ -334,8 +319,6 @@ export default function App() {
                   />
                 )}
               </>
-            )}
-
           </main>
 
         </div>
@@ -388,22 +371,7 @@ export default function App() {
         />
       )}
 
-      {/* Interactive Mobile Device Simulator Modal matching bottom right of image */}
-      {mobileFrameOpen && (
-        <MobileDeviceFrame
-          onClose={() => setMobileFrameOpen(false)}
-          tattoos={tattoos}
-          currentUser={currentUser}
-          onSelectTattoo={(t) => {
-            setSelectedTattoo(t);
-            setMobileFrameOpen(false);
-          }}
-          onOpenCreate={() => {
-            setMobileFrameOpen(false);
-            setCreateModalOpen(true);
-          }}
-        />
-      )}
+
 
       {/* Mobile Drawer Navigation when hamburger clicked */}
       {mobileMenuOpen && (

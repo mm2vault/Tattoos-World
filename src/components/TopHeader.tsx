@@ -12,9 +12,8 @@ interface TopHeaderProps {
   onProfileClick: () => void;
   onLoginWithGoogle?: () => void;
   onToggleMobileMenu?: () => void;
-  onOpenMobileFrame: () => void;
-  showcaseMode: boolean;
-  onToggleShowcaseMode: () => void;
+  onMessagesClick?: () => void;
+  onFavoritesClick?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -24,6 +23,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onProfileClick,
   onLoginWithGoogle,
   onToggleMobileMenu,
+  onMessagesClick,
+  onFavoritesClick,
 }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(() => tattooStore.getNotifications());
@@ -117,6 +118,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button type="button" onClick={onFavoritesClick} className="hidden sm:inline-flex p-2.5 rounded-full text-white hover:bg-white/10 cursor-pointer" aria-label="Kaydedilenler">
+            <Heart className="w-5 h-5" />
+          </button>
+          <button type="button" onClick={onMessagesClick} className="hidden sm:inline-flex p-2.5 rounded-full text-white hover:bg-white/10 cursor-pointer" aria-label="Mesajlar">
+            <MessageCircle className="w-5 h-5" />
+          </button>
           <div className="relative" ref={popoverRef}>
             <button
               type="button"

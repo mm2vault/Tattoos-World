@@ -54,6 +54,10 @@ export const Gallery: React.FC<GalleryProps> = ({
         tattoo.creatorName.toLowerCase().includes(query) ||
         tattoo.tags.some((tag) => tag.toLowerCase().includes(query)))
     );
+  }).sort((a, b) => {
+    const ad = new Date(a.createdAt).getTime() || 0;
+    const bd = new Date(b.createdAt).getTime() || 0;
+    return bd - ad;
   });
 
   const toggleLike = (id: string) => {

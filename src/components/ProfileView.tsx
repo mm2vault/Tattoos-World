@@ -371,13 +371,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-[#AAAAAA]">{profileUser.handle}</span>
               <span>•</span>
               <span>{profileUser.isAdmin ? 'Master Admin' : (profileUser.isArtist ? 'Tattoo Artist' : 'Dövme Tutkunu')}</span>
-              <span>•</span>
-              <span>{profileUser.followersCount > 1000 ? (profileUser.followersCount / 1000).toFixed(1) + 'K' : profileUser.followersCount} Takipçi</span>
-              <span>•</span>
-              <span>{userTattoos.length} Paylaşım</span>
             </p>
+            <div className="mt-3 grid grid-cols-3 max-w-[360px] border border-white/10 rounded-lg overflow-hidden text-center">
+              <div className="px-3 py-2 bg-white/[0.02]">
+                <div className="text-sm font-semibold text-white">{userTattoos.length}</div>
+                <div className="text-[10px] text-[#777]">gönderi</div>
+              </div>
+              <div className="px-3 py-2 border-x border-white/10 bg-white/[0.02]">
+                <div className="text-sm font-semibold text-white">{profileUser.followersCount}</div>
+                <div className="text-[10px] text-[#777]">takipçi</div>
+              </div>
+              <div className="px-3 py-2 bg-white/[0.02]">
+                <div className="text-sm font-semibold text-white">{profileUser.followingCount}</div>
+                <div className="text-[10px] text-[#777]">takip</div>
+              </div>
+            </div>
 
-            <p className="text-xs text-[#CCCCCC] max-w-md mx-auto pt-1 leading-relaxed">
+
               {profileUser.bio || 'Sanat, hayatın en gerçek halidir. Daha fazla dövme, daha fazla hikaye...'}
             </p>
           </div>
