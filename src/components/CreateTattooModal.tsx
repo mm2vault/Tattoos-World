@@ -119,6 +119,19 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
       return;
     }
 
+    const imageBytes = imagePreviews.reduce((total, src) => {
+      const comma = src.indexOf(',');
+      const base64 = comma >= 0 ? src.slice(comma + 1) : src;
+      return total + Math.ceil(base64.length * 0.75);
+    }, 0);
+
+    // Firestore documents are capped at about 1 MiB. Keep a safety margin because
+    // the tattoo object also contains metadata, tags and creator information.
+    if (imageBytes > 700 * 1024) {
+      setErrorMsg('Görseller çok büyük. Daha az fotoğraf seçin veya fotoğrafları küçültüp tekrar deneyin. Gönderi verisinin Firestore sınırını aşmasını önlüyoruz.');
+      return;
+    }
+
     setIsSubmitting(true);
     const categoryObj = categories.find((c) => c.id === category);
 
