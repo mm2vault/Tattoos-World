@@ -170,9 +170,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           </div>
           <div className="bg-[#141414] border border-white/10 rounded-2xl p-3.5">
             <span className="text-[#888888]">Firebase Durumu</span>
-            <p className="text-xs font-bold text-emerald-400 mt-1.5 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Bağlı (tattoo-s-world)</span>
+            <p className={"text-xs font-bold mt-1.5 flex items-center gap-1 " + (tattooStore.hasActiveSession() ? 'text-emerald-400' : 'text-amber-300')}>
+              <span className={"w-2 h-2 rounded-full " + (tattooStore.hasActiveSession() ? 'bg-emerald-400 animate-pulse' : 'bg-amber-300')} />
+              <span>{tattooStore.hasActiveSession() ? 'Oturum aktif' : 'Oturum bekleniyor'}</span>
             </p>
           </div>
         </div>
@@ -465,9 +465,40 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (!file.type.startsWith('image/')) return;
+                        if (!file.type.startsWith('image/')) {
+                          onToast('Lütfen bir görsel dosyası seç.');
+                          return;
+                        }
+
                         const reader = new FileReader();
-                        reader.onload = () => setEditImage(reader.result as string);
+                        reader.onerror = () => onToast('Görsel okunamadı.');
+                        reader.onload = () => {
+                          const img = new Image();
+                          img.onerror = () => onToast('Görsel işlenemedi.');
+                          img.onload = () => {
+                            const maxSide = 1100;
+                            const scale = Math.min(1, maxSide / img.width, maxSide / img.height);
+                            const canvas = document.createElement('canvas');
+                            canvas.width = Math.max(1, Math.round(img.width * scale));
+                            canvas.height = Math.max(1, Math.round(img.height * scale));
+                            const ctx = canvas.getContext('2d');
+                            if (!ctx) {
+                              onToast('Görsel düzenlenemedi.');
+                              return;
+                            }
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            const result = canvas.toDataURL('image/jpeg', 0.65);
+                            const comma = result.indexOf(',');
+                            const base64 = comma >= 0 ? result.slice(comma + 1) : result;
+                            const bytes = Math.ceil(base64.length * 0.75);
+                            if (bytes > 700 * 1024) {
+                              onToast('Görsel hâlâ çok büyük. Daha küçük bir görsel seç.');
+                              return;
+                            }
+                            setEditImage(result);
+                          };
+                          img.src = reader.result as string;
+                        };
                         reader.readAsDataURL(file);
                       }}
                     />
