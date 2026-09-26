@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ShieldCheck, Trash2, Edit3, Star, X, CheckCircle, 
   Layers, Users, MessageSquare, AlertTriangle, Save, Plus 
@@ -30,6 +30,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [editDesc, setEditDesc] = useState('');
   const [editImage, setEditImage] = useState('');
   const [tattooToDelete, setTattooToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   const categories: { id: CategoryId; name: string }[] = [
     { id: 'realism', name: 'Realizm' },
@@ -45,6 +48,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const totalLikes = tattoos.reduce((acc, curr) => acc + (curr.likesCount || 0), 0);
   const totalComments = tattoos.reduce((acc, curr) => acc + (curr.commentsCount || 0), 0);
+
+  useEffect(() => {
+    if (activeTab !== 'users') return;
+    let cancelled = false;
+    setUsersLoading(true);
+    tattooStore.getAllUsers().then((list) => {
+      if (!cancelled) setUsers(list);
+    }).finally(() => {
+      if (!cancelled) setUsersLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeTab]);
 
   const allComments = React.useMemo(() => {
     const res: { tattooId: string; tattooTitle: string; comment: any }[] = [];
@@ -281,31 +296,79 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {activeTab === 'users' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
-                Master Admin (<span className="font-mono font-bold">{currentUser.email}</span>) olarak tüm kullanıcıların profil rollerini ve onaylı sanatçı rozetlerini değiştirebilirsiniz.
+                Master Admin (<span className="font-mono font-bold">{currentUser.email}</span>) olarak Firestore'daki gerçek kullanıcı profillerini yönetebilirsin.
+              </div>
+
+              <div className="relative">
+                <input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Kullanıcı, @handle veya e-posta ara..."
+                  className="w-full bg-[#141414] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-[#666] outline-none focus:border-amber-500/40"
+                />
               </div>
 
               <div className="divide-y divide-white/10 border border-white/10 rounded-2xl bg-[#111111] overflow-hidden text-xs">
-                {[
-                  { name: currentUser.displayName || 'Master Admin', handle: currentUser.handle || '@admin', email: currentUser.email || 'Admin', role: currentUser.isAdmin ? 'Master Admin' : 'Kullanıcı', verified: Boolean(currentUser.verified || currentUser.isAdmin) },
-                ].map((user, idx) => (
-                  <div key={idx} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center font-bold text-white">
-                        {user.name.charAt(0)}
+                {usersLoading ? (
+                  <div className="p-8 text-center text-[#777]">Kullanıcılar yükleniyor…</div>
+                ) : (() => {
+                  const q = userSearch.trim().toLowerCase();
+                  const visibleUsers = users.filter((user) =>
+                    !q ||
+                    String(user.displayName || '').toLowerCase().includes(q) ||
+                    String(user.handle || '').toLowerCase().includes(q) ||
+                    String(user.email || '').toLowerCase().includes(q)
+                  );
+                  if (visibleUsers.length === 0) {
+                    return <div className="p-8 text-center text-[#777]">Kullanıcı bulunamadı.</div>;
+                  }
+                  return visibleUsers.map((user) => (
+                    <div key={user.uid} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={user.photoURL || './images/users/avatar_inkedlife.jpg'}
+                          alt={user.displayName || user.handle}
+                          className="w-10 h-10 rounded-full object-cover border border-white/15 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <span className="truncate">{user.displayName || 'Kullanıcı'}</span>
+                            {user.verified && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                          </h4>
+                          <p className="text-[11px] text-[#777777] font-mono truncate">{user.handle} · {user.email || 'e-posta yok'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <span>{user.name}</span>
-                          {user.verified && <CheckCircle className="w-3.5 h-3.5 text-blue-400" />}
-                        </h4>
-                        <p className="text-[11px] text-[#777777] font-mono">{user.handle} · {user.email}</p>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextVerified = !Boolean(user.verified);
+                            tattooStore.adminUpdateUser(user.uid, { verified: nextVerified });
+                            setUsers((prev) => prev.map((item) => item.uid === user.uid ? { ...item, verified: nextVerified } : item));
+                            onToast(nextVerified ? 'Kullanıcı doğrulandı.' : 'Doğrulama kaldırıldı.');
+                          }}
+                          className={`px-3 py-2 rounded-lg text-[11px] font-semibold border cursor-pointer ${user.verified ? 'bg-blue-500/15 border-blue-500/30 text-blue-300' : 'bg-white/5 border-white/10 text-white'}`}
+                        >
+                          {user.verified ? 'Doğrulandı' : 'Doğrula'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextArtist = !Boolean(user.isArtist);
+                            const nextRole = nextArtist ? 'artist' : 'user';
+                            tattooStore.adminUpdateUser(user.uid, { isArtist: nextArtist, role: nextRole });
+                            setUsers((prev) => prev.map((item) => item.uid === user.uid ? { ...item, isArtist: nextArtist, role: nextRole } : item));
+                            onToast(nextArtist ? 'Sanatçı rolü verildi.' : 'Sanatçı rolü kaldırıldı.');
+                          }}
+                          className={`px-3 py-2 rounded-lg text-[11px] font-semibold border cursor-pointer ${user.isArtist ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-white/5 border-white/10 text-white'}`}
+                        >
+                          {user.isArtist ? 'Sanatçı' : 'Kullanıcı'}
+                        </button>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-white/10 text-white font-medium text-[11px]">
-                      {user.role}
-                    </span>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
           )}
