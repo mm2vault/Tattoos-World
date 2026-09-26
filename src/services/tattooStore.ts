@@ -160,6 +160,7 @@ class TattooStoreService {
                   verified: isAdmin || remote.verified || false,
                 };
                 this.saveUser();
+                window.dispatchEvent(new Event('tattoos-world-user-updated'));
               } else {
                 this.currentUser = {
                   ...this.currentUser,
@@ -171,6 +172,7 @@ class TattooStoreService {
                   verified: isAdmin,
                 };
                 this.saveUser();
+                window.dispatchEvent(new Event('tattoos-world-user-updated'));
               }
             } catch (err) {
               console.warn('Auth state Firestore sync notice:', err);
@@ -478,6 +480,8 @@ class TattooStoreService {
         this.saveFollows();
         this.saveUser();
       }
+
+      window.dispatchEvent(new Event('tattoos-world-community-updated'));
     } catch (err) {
       console.warn('Community Firestore sync skipped:', err);
     }
@@ -764,6 +768,7 @@ class TattooStoreService {
 
     tattoo.isFeatured = !tattoo.isFeatured;
     this.saveTattoos();
+    updateDoc(doc(db, 'tattoos', tattooId), { isFeatured: tattoo.isFeatured }).catch(() => {});
     return tattoo.isFeatured;
   }
 
@@ -994,7 +999,7 @@ class TattooStoreService {
       userHandle: this.currentUser.handle,
       userAvatar: this.currentUser.photoURL,
       text: text.trim(),
-      createdAt: 'Az önce',
+      createdAt: new Date().toISOString(),
       likes: 0,
     };
 
@@ -1065,7 +1070,7 @@ class TattooStoreService {
       creatorPhoto: this.currentUser.photoURL,
       creatorRole: this.isCurrentUserAdmin() ? 'Master Admin' : (this.currentUser.isArtist ? 'Sanatçı' : 'Koleksiyoner'),
       creatorVerified: this.currentUser.verified || this.isCurrentUserAdmin(),
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
       likesCount: 0,
       commentsCount: 0,
       tags: data.tags || [data.categoryName],
