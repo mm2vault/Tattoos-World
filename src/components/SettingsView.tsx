@@ -177,17 +177,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </h3>
           <div className="bg-[#141414] border border-white/10 rounded-2xl divide-y divide-white/5">
             {[
-              {icon: Eye, title:'Profilimi toplulukta göster', desc:'Profiliniz ve paylaşımlarınız diğer üyeler tarafından görülebilsin.', value:profilePublic, set:setProfilePublic, key:'profilePublic'},
-              {icon: Zap, title:'Hareketli geçişler', desc:'Arayüz animasyonlarını ve yumuşak geçişleri kullan.', value:!reduceMotion, set:(v:boolean)=>setReduceMotion(!v), key:'reduceMotion', invert:true},
-              {icon: Moon, title:'Medya otomatik oynatma', desc:'Hareketli içeriklerde otomatik oynatmayı etkinleştir.', value:autoplay, set:setAutoplay, key:'autoplay'},
+              {
+                icon: Eye,
+                title: 'Profilimi toplulukta göster',
+                desc: 'Profiliniz ve paylaşımlarınız diğer üyeler tarafından görülebilsin.',
+                value: profilePublic,
+                toggle: () => {
+                  const next = !profilePublic;
+                  setProfilePublic(next);
+                  saveSetting('profilePublic', next);
+                },
+              },
+              {
+                icon: Zap,
+                title: 'Hareketli geçişler',
+                desc: 'Arayüz animasyonlarını ve yumuşak geçişleri kullan.',
+                value: !reduceMotion,
+                toggle: () => {
+                  const next = !reduceMotion;
+                  setReduceMotion(next);
+                  saveSetting('reduceMotion', next);
+                },
+              },
+              {
+                icon: Moon,
+                title: 'Medya otomatik oynatma',
+                desc: 'Hareketli içeriklerde otomatik oynatmayı etkinleştir.',
+                value: autoplay,
+                toggle: () => {
+                  const next = !autoplay;
+                  setAutoplay(next);
+                  saveSetting('autoplay', next);
+                },
+              },
             ].map((item) => {
               const Icon = item.icon;
-              return <div key={item.key} className="p-4 flex items-center justify-between gap-4">
+              return <div key={item.title} className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <Icon className="w-4 h-4 text-[#999999] shrink-0" />
                   <div><h4 className="text-xs font-bold text-white">{item.title}</h4><p className="text-[11px] text-[#777777]">{item.desc}</p></div>
                 </div>
-                <button onClick={() => { item.set(!item.value); saveSetting(item.key, item.key === 'reduceMotion' ? !item.value : !item.value); onToast('Ayar kaydedildi'); }} className={`w-11 h-6 rounded-full relative shrink-0 ${item.value ? 'bg-white' : 'bg-[#2a2a2a]'}`}>
+                <button onClick={() => { item.toggle(); onToast('Ayar kaydedildi'); }} className={`w-11 h-6 rounded-full relative shrink-0 ${item.value ? 'bg-white' : 'bg-[#2a2a2a]'}`}>
                   <span className={`absolute top-1 w-4 h-4 rounded-full ${item.value ? 'right-1 bg-black' : 'left-1 bg-white/60'}`} />
                 </button>
               </div>;
