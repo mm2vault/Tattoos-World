@@ -255,7 +255,6 @@ export default function App() {
                         onToast={(msg) => setToastMessage(msg)}
                         onTattooUpdated={handleTattooUpdated}
                       />
-                    </div>
                   </div>
                 )}
 
