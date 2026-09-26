@@ -57,10 +57,26 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
     onToast(following ? `${tattoo.creatorHandle} takip ediliyor` : 'Takipten çıkıldı');
   };
 
-  const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      onToast('Bağlantı kopyalandı');
+  const handleShare = async () => {
+    const url = new URL(window.location.href);
+    url.hash = `post=${encodeURIComponent(tattoo.id)}`;
+    const shareUrl = url.toString();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: tattoo.title,
+          text: `@${tattoo.creatorHandle.replace(/^@/, '')} tarafından paylaşılan dövme`,
+          url: shareUrl,
+        });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        onToast('Gönderi bağlantısı kopyalandı');
+      } else {
+        onToast('Bağlantı kopyalanamadı');
+      }
+    } catch {
+      // Share sheet was closed.
     }
   };
 
