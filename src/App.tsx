@@ -59,6 +59,25 @@ export default function App() {
     }
   }, []);
 
+  // Shared post links use the hash so the exact tattoo opens when the link is visited.
+  useEffect(() => {
+    const openPostFromHash = () => {
+      const match = window.location.hash.match(/(?:^|#)post=([^&]+)/);
+      if (!match) return;
+      const tattooId = decodeURIComponent(match[1]);
+      const tattoo = tattooStore.getTattooById(tattooId);
+      if (tattoo) {
+        setSelectedCreatorHandle(null);
+        setCurrentTab('explore');
+        setSelectedTattoo(tattoo);
+      }
+    };
+
+    openPostFromHash();
+    window.addEventListener('hashchange', openPostFromHash);
+    return () => window.removeEventListener('hashchange', openPostFromHash);
+  }, []);
+
   const handleLanguageChange = (lang: SupportedLanguage) => {
     setCurrentLanguage(lang);
     localStorage.setItem('tattos_world_lang_v1', lang);
@@ -104,9 +123,12 @@ export default function App() {
 
   const handleLogout = async () => {
     await tattooStore.logout();
-    const guest = await tattooStore.loginAsGuest();
-    setCurrentUser(guest);
-    setToastMessage('Çıkış yapıldı. Konuk olarak devam ediyorsunuz.');
+    localStorage.removeItem('tattos_world_has_entered');
+    setIsAuthenticated(false);
+    setCurrentUser(tattooStore.getCurrentUser());
+    setSelectedCreatorHandle(null);
+    setSelectedTattoo(null);
+    setToastMessage('Oturum kapatıldı.');
   };
 
   const handleCreateTattoo = (data: {
@@ -219,6 +241,21 @@ export default function App() {
               setSelectedCreatorHandle(null);
               setCurrentTab('favorites');
             }}
+            onOpenNotification={(notification) => {
+              if (notification.tattooId) {
+                const tattoo = tattooStore.getTattooById(notification.tattooId);
+                if (tattoo) {
+                  setSelectedCreatorHandle(null);
+                  setCurrentTab('explore');
+                  setSelectedTattoo(tattoo);
+                  return;
+                }
+              }
+              if (notification.senderHandle) {
+                setCurrentTab('profile');
+                setSelectedCreatorHandle(notification.senderHandle);
+              }
+            }}
           />
 
           {/* Main Body */}
@@ -328,7 +365,6 @@ export default function App() {
       <BottomNav
         currentTab={currentTab}
         onSelectTab={(tab) => {
-          setShowcaseMode(false);
           setCurrentTab(tab);
           if (tab !== 'profile') setSelectedCreatorHandle(null);
         }}
