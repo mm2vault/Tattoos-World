@@ -911,6 +911,12 @@ class TattooStoreService {
 
     this.saveLikes();
 
+    if (tattoo) {
+      updateDoc(doc(db, 'tattoos', tattooId), {
+        likesCount: tattoo.likesCount,
+      }).catch(() => {});
+    }
+
     const likeRef = doc(db, 'likes', `${tattooId}_${uid}`);
     if (isLikedNow) {
       setDoc(likeRef, { tattooId, uid, createdAt: new Date().toISOString() }).catch(() => {});
@@ -940,6 +946,15 @@ class TattooStoreService {
     }
     this.currentUser.savedTattooIds = Array.from(saved);
     this.saveUser();
+
+    if (auth.currentUser) {
+      setDoc(
+        doc(db, 'users', auth.currentUser.uid),
+        { savedTattooIds: this.currentUser.savedTattooIds },
+        { merge: true }
+      ).catch(() => {});
+    }
+
     return isSavedNow;
   }
 
