@@ -88,6 +88,24 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
     onToast(sent ? 'Bildirim moderasyona gönderildi' : 'Rapor göndermek için Google ile giriş yapmalısınız');
   };
 
+  const formatCommentTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const diffMs = Math.max(0, Date.now() - date.getTime());
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Az önce';
+    if (minutes < 60) return `${minutes} dk önce`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} sa önce`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} gün önce`;
+
+    return date.toLocaleDateString();
+  };
+
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -342,7 +360,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                     </div>
                     <p className="text-[#CCCCCC] mt-0.5 leading-relaxed">{c.text}</p>
                     <div className="flex items-center gap-2 text-[10px] text-[#666666] mt-1">
-                      <span>{c.createdAt}</span>
+                      <span>{formatCommentTime(c.createdAt)}</span>
                       <span>·</span>
                       <span className="flex items-center gap-0.5">
                         <Heart className="w-2.5 h-2.5" />
