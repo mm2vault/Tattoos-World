@@ -362,7 +362,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* Name & Handle & Stats */}
-          <div className="space-y-1">
+          <div className="space-y-1 text-center sm:text-left flex-1">
             <h1 className="text-xl sm:text-2xl font-semibold text-white flex items-center sm:justify-start justify-center gap-1.5">
               <span>{profileUser.displayName || profileUser.handle}</span>
             </h1>
@@ -371,23 +371,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-[#AAAAAA]">{profileUser.handle}</span>
               <span>•</span>
               <span>{profileUser.isAdmin ? 'Master Admin' : (profileUser.isArtist ? 'Tattoo Artist' : 'Dövme Tutkunu')}</span>
+              <span>•</span>
+              <span>{profileUser.followersCount > 1000 ? (profileUser.followersCount / 1000).toFixed(1) + 'K' : profileUser.followersCount} Takipçi</span>
+              <span>•</span>
+              <span>{userTattoos.length} Paylaşım</span>
             </p>
-            <div className="mt-3 grid grid-cols-3 max-w-[360px] border border-white/10 rounded-lg overflow-hidden text-center">
-              <div className="px-3 py-2 bg-white/[0.02]">
-                <div className="text-sm font-semibold text-white">{userTattoos.length}</div>
-                <div className="text-[10px] text-[#777]">gönderi</div>
-              </div>
-              <div className="px-3 py-2 border-x border-white/10 bg-white/[0.02]">
-                <div className="text-sm font-semibold text-white">{profileUser.followersCount}</div>
-                <div className="text-[10px] text-[#777]">takipçi</div>
-              </div>
-              <div className="px-3 py-2 bg-white/[0.02]">
-                <div className="text-sm font-semibold text-white">{profileUser.followingCount}</div>
-                <div className="text-[10px] text-[#777]">takip</div>
-              </div>
-            </div>
 
-
+            <p className="text-xs text-[#CCCCCC] max-w-md mx-auto pt-1 leading-relaxed">
               {profileUser.bio || 'Sanat, hayatın en gerçek halidir. Daha fazla dövme, daha fazla hikaye...'}
             </p>
           </div>
@@ -521,7 +511,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         <button
           onClick={() => setActiveTab('favorites')}
-          className={`pb-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-6 py-3 transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'favorites'
               ? 'text-white border-b-2 border-white'
               : 'text-[#888888] hover:text-white'
@@ -542,7 +532,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div
                 key={item.id}
                 onClick={() => onSelectTattoo(item)}
-                className="group relative relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
+                className="group relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
               >
                 <img
                   src={item.image}
@@ -654,13 +644,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Tab 3: Favorilerim (Saved/Favorites) */}
       {activeTab === 'favorites' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-0 border border-white/10">
           {favoriteTattoos.length > 0 ? (
             favoriteTattoos.map((item) => (
               <div
                 key={item.id}
                 onClick={() => onSelectTattoo(item)}
-                className="group relative relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
+                className="group relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
               >
                 <img
                   src={item.image}
