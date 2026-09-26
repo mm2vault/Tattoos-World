@@ -545,7 +545,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {(isOwnProfile || currentUser.isAdmin) && (
                   <button
                     onClick={(e) => handleDeleteTattoo(e, item)}
-                    className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/70 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-20 hover:scale-110"
+                    className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/70 hover:bg-red-600 text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-20 hover:scale-110"
                     title="Bu dövmeyi sil"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
