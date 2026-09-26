@@ -57,6 +57,23 @@ export default function App() {
     if (tattooStore.hasActiveSession()) {
       setCurrentUser(tattooStore.getCurrentUser());
     }
+
+    const refreshUser = () => setCurrentUser({ ...tattooStore.getCurrentUser() });
+    const refreshCommunity = () => setTattoos([...tattooStore.getTattoos()]);
+
+    window.addEventListener('tattoos-world-user-updated', refreshUser);
+    window.addEventListener('tattoos-world-community-updated', refreshCommunity);
+
+    const handleFocus = () => {
+      tattooStore.syncCommunityFromFirestore().catch(() => {});
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('tattoos-world-user-updated', refreshUser);
+      window.removeEventListener('tattoos-world-community-updated', refreshCommunity);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Shared post links use the hash so the exact tattoo opens when the link is visited.
@@ -276,6 +293,7 @@ export default function App() {
                         currentUser={currentUser}
                         onToast={(msg) => setToastMessage(msg)}
                         onTattooUpdated={handleTattooUpdated}
+                        initialViewMode="feed"
                       />
                   </div>
                 )}
@@ -293,6 +311,7 @@ export default function App() {
                     currentUser={currentUser}
                     onToast={(msg) => setToastMessage(msg)}
                     onTattooUpdated={handleTattooUpdated}
+                    initialViewMode="grid"
                   />
                 )}
 
@@ -434,7 +453,7 @@ export default function App() {
               <nav className="space-y-1">
                 {[
                   { id: 'explore', label: 'Ana Sayfa', icon: Home },
-                  { id: 'gallery', label: 'Galeri', icon: Compass },
+                  { id: 'gallery', label: 'Keşfet', icon: Compass },
                   { id: 'community', label: 'Topluluk', icon: Users },
                   { id: 'profile', label: 'Profilim', icon: User },
                   { id: 'create', label: 'Dövme Ekle', icon: PlusCircle, isAction: true },
