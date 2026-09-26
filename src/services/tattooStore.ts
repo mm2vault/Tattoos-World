@@ -779,13 +779,32 @@ class TattooStoreService {
    * Admin: Change user role or verification
    */
   public adminUpdateUser(uid: string, updates: Partial<UserProfile>): boolean {
-    if (!this.isCurrentUserAdmin()) return false;
+    if (!this.isCurrentUserAdmin() || !uid) return false;
 
     if (this.currentUser.uid === uid) {
       this.currentUser = { ...this.currentUser, ...updates };
       this.saveUser();
     }
+
+    setDoc(doc(db, 'users', uid), updates, { merge: true }).catch((err) => {
+      console.warn('Admin user update failed:', err);
+    });
+
     return true;
+  }
+
+  public async getAllUsers(): Promise<UserProfile[]> {
+    if (!this.isCurrentUserAdmin()) return [];
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      return snap.docs
+        .map((item) => item.data() as UserProfile)
+        .filter((user) => Boolean(user?.uid))
+        .sort((a, b) => String(a.displayName || '').localeCompare(String(b.displayName || '')));
+    } catch (err) {
+      console.warn('Admin user list could not be loaded:', err);
+      return [];
+    }
   }
 
   // ================= NOTIFICATIONS =================
