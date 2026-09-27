@@ -127,7 +127,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           const ctx = canvas.getContext('2d');
           if (!ctx) return reject(new Error('canvas-failed'));
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
+
+          const maxBytes = 650 * 1024;
+          let best = '';
+          for (const quality of [0.75, 0.65, 0.55, 0.45]) {
+            const candidate = canvas.toDataURL('image/jpeg', quality);
+            const comma = candidate.indexOf(',');
+            const base64 = comma >= 0 ? candidate.slice(comma + 1) : candidate;
+            const bytes = Math.ceil(base64.length * 0.75);
+            if (bytes <= maxBytes) {
+              best = candidate;
+              break;
+            }
+            best = candidate;
+          }
+
+          const comma = best.indexOf(',');
+          const base64 = comma >= 0 ? best.slice(comma + 1) : best;
+          const bytes = Math.ceil(base64.length * 0.75);
+          if (bytes > maxBytes) return reject(new Error('image-too-large'));
+
+          resolve(best);
         };
         img.src = reader.result as string;
       };
@@ -145,7 +165,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setEditBannerURL(result);
       onToast('Kapak fotoğrafı güncellendi ve kaydedildi');
     } catch {
-      onToast('Kapak fotoğrafı yüklenemedi');
+      onToast('Kapak fotoğrafı yüklenemedi veya görsel çok büyük.');
     } finally {
       e.target.value = '';
     }
@@ -162,7 +182,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setEditPhotoURL(result);
       onToast('Profil fotoğrafı güncellendi ve kaydedildi');
     } catch {
-      onToast('Profil fotoğrafı yüklenemedi');
+      onToast('Profil fotoğrafı yüklenemedi veya görsel çok büyük.');
     } finally {
       e.target.value = '';
     }
