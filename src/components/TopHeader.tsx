@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search, Bell, Menu, Heart, MessageCircle, X, ArrowLeft, MoreHorizontal
+  Search, Bell, Menu, Heart, MessageCircle, Send, X, ArrowLeft, MoreHorizontal
 } from 'lucide-react';
 import { UserProfile, Notification } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -154,7 +154,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   className="p-2 rounded-full text-white hover:bg-white/10 cursor-pointer"
                   aria-label="Mesajlar"
                 >
-                  <MessageCircle className="w-[21px] h-[21px]" />
+                  <Send className="w-[21px] h-[21px]" />
                 </button>
                 <button
                   type="button"
