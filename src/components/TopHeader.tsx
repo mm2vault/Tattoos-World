@@ -316,7 +316,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                       <button
                         key={notification.id}
                         type="button"
-                        onClick={() => handleOpenNotification(notification)}}
+                        onClick={() => handleOpenNotification(notification)}
                         className="w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer"
                       >
                         <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
