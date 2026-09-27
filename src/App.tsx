@@ -175,6 +175,11 @@ export default function App() {
   };
 
   const handleSelectCreator = (handle: string) => {
+    const profile = tattooStore.getArtistProfile(handle);
+    if (!profile) {
+      setToastMessage('Bu profil bulunamadı veya gizli.');
+      return;
+    }
     if (!tattooStore.isProfilePublic(handle)) {
       setToastMessage('Bu profil gizli.');
       return;
@@ -285,8 +290,13 @@ export default function App() {
                 }
               }
               if (notification.senderHandle) {
-                setCurrentTab('profile');
-                setSelectedCreatorHandle(notification.senderHandle);
+                const profile = tattooStore.getArtistProfile(notification.senderHandle);
+                if (profile && tattooStore.isProfilePublic(notification.senderHandle)) {
+                  setCurrentTab('profile');
+                  setSelectedCreatorHandle(notification.senderHandle);
+                } else {
+                  setToastMessage('Gönderen profil artık görüntülenemiyor.');
+                }
               }
             }}
           />
