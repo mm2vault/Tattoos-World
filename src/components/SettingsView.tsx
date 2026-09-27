@@ -48,9 +48,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = reduceMotion ? 'true' : 'false';
-    return () => {
-      delete document.documentElement.dataset.reduceMotion;
-    };
   }, [reduceMotion]);
 
   const saveSetting = (key: string, value: boolean) => {
