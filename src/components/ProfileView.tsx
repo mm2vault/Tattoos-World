@@ -4,7 +4,7 @@ import {
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
   ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle,
-  Grid3X3, Bookmark, Info as InfoIcon
+  Grid3X3, Bookmark, Info as InfoIcon, Users
 } from 'lucide-react';
 import { Tattoo, UserProfile, SupportedLanguage } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -61,11 +61,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const [isFollowing, setIsFollowing] = useState(() => tattooStore.isFollowing(profileUser.handle));
   const [followerCount, setFollowerCount] = useState(() => tattooStore.getFollowerCount(profileUser.handle));
+  const [followingCount, setFollowingCount] = useState(() => tattooStore.getProfileFollowingCount(profileUser.handle));
+  const [socialModal, setSocialModal] = useState<'followers' | 'following' | null>(null);
+  const [socialProfiles, setSocialProfiles] = useState<UserProfile[]>([]);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   React.useEffect(() => {
     setIsFollowing(tattooStore.isFollowing(profileUser.handle));
     setFollowerCount(tattooStore.getFollowerCount(profileUser.handle));
+    setFollowingCount(tattooStore.getProfileFollowingCount(profileUser.handle));
   }, [profileUser.handle]);
+
+  const openSocialModal = async (mode: 'followers' | 'following') => {
+    setSocialModal(mode);
+    setSocialProfiles([]);
+    setSocialLoading(true);
+    try {
+      const profiles = mode === 'followers'
+        ? await tattooStore.getFollowerProfiles(profileUser.handle)
+        : await tattooStore.getFollowingProfiles(profileUser.uid);
+      setSocialProfiles(profiles);
+    } finally {
+      setSocialLoading(false);
+    }
+  };
 
   // Hidden file inputs for direct one-click upload
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +138,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const following = tattooStore.toggleFollow(profileUser.handle);
     setIsFollowing(following);
     setFollowerCount(tattooStore.getFollowerCount(profileUser.handle));
+    setFollowingCount(tattooStore.getProfileFollowingCount(profileUser.handle));
     onUserUpdated({ ...tattooStore.getCurrentUser() });
     onToast(following ? profileUser.handle + " takip ediliyor" : "Takipten çıkıldı");
   };
@@ -361,8 +381,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <div className="flex-1 grid grid-cols-3 text-center gap-1">
             <div><p className="text-[18px] font-bold text-white leading-none">{userTattoos.length}</p><p className="text-[10px] text-[#999] mt-1">Paylaşım</p></div>
-            <div><p className="text-[18px] font-bold text-white leading-none">{followerCount > 1000 ? (followerCount / 1000).toFixed(1) + 'K' : followerCount}</p><p className="text-[10px] text-[#999] mt-1">Takipçi</p></div>
-            <div><p className="text-[18px] font-bold text-white leading-none">{profileUser.followingCount}</p><p className="text-[10px] text-[#999] mt-1">Takip</p></div>
+            <button type="button" onClick={() => openSocialModal('followers')} className="text-center cursor-pointer">
+              <p className="text-[18px] font-bold text-white leading-none">{followerCount > 1000 ? (followerCount / 1000).toFixed(1) + 'K' : followerCount}</p>
+              <p className="text-[10px] text-[#999] mt-1">Takipçi</p>
+            </button>
+            <button type="button" onClick={() => openSocialModal('following')} className="text-center cursor-pointer">
+              <p className="text-[18px] font-bold text-white leading-none">{followingCount}</p>
+              <p className="text-[10px] text-[#999] mt-1">Takip</p>
+            </button>
           </div>
         </div>
 
@@ -477,8 +503,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </p>
             <div className="hidden sm:flex items-center gap-6 pt-1 text-sm">
               <span><strong className="text-white">{userTattoos.length}</strong> <span className="text-[#777]">gönderi</span></span>
-              <span><strong className="text-white">{followerCount}</strong> <span className="text-[#777]">takipçi</span></span>
-              <span><strong className="text-white">{profileUser.followingCount}</strong> <span className="text-[#777]">takip</span></span>
+              <button type="button" onClick={() => openSocialModal('followers')} className="cursor-pointer hover:text-white">
+                <strong className="text-white">{followerCount}</strong> <span className="text-[#777]">takipçi</span>
+              </button>
+              <button type="button" onClick={() => openSocialModal('following')} className="cursor-pointer hover:text-white">
+                <strong className="text-white">{followingCount}</strong> <span className="text-[#777]">takip</span>
+              </button>
             </div>
 
             <p className="text-xs text-[#CCCCCC] max-w-md mx-auto pt-1 leading-relaxed">
@@ -744,6 +774,62 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               Henüz kaydedilen favori dövme yok. Keşfet sekmesinden beğendiğiniz dövmeleri kaydedebilirsiniz.
             </div>
           )}
+        </div>
+      )}
+
+      {socialModal && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-3">
+          <div className="w-full max-w-md max-h-[78vh] rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">{socialModal === 'followers' ? 'Takipçiler' : 'Takip Edilenler'}</h3>
+                <p className="text-[10px] text-[#666] mt-0.5">{socialModal === 'followers' ? followerCount : followingCount} kişi</p>
+              </div>
+              <button type="button" onClick={() => setSocialModal(null)} className="p-2 rounded-full text-[#888] hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Kapat">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="max-h-[66vh] overflow-y-auto">
+              {socialLoading ? (
+                <div className="py-12 text-center text-xs text-[#777]">Yükleniyor...</div>
+              ) : socialProfiles.length === 0 ? (
+                <div className="py-12 px-6 text-center">
+                  <Users className="w-7 h-7 mx-auto text-[#555] mb-2" />
+                  <p className="text-xs text-[#777]">Henüz burada gösterilecek profil yok.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {socialProfiles.map((profile) => (
+                    <button
+                      key={profile.uid}
+                      type="button"
+                      onClick={() => {
+                        setSocialModal(null);
+                        if (profile.handle.toLowerCase() === currentUser.handle.toLowerCase()) return;
+                        const isPublic = tattooStore.isProfilePublic(profile.handle);
+                        if (!isPublic) {
+                          onToast('Bu profil gizli.');
+                          return;
+                        }
+                        onToast('');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.04] cursor-pointer"
+                    >
+                      <img src={profile.photoURL || './images/users/avatar_inkedlife.jpg'} alt={profile.displayName} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-white truncate">{profile.displayName}</span>
+                          {(profile.verified || profile.isAdmin) && <CheckCircle2 className="w-3 h-3 text-blue-400 shrink-0" />}
+                        </span>
+                        <span className="block text-[10px] text-[#777] truncate">{profile.handle}</span>
+                      </span>
+                      {profile.isArtist && <span className="text-[10px] text-[#666]">Sanatçı</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
