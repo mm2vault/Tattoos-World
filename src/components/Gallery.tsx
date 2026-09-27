@@ -147,6 +147,54 @@ export const Gallery: React.FC<GalleryProps> = ({
 
   const getSlides = (tattoo: Tattoo) => Array.from(new Set([tattoo.image, ...(tattoo.additionalImages || [])].filter(Boolean))).slice(0, 10);
 
+  const profileResults = React.useMemo(() => {
+    const profiles = new Map<string, {
+      handle: string;
+      name: string;
+      image: string;
+      role: string;
+      verified: boolean;
+    }>();
+
+    const currentHandle = String(currentUser.handle || '').trim();
+    if (currentHandle) {
+      profiles.set(currentHandle.toLowerCase(), {
+        handle: currentHandle,
+        name: currentUser.displayName || currentHandle,
+        image: currentUser.photoURL || './images/users/avatar_inkedlife.jpg',
+        role: currentUser.isArtist ? 'Sanatçı' : 'Üye',
+        verified: Boolean(currentUser.verified),
+      });
+    }
+
+    tattoos.forEach((tattoo) => {
+      const handle = String(tattoo.creatorHandle || '').trim();
+      if (!handle) return;
+      const key = handle.toLowerCase();
+      if (profiles.has(key)) {
+        const existing = profiles.get(key)!;
+        profiles.set(key, {
+          ...existing,
+          role: existing.role === 'Sanatçı' || tattoo.creatorRole === 'artist' ? 'Sanatçı' : existing.role,
+          verified: existing.verified || Boolean(tattoo.creatorVerified),
+        });
+        return;
+      }
+      profiles.set(key, {
+        handle,
+        name: tattoo.creatorName || handle,
+        image: tattoo.creatorPhoto || tattoo.image,
+        role: tattoo.creatorRole === 'artist' ? 'Sanatçı' : 'Üye',
+        verified: Boolean(tattoo.creatorVerified),
+      });
+    });
+
+    const query = searchQuery.trim().toLowerCase();
+    return Array.from(profiles.values())
+      .filter((profile) => !query || profile.handle.toLowerCase().includes(query) || profile.name.toLowerCase().includes(query))
+      .slice(0, 12);
+  }, [currentUser, searchQuery, tattoos]);
+
   const storyCreators = React.useMemo(() => {
     const result: { handle: string; name: string; image: string; isCurrentUser?: boolean }[] = [
       {
@@ -230,6 +278,41 @@ export const Gallery: React.FC<GalleryProps> = ({
           ))}
         </div>
       </section>
+      )}
+
+      {viewMode === 'grid' && searchQuery.trim() && profileResults.length > 0 && (
+        <section className="px-3 sm:px-0">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Kişiler ve sanatçılar</h2>
+              <p className="text-[10px] text-[#666] mt-0.5">{profileResults.length} profil</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {profileResults.map((profile) => (
+              <button
+                key={profile.handle}
+                type="button"
+                onClick={() => onSelectCreator(profile.handle)}
+                className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
+              >
+                <img
+                  src={profile.image}
+                  alt={profile.name}
+                  className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1 min-w-0">
+                    <span className="text-xs font-semibold text-white truncate">{profile.name}</span>
+                    {profile.verified && <span className="text-[9px] text-sky-300">✓</span>}
+                  </span>
+                  <span className="block text-[10px] text-[#777] truncate">@{profile.handle.replace(/^@/, '')}</span>
+                  <span className="block text-[10px] text-[#555] mt-0.5">{profile.role}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="space-y-3 pt-1">
