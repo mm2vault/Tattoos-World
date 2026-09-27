@@ -11,6 +11,7 @@ interface AdminPanelModalProps {
   tattoos: Tattoo[];
   currentUser: UserProfile;
   onTattooUpdated: () => void;
+  onSelectTattoo?: (tattoo: Tattoo) => void;
   onToast: (msg: string) => void;
 }
 
@@ -19,6 +20,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   tattoos,
   currentUser,
   onTattooUpdated,
+  onSelectTattoo,
   onToast,
 }) => {
   const [activeTab, setActiveTab] = useState<'tattoos' | 'users' | 'comments' | 'reports'>('tattoos');
@@ -455,8 +457,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                onTattooUpdated();
-                                onToast('Raporlanan gönderi bulundu. Ana listeden açabilirsiniz.');
+                                onSelectTattoo?.(targetTattoo);
+                                onToast('Raporlanan gönderi açıldı.');
                               }}
                               className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white hover:bg-white/10 cursor-pointer"
                             >
