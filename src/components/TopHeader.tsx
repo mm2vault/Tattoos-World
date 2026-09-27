@@ -232,27 +232,37 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div className="hidden lg:block flex-1 max-w-[360px]">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8d8d8d]" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Ara"
-              aria-label="Dövme, sanatçı veya etiket ara"
-              className="w-full h-9 bg-[#1a1a1a] border border-transparent focus:border-white/15 rounded-lg pl-10 pr-9 text-sm text-white placeholder-[#8d8d8d] outline-none transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-[#888] hover:text-white"
-                aria-label="Aramayı temizle"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          {['explore', 'gallery'].includes(currentTab) ? (
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8d8d8d]" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={currentTab === 'gallery' ? 'Dövme, sanatçı veya tarz ara...' : 'Ara'}
+                aria-label="Dövme, sanatçı veya etiket ara"
+                className="w-full h-9 bg-[#1a1a1a] border border-transparent focus:border-white/15 rounded-lg pl-10 pr-9 text-sm text-white placeholder-[#8d8d8d] outline-none transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-[#888] hover:text-white"
+                  aria-label="Aramayı temizle"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="h-9 flex items-center px-3 text-sm text-[#777]">
+              {currentTab === 'profile' ? profileHandle || 'Profil' :
+                currentTab === 'messages' ? 'Mesajlar' :
+                currentTab === 'favorites' ? 'Kaydedilenler' :
+                currentTab === 'community' ? 'Topluluk' :
+                currentTab === 'settings' ? 'Ayarlar' : 'Tattoogram'}
+            </div>
+          )}
         </div>
 
         <div className="hidden lg:flex items-center gap-1.5">
