@@ -959,10 +959,15 @@ class TattooStoreService {
       if (type === 'like') return settings.notifyLikes !== false;
       if (type === 'comment') return settings.notifyComments !== false;
       if (type === 'follow' || type === 'new_post') return settings.notifyArtists !== false;
+      if (type === 'message') return true;
       return true;
     } catch {
       return true;
     }
+  }
+
+  public notifyMessage(recipientUid: string, text: string) {
+    this.createNotification(recipientUid, 'message', text);
   }
 
   private createNotification(
