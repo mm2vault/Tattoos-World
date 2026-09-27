@@ -192,6 +192,7 @@ export const Gallery: React.FC<GalleryProps> = ({
         </div>
       </section>
 
+      {viewMode === 'grid' && (
       <section className="px-3 sm:px-0">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
           <button
@@ -214,16 +215,17 @@ export const Gallery: React.FC<GalleryProps> = ({
           ))}
         </div>
       </section>
+      )}
 
       <section className="space-y-4 pt-1">
         <div className="flex items-center justify-between">
-          <div>
+          <div className={`sm:block ${viewMode === 'feed' ? 'hidden' : 'block'}`}>
             <h2 className="text-sm sm:text-base font-semibold text-white">
-              {searchQuery ? `"${searchQuery}" Sonuçları` : 'Akış'}
+              {searchQuery ? `"${searchQuery}" Sonuçları` : 'Keşfet'}
             </h2>
           </div>
 
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-[#111111] border border-white/10">
+          <div className={`flex items-center gap-1 p-1 rounded-xl bg-[#111111] border border-white/10 ${viewMode === 'feed' ? 'hidden sm:flex' : 'flex'}`}>
             <button
               type="button"
               onClick={() => setViewMode('feed')}
@@ -467,40 +469,36 @@ export const Gallery: React.FC<GalleryProps> = ({
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
+          <div className="grid grid-cols-3 gap-[2px] sm:gap-1 bg-black">
             {filteredTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               return (
-                <div
+                <button
                   key={tattoo.id}
+                  type="button"
                   onClick={() => onSelectTattoo(tattoo)}
-                  className="group relative rounded-2xl overflow-hidden bg-[#121212] border border-white/10 hover:border-white/25 transition-all duration-300 cursor-pointer flex flex-col"
+                  className="group relative aspect-square overflow-hidden bg-[#111] cursor-pointer"
                 >
-                  <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+                  <div className="relative w-full h-full overflow-hidden bg-black">
                     <img src={tattoo.image} alt={tattoo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleLike(tattoo.id);
                       }}
-                      className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hover:scale-110 transition-transform"
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/55 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       aria-label="Beğen"
                     >
-                      <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                      <Heart className={`w-4 h-4 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                     </button>
-                  </div>
-                  <div className="p-3.5">
-                    <h4 className="text-sm font-bold text-white truncate">{tattoo.title}</h4>
-                    <p onClick={(e) => { e.stopPropagation(); onSelectCreator(tattoo.creatorHandle); }} className="text-xs text-[#888888] hover:text-white cursor-pointer truncate mt-0.5">
-                      {tattoo.creatorHandle}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] text-[#666666] pt-2 mt-2 border-t border-white/5">
-                      <span>{tattoo.categoryName}</span>
-                      <span className="flex items-center gap-1 text-white/80"><Heart className="w-3 h-3 fill-current" />{tattoo.likesCount}</span>
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
+                      <p className="text-[10px] sm:text-xs font-semibold text-white truncate">{tattoo.creatorHandle}</p>
+                      <p className="text-[9px] sm:text-[11px] text-white/70 truncate">{tattoo.categoryName}</p>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
