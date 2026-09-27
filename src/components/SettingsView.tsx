@@ -32,7 +32,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyArtists ?? true; } catch { return true; }
   });
   const [profilePublic, setProfilePublic] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').profilePublic ?? true; } catch { return true; }
+    try {
+      const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      return settings.profilePublic ?? currentUser.profilePublic ?? true;
+    } catch {
+      return currentUser.profilePublic ?? true;
+    }
   });
   const [reduceMotion, setReduceMotion] = useState(() => {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').reduceMotion ?? false; } catch { return false; }
