@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, ChevronLeft, ChevronRight, Grid3X3, LayoutList, Link2, Flag, Trash2 } from 'lucide-react';
 import { Tattoo, CategoryId, UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -14,6 +14,7 @@ interface GalleryProps {
   currentUser: UserProfile;
   onToast: (msg: string) => void;
   onTattooUpdated: () => void;
+  onSearchChange: (query: string) => void;
   initialViewMode?: 'feed' | 'grid';
 }
 
@@ -27,12 +28,20 @@ export const Gallery: React.FC<GalleryProps> = ({
   currentUser,
   onToast,
   onTattooUpdated,
+  onSearchChange,
   initialViewMode = 'feed',
 }) => {
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>(initialViewMode);
   const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
   const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialViewMode === 'feed') {
+      if (selectedCategory !== 'all') onSelectCategory('all');
+      if (searchQuery) onSearchChange('');
+    }
+  }, [initialViewMode]);
 
   const categoriesList: { id: CategoryId; name: string; image: string }[] = [
     { id: 'realism', name: 'Realizm', image: './images/tattoos/lion_clock.jpg' },
