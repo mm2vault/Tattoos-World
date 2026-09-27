@@ -21,7 +21,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onTattooUpdated,
   onToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'tattoos' | 'users' | 'comments'>('tattoos');
+  const [activeTab, setActiveTab] = useState<'tattoos' | 'users' | 'comments' | 'reports'>('tattoos');
 
   // Editing tattoo state
   const [editingTattoo, setEditingTattoo] = useState<Tattoo | null>(null);
@@ -33,6 +33,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [reports, setReports] = useState<Array<{
+    id: string;
+    type: string;
+    targetId: string;
+    reporterUid: string;
+    reporterName: string;
+    reason: string;
+    createdAt: string;
+    status: 'open' | 'reviewed' | 'resolved';
+  }>>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
 
   const categories: { id: CategoryId; name: string }[] = [
     { id: 'realism', name: 'Realizm' },
@@ -48,6 +59,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const totalLikes = tattoos.reduce((acc, curr) => acc + (curr.likesCount || 0), 0);
   const totalComments = tattoos.reduce((acc, curr) => acc + (curr.commentsCount || 0), 0);
+
+  useEffect(() => {
+    if (activeTab !== 'reports') return;
+    let cancelled = false;
+    setReportsLoading(true);
+    tattooStore.getReports().then((list) => {
+      if (!cancelled) setReports(list);
+    }).finally(() => {
+      if (!cancelled) setReportsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'users') return;
@@ -201,6 +224,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           >
             <Users className="w-4 h-4" />
             <span>Sanatçı & Kullanıcı Yönetimi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`py-3.5 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'reports'
+                ? 'text-amber-400 border-b-2 border-amber-400 font-bold'
+                : 'text-[#888888] hover:text-white'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <span>Bildirimler ({reports.filter((report) => report.status === 'open').length})</span>
           </button>
 
           <button
@@ -370,6 +405,100 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   ));
                 })()}
               </div>
+            </div>
+          )}
+
+          {/* TAB 3.5: REPORTS */}
+          {activeTab === 'reports' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-xs text-red-300">
+                Kullanıcı raporlarını buradan inceleyebilir, durumu değiştirebilir ve ilgili gönderiyi açabilirsiniz.
+              </div>
+
+              {reportsLoading ? (
+                <div className="p-8 text-center text-xs text-[#777]">Raporlar yükleniyor…</div>
+              ) : reports.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#777]">Henüz rapor bulunmuyor.</div>
+              ) : (
+                <div className="divide-y divide-white/10 border border-white/10 rounded-2xl bg-[#111111] overflow-hidden">
+                  {reports.map((report) => {
+                    const targetTattoo = tattoos.find((tattoo) => tattoo.id === report.targetId);
+                    return (
+                      <div key={report.id} className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={
+                              "px-2 py-0.5 rounded-md text-[10px] font-bold border " +
+                              (report.status === 'open'
+                                ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                                : report.status === 'reviewed'
+                                ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300')
+                            }>
+                              {report.status === 'open' ? 'Açık' : report.status === 'reviewed' ? 'İncelendi' : 'Çözüldü'}
+                            </span>
+                            <span className="text-[10px] text-[#666]">{new Date(report.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p className="text-xs text-white mt-2">
+                            <span className="font-bold">{report.reporterName || 'Kullanıcı'}</span> tarafından bildirildi
+                          </p>
+                          <p className="text-[11px] text-[#AAAAAA] mt-1 break-words">{report.reason}</p>
+                          {targetTattoo && (
+                            <p className="text-[10px] text-[#666] mt-1 truncate">
+                              Hedef: {targetTattoo.title} · {targetTattoo.creatorHandle}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                          {targetTattoo && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onTattooUpdated();
+                                onToast('Raporlanan gönderi bulundu. Ana listeden açabilirsiniz.');
+                              }}
+                              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white hover:bg-white/10 cursor-pointer"
+                            >
+                              Gönderiyi Bul
+                            </button>
+                          )}
+                          {report.status !== 'reviewed' && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const ok = await tattooStore.updateReportStatus(report.id, 'reviewed');
+                                if (ok) {
+                                  setReports((prev) => prev.map((item) => item.id === report.id ? { ...item, status: 'reviewed' } : item));
+                                  onToast('Rapor incelendi.');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 hover:bg-amber-500/20 cursor-pointer"
+                            >
+                              İncelendi
+                            </button>
+                          )}
+                          {report.status !== 'resolved' && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const ok = await tattooStore.updateReportStatus(report.id, 'resolved');
+                                if (ok) {
+                                  setReports((prev) => prev.map((item) => item.id === report.id ? { ...item, status: 'resolved' } : item));
+                                  onToast('Rapor çözüldü.');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 hover:bg-emerald-500/20 cursor-pointer"
+                            >
+                              Çözüldü
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
