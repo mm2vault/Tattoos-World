@@ -59,7 +59,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   }, [initialTab, isOwnProfile]);
 
-  const isFollowing = tattooStore.isFollowing(profileUser.handle);
+  const [isFollowing, setIsFollowing] = useState(() => tattooStore.isFollowing(profileUser.handle));
+  const [followerCount, setFollowerCount] = useState(() => tattooStore.getFollowerCount(profileUser.handle));
+
+  React.useEffect(() => {
+    setIsFollowing(tattooStore.isFollowing(profileUser.handle));
+    setFollowerCount(tattooStore.getFollowerCount(profileUser.handle));
+  }, [profileUser.handle]);
 
   // Hidden file inputs for direct one-click upload
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +117,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleToggleFollow = () => {
     const following = tattooStore.toggleFollow(profileUser.handle);
-    onToast(following ? `${profileUser.handle} takip ediliyor` : 'Takipten çıkıldı');
+    setIsFollowing(following);
+    setFollowerCount(tattooStore.getFollowerCount(profileUser.handle));
+    onUserUpdated({ ...tattooStore.getCurrentUser() });
+    onToast(following ? profileUser.handle + " takip ediliyor" : "Takipten çıkıldı");
   };
 
   // Convert uploaded images to compact JPEG data so they survive reloads without
@@ -352,7 +361,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <div className="flex-1 grid grid-cols-3 text-center gap-1">
             <div><p className="text-[18px] font-bold text-white leading-none">{userTattoos.length}</p><p className="text-[10px] text-[#999] mt-1">Paylaşım</p></div>
-            <div><p className="text-[18px] font-bold text-white leading-none">{profileUser.followersCount > 1000 ? (profileUser.followersCount / 1000).toFixed(1) + 'K' : profileUser.followersCount}</p><p className="text-[10px] text-[#999] mt-1">Takipçi</p></div>
+            <div><p className="text-[18px] font-bold text-white leading-none">{followerCount > 1000 ? (followerCount / 1000).toFixed(1) + 'K' : followerCount}</p><p className="text-[10px] text-[#999] mt-1">Takipçi</p></div>
             <div><p className="text-[18px] font-bold text-white leading-none">{profileUser.followingCount}</p><p className="text-[10px] text-[#999] mt-1">Takip</p></div>
           </div>
         </div>
@@ -466,7 +475,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>•</span>
               <span>{profileUser.isAdmin ? 'Master Admin' : (profileUser.isArtist ? 'Tattoo Artist' : 'Dövme Tutkunu')}</span>
               <span>•</span>
-              <span>{profileUser.followersCount > 1000 ? (profileUser.followersCount / 1000).toFixed(1) + 'K' : profileUser.followersCount} Takipçi</span>
+              <span>{followerCount > 1000 ? (followerCount / 1000).toFixed(1) + 'K' : followerCount} Takipçi</span>
               <span>•</span>
               <span>{userTattoos.length} Paylaşım</span>
             </p>
