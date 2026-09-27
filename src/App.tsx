@@ -453,6 +453,7 @@ function App() {
                     onSelectTattoo={(t) => setSelectedTattoo(t)}
                     onOpenCreate={() => setCreateModalOpen(true)}
                     onOpenMessages={handleOpenMessagesWithCreator}
+                    onOpenProfile={handleSelectCreator}
                     currentLanguage={currentLanguage}
                     onToast={(msg) => setToastMessage(msg)}
                     onUserUpdated={(u) => setCurrentUser(u)}
