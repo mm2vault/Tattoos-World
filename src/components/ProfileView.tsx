@@ -470,15 +470,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>{profileUser.displayName || profileUser.handle}</span>
             </h1>
             
-            <p className="text-xs text-[#888888] flex items-center sm:justify-start justify-center gap-2 flex-wrap">
-              <span className="text-[#AAAAAA]">{profileUser.handle}</span>
+            <p className="text-xs text-[#999999] flex items-center sm:justify-start justify-center gap-2 flex-wrap">
+              <span className="text-[#cfcfcf] font-semibold">{profileUser.handle}</span>
               <span>•</span>
               <span>{profileUser.isAdmin ? 'Master Admin' : (profileUser.isArtist ? 'Tattoo Artist' : 'Dövme Tutkunu')}</span>
-              <span>•</span>
-              <span>{followerCount > 1000 ? (followerCount / 1000).toFixed(1) + 'K' : followerCount} Takipçi</span>
-              <span>•</span>
-              <span>{userTattoos.length} Paylaşım</span>
             </p>
+            <div className="hidden sm:flex items-center gap-6 pt-1 text-sm">
+              <span><strong className="text-white">{userTattoos.length}</strong> <span className="text-[#777]">gönderi</span></span>
+              <span><strong className="text-white">{followerCount}</strong> <span className="text-[#777]">takipçi</span></span>
+              <span><strong className="text-white">{profileUser.followingCount}</strong> <span className="text-[#777]">takip</span></span>
+            </div>
 
             <p className="text-xs text-[#CCCCCC] max-w-md mx-auto pt-1 leading-relaxed">
               {profileUser.bio || 'Sanat, hayatın en gerçek halidir. Daha fazla dövme, daha fazla hikaye...'}
@@ -490,7 +491,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isOwnProfile ? (
               <button
                 onClick={openEditModal}
-                className="flex items-center gap-2 px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#1d1d1d] hover:bg-[#252525] border border-white/10 text-xs font-semibold text-white transition-all cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Profili Düzenle</span>
@@ -499,9 +500,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <>
               <button
                 onClick={handleToggleFollow}
-                className={`px-8 py-2 rounded-full text-xs font-bold transition-all cursor-pointer shadow-md ${
+                className={`px-8 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isFollowing
-                    ? 'bg-white/15 text-white hover:bg-red-500/20 hover:text-red-400'
+                    ? 'bg-[#1d1d1d] text-white border border-white/10 hover:bg-[#252525]'
                     : 'bg-white text-black hover:bg-[#EAEAEA]'
                 }`}
               >
@@ -511,7 +512,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenMessages(profileUser.handle)}
-                  className="flex items-center gap-2 px-6 py-2 rounded-full bg-[#CCFF00] text-black text-xs font-bold hover:bg-[#b4f309] transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-2 px-6 py-2 rounded-lg bg-[#1d1d1d] border border-white/10 text-white text-xs font-bold hover:bg-[#252525] transition-all cursor-pointer"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
                   <span>Konuş</span>
@@ -523,7 +524,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isOwnProfile && (
               <button
                 onClick={onOpenCreate}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-white text-black text-xs font-bold hover:bg-[#EAEAEA] transition-all cursor-pointer shadow-md"
+                className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-white text-black text-xs font-bold hover:bg-[#EAEAEA] transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Dövme Ekle</span>
