@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useState, useEffect } from 'react';
 import { Tattoo, CategoryId, SupportedLanguage, UserProfile } from './types';
 import { tattooStore } from './services/tattooStore';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -20,7 +20,54 @@ import {
   X, Home, Compass, Users, User, PlusCircle, Heart, MessageSquare, Info, Settings, ShieldCheck, LogOut 
 } from 'lucide-react';
 
-export default function App() {
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message: string }> {
+  state = { hasError: false, message: '' };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || 'Beklenmeyen bir hata oluştu.' };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Tattoos World runtime error:', error, info);
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h1 className="text-lg font-bold">Tattoos World açılırken bir hata oluştu</h1>
+          <p className="text-sm text-neutral-400 mt-2 break-words">{this.state.message}</p>
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold cursor-pointer"
+            >
+              Yenile
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  localStorage.removeItem('tattos_world_settings_v1');
+                } catch {}
+                window.location.reload();
+              }}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/15 text-sm font-semibold cursor-pointer"
+            >
+              Ayarları sıfırla
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+function App() {
   // Authentication: check persistent session or previous entry so user stays in the app
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('tattos_world_has_entered') === 'true' || tattooStore.hasActiveSession();
@@ -598,5 +645,14 @@ export default function App() {
       <Toast message={toastMessage} onClear={() => setToastMessage(null)} />
 
     </div>
+  );
+}
+
+
+export default function AppWithRecovery() {
+  return (
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   );
 }
