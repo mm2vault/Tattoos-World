@@ -31,6 +31,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [notifyArtists, setNotifyArtists] = useState(() => {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyArtists ?? true; } catch { return true; }
   });
+  const [notifyMessages, setNotifyMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').notifyMessages ?? true; } catch { return true; }
+  });
   const [profilePublic, setProfilePublic] = useState(() => {
     try {
       const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -41,9 +44,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   });
   const [reduceMotion, setReduceMotion] = useState(() => {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').reduceMotion ?? false; } catch { return false; }
-  });
-  const [autoplay, setAutoplay] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').autoplay ?? true; } catch { return true; }
   });
 
   useEffect(() => {
@@ -62,9 +62,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setNotifyLikes(true);
     setNotifyComments(true);
     setNotifyArtists(true);
+    setNotifyMessages(true);
     setProfilePublic(true);
     setReduceMotion(false);
-    setAutoplay(true);
     tattooStore.setProfilePublic(true);
     window.dispatchEvent(new Event('tattoos-world-notification-settings'));
     onToast('Tercihler varsayılan değerlere döndürüldü');
@@ -89,7 +89,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Hesap Bilgileri</span>
           </h3>
 
-          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl p-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img
                 src={currentUser.photoURL || './images/users/avatar_inkedlife.jpg'}
@@ -100,6 +100,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h4 className="text-sm font-bold text-white">{currentUser.displayName}</h4>
                 <p className="text-xs text-[#888888]">{currentUser.email}</p>
                 <p className="text-[11px] text-[#AAAAAA] font-mono mt-0.5">{currentUser.handle}</p>
+                <p className="text-[10px] text-[#666666] mt-1">
+                  {currentUser.email?.includes('guest@') ? 'Misafir oturumu' : 'Firebase hesabı'}
+                </p>
               </div>
             </div>
             <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
@@ -165,6 +168,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h4 className="text-xs font-bold text-white">Takip Edilen Sanatçılar</h4>
                 <p className="text-[11px] text-[#777777]">Takip ettiğiniz sanatçılar yeni dövme yüklediğinde bildir.</p>
               </div>
+            <div className="p-4 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-white">Mesaj Bildirimleri</h4>
+                <p className="text-[11px] text-[#777777]">Yeni bir özel mesaj geldiğinde bildirim göster.</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !notifyMessages;
+                  setNotifyMessages(next);
+                  saveSetting('notifyMessages', next);
+                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
+                  onToast('Bildirim ayarı kaydedildi');
+                }}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyMessages ? 'bg-white' : 'bg-[#2a2a2a]'}`}
+              >
+                <div className={`w-4 h-4 rounded-full transition-transform absolute top-1 ${notifyMessages ? 'right-1 bg-black' : 'left-1 bg-white/60'}`} />
+              </button>
+            </div>
               <button
                 onClick={() => {
                   setNotifyArtists(!notifyArtists);
@@ -215,17 +236,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   saveSetting('reduceMotion', next);
                 },
               },
-              {
-                icon: Moon,
-                title: 'Medya otomatik oynatma',
-                desc: 'Hareketli içeriklerde otomatik oynatmayı etkinleştir.',
-                value: autoplay,
-                toggle: () => {
-                  const next = !autoplay;
-                  setAutoplay(next);
-                  saveSetting('autoplay', next);
-                },
-              },
+
             ].map((item) => {
               const Icon = item.icon;
               return <div key={item.title} className="p-4 flex items-center justify-between gap-4">
