@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, Plus, MessageCircle, User } from 'lucide-react';
+import { Home, Search, Plus, Heart, User } from 'lucide-react';
 import { SupportedLanguage, UserProfile } from '../types';
 import { translations } from '../i18n/translations';
 
@@ -55,13 +55,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
       <button
         type="button"
-        onClick={() => onSelectTab('messages')}
+        onClick={() => onSelectTab('favorites')}
         className={`p-2 rounded-full cursor-pointer ${
-          currentTab === 'messages' ? 'text-white' : 'text-[#888]'
+          currentTab === 'favorites' ? 'text-white' : 'text-[#888]'
         }`}
-        aria-label="Mesajlar"
+        aria-label="Kaydedilenler"
       >
-        <MessageCircle className="w-6 h-6" />
+        <Heart className={`w-6 h-6 ${currentTab === 'favorites' ? 'fill-white' : ''}`} />
       </button>
 
       <button
