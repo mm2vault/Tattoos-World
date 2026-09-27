@@ -964,7 +964,7 @@ class TattooStoreService {
       if (type === 'like') return settings.notifyLikes !== false;
       if (type === 'comment') return settings.notifyComments !== false;
       if (type === 'follow' || type === 'new_post') return settings.notifyArtists !== false;
-      if (type === 'message') return true;
+      if (type === 'message') return settings.notifyMessages !== false;
       return true;
     } catch {
       return true;
