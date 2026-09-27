@@ -877,7 +877,7 @@ class TattooStoreService {
       const settings = JSON.parse(localStorage.getItem('tattos_world_settings_v1') || '{}');
       if (type === 'like') return settings.notifyLikes !== false;
       if (type === 'comment') return settings.notifyComments !== false;
-      if (type === 'follow') return settings.notifyArtists !== false;
+      if (type === 'follow' || type === 'new_post') return settings.notifyArtists !== false;
       return true;
     } catch {
       return true;
@@ -1128,7 +1128,7 @@ class TattooStoreService {
             if (followerUid && followerUid !== this.currentUser.uid) {
               this.createNotification(
                 followerUid,
-                'follow',
+                'new_post',
                 `${this.currentUser.handle} yeni bir dövme paylaştı.`,
                 newTattoo
               );
