@@ -529,6 +529,10 @@ function App() {
           tattoos={tattoos}
           currentUser={currentUser}
           onTattooUpdated={handleTattooUpdated}
+          onSelectTattoo={(tattoo) => {
+            setAdminPanelOpen(false);
+            setSelectedTattoo(tattoo);
+          }}
           onToast={(msg) => setToastMessage(msg)}
         />
       )}
