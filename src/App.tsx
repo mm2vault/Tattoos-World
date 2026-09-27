@@ -100,6 +100,31 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+
+      if (adminPanelOpen) {
+        setAdminPanelOpen(false);
+        return;
+      }
+      if (createModalOpen) {
+        setCreateModalOpen(false);
+        return;
+      }
+      if (selectedTattoo) {
+        setSelectedTattoo(null);
+        return;
+      }
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [adminPanelOpen, createModalOpen, selectedTattoo, mobileMenuOpen]);
+
   // Shared post links use the hash so the exact tattoo opens when the link is visited.
   useEffect(() => {
     const openPostFromHash = () => {
