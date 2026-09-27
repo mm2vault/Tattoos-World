@@ -284,8 +284,14 @@ export default function App() {
               setCurrentTab('explore');
             }}
             onProfileClick={() => {
-                setSelectedCreatorHandle(null);
+              setSelectedCreatorHandle(null);
               setCurrentTab('profile');
+            }}
+            onHomeClick={() => {
+              setSelectedCreatorHandle(null);
+              setSelectedCategory('all');
+              setSearchQuery('');
+              setCurrentTab('explore');
             }}
             onLoginWithGoogle={handleLoginWithGoogle}
             onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
