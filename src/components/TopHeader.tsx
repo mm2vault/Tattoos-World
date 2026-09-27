@@ -48,7 +48,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     refreshNotifications();
     tattooStore.syncNotificationsFromFirestore().catch(() => {});
     window.addEventListener('tattoos-world-notifications', refreshNotifications);
-    return () => window.removeEventListener('tattoos-world-notifications', refreshNotifications);
+    window.addEventListener('tattoos-world-notification-settings', refreshNotifications);
+    return () => {
+      window.removeEventListener('tattoos-world-notifications', refreshNotifications);
+      window.removeEventListener('tattoos-world-notification-settings', refreshNotifications);
+    };
   }, [currentUser.uid]);
 
   useEffect(() => {
