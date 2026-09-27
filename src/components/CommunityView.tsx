@@ -39,6 +39,11 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
       .slice(0, 12);
   }, [tattoos, currentUser.uid]);
 
+  const featuredCreators = React.useMemo(
+    () => creators.filter((artist) => artist.isArtist || artist.verified).slice(0, 6),
+    [creators]
+  );
+
   const feed = React.useMemo(
     () => tattoos.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 12),
     [tattoos]
@@ -120,7 +125,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
           <h2 className="text-sm font-semibold text-white">Öne çıkan tattoo artist'ler</h2>
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
-          {creators.slice(0, 6).map((artist) => {
+          {featuredCreators.map((artist) => {
             const following = tattooStore.isFollowing(artist.handle);
             return (
               <div key={artist.uid} className="flex items-center gap-3 border border-white/10 rounded-xl px-3 py-3 bg-[#0d0d0d]">
@@ -130,7 +135,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                 <button type="button" onClick={() => onSelectCreator(artist.handle)} className="min-w-0 flex-1 text-left cursor-pointer">
                   <div className="flex items-center gap-1">
                     <span className="text-xs font-semibold text-white truncate">{artist.displayName}</span>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    {artist.verified && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
                   </div>
                   <span className="text-[11px] text-[#777] truncate block">{artist.handle}</span>
                 </button>
