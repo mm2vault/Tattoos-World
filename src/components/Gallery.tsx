@@ -473,10 +473,17 @@ export const Gallery: React.FC<GalleryProps> = ({
             {filteredTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               return (
-                <button
+                <div
                   key={tattoo.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectTattoo(tattoo)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectTattoo(tattoo);
+                    }
+                  }}
                   className="group relative aspect-square overflow-hidden bg-[#111] cursor-pointer"
                 >
                   <div className="relative w-full h-full overflow-hidden bg-black">
@@ -498,7 +505,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                       <p className="text-[9px] sm:text-[11px] text-white/70 truncate">{tattoo.categoryName}</p>
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
