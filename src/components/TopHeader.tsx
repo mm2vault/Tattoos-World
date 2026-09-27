@@ -93,6 +93,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const notificationIcon = (type: Notification['type']) => {
     if (type === 'like') return <Heart className="w-4 h-4 text-red-400 fill-red-400" />;
     if (type === 'comment') return <MessageCircle className="w-4 h-4 text-sky-400" />;
+    if (type === 'message') return <Send className="w-4 h-4 text-white" />;
     if (type === 'new_post') return <span className="text-sm text-emerald-300">✦</span>;
     return <span className="text-sm text-white">＋</span>;
   };
