@@ -41,24 +41,35 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   }, [tattoo.image, tattoo.additionalImages]);
 
   const currentImg = thumbnails[activeImageIndex] || tattoo.image;
-  const isLiked = tattooStore.isLiked(tattoo.id, currentUser.uid);
-  const isSaved = tattooStore.isSaved(tattoo.id);
-  const isFollowing = tattooStore.isFollowing(tattoo.creatorHandle);
-
   const handleToggleLike = () => {
+    if (isLiking) return;
+    setIsLiking(true);
     const result = tattooStore.toggleLike(tattoo.id);
+    setIsLiked(result.isLiked);
     onTattooUpdated();
     onToast(result.isLiked ? 'Beğenildi' : 'Beğeni kaldırıldı');
+    window.setTimeout(() => setIsLiking(false), 180);
   };
 
   const handleToggleSave = () => {
     const saved = tattooStore.toggleSaveTattoo(tattoo.id);
+    setIsSaved(saved);
     onToast(saved ? 'Kaydedildi' : 'Kaydedilenlerden kaldırıldı');
   };
 
   const handleToggleFollow = () => {
+    if (currentUser.handle.toLowerCase() === tattoo.creatorHandle.toLowerCase()) {
+      onToast('Kendi profilini takip edemezsin.');
+      return;
+    }
     const following = tattooStore.toggleFollow(tattoo.creatorHandle);
-    onToast(following ? `${tattoo.creatorHandle} takip ediliyor` : 'Takipten çıkıldı');
+    setIsFollowing(following);
+    onToast(following ? tattoo.creatorHandle + ' takip ediliyor' : 'Takipten çıkıldı');
+  };
+
+  const handleOpenCreator = (handle: string) => {
+    onClose();
+    onSelectCreator(handle);
   };
 
   const handleShare = async () => {
