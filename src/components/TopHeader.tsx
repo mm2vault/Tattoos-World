@@ -10,6 +10,7 @@ interface TopHeaderProps {
   onSearchChange: (q: string) => void;
   currentUser: UserProfile;
   onProfileClick: () => void;
+  onHomeClick?: () => void;
   onLoginWithGoogle?: () => void;
   onToggleMobileMenu?: () => void;
   onMessagesClick?: () => void;
@@ -25,6 +26,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onSearchChange,
   currentUser,
   onProfileClick,
+  onHomeClick,
   onLoginWithGoogle,
   onToggleMobileMenu,
   onMessagesClick,
@@ -147,7 +149,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <div className="w-full flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={onProfileClick}
+                onClick={onHomeClick || onProfileClick}
                 className="font-script text-[27px] leading-none font-bold text-white tracking-wide"
               >
                 Tattoogram
