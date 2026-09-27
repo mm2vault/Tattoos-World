@@ -719,11 +719,22 @@ class TattooStoreService {
     this.saveComments();
     this.saveLikes();
 
-    // Firestore deletion
+    // Firestore deletion + cleanup of orphaned comments/likes.
     try {
       deleteDoc(doc(db, 'tattoos', tattooId)).catch(() => {});
+
+      Promise.all([
+        getDocs(query(collection(db, 'comments'), where('tattooId', '==', tattooId))),
+        getDocs(query(collection(db, 'likes'), where('tattooId', '==', tattooId))),
+      ]).then(([commentSnap, likeSnap]) => {
+        return Promise.all([
+          ...commentSnap.docs.map((item) => deleteDoc(item.ref)),
+          ...likeSnap.docs.map((item) => deleteDoc(item.ref)),
+        ]);
+      }).catch(() => {});
     } catch (e) {}
 
+    window.dispatchEvent(new Event('tattoos-world-community-updated'));
     return true;
   }
 
