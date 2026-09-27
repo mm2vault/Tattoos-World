@@ -22,6 +22,7 @@ interface ProfileViewProps {
   onSelectTattoo: (tattoo: Tattoo) => void;
   onOpenCreate: () => void;
   onOpenMessages?: (handle: string) => void;
+  onOpenProfile?: (handle: string) => void;
   currentLanguage: SupportedLanguage;
   onToast: (msg: string) => void;
   onUserUpdated: (user: UserProfile) => void;
@@ -36,6 +37,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSelectTattoo,
   onOpenCreate,
   onOpenMessages,
+  onOpenProfile,
   onToast,
   onUserUpdated,
   onTattooUpdated,
@@ -805,13 +807,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       type="button"
                       onClick={() => {
                         setSocialModal(null);
-                        if (profile.handle.toLowerCase() === currentUser.handle.toLowerCase()) return;
+                        if (profile.handle.toLowerCase() === currentUser.handle.toLowerCase()) {
+                          return;
+                        }
                         const isPublic = tattooStore.isProfilePublic(profile.handle);
                         if (!isPublic) {
                           onToast('Bu profil gizli.');
                           return;
                         }
-                        onToast('');
+                        onOpenProfile?.(profile.handle);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.04] cursor-pointer"
                     >
