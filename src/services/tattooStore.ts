@@ -744,12 +744,42 @@ class TattooStoreService {
     };
     this.saveUser();
 
+    // Keep existing posts in sync with the owner's updated profile.
+    const ownTattoos = this.tattoos.filter(
+      (tattoo) =>
+        tattoo.creatorId === this.currentUser.uid ||
+        tattoo.creatorHandle.toLowerCase() === this.currentUser.handle.toLowerCase()
+    );
+
+    ownTattoos.forEach((tattoo) => {
+      tattoo.creatorName = this.currentUser.displayName;
+      tattoo.creatorHandle = this.currentUser.handle;
+      tattoo.creatorPhoto = this.currentUser.photoURL;
+      tattoo.creatorVerified = this.currentUser.verified || this.isCurrentUserAdmin();
+      tattoo.creatorRole = this.isCurrentUserAdmin()
+        ? 'Master Admin'
+        : (this.currentUser.isArtist ? 'Sanatçı' : 'Koleksiyoner');
+      tattoo.creatorProfilePublic = this.currentUser.profilePublic !== false;
+
+      updateDoc(doc(db, 'tattoos', tattoo.id), {
+        creatorName: tattoo.creatorName,
+        creatorHandle: tattoo.creatorHandle,
+        creatorPhoto: tattoo.creatorPhoto,
+        creatorVerified: tattoo.creatorVerified,
+        creatorRole: tattoo.creatorRole,
+        creatorProfilePublic: tattoo.creatorProfilePublic,
+      }).catch(() => {});
+    });
+    this.saveTattoos();
+
     // Sync in Firestore
     try {
       const userRef = doc(db, 'users', this.currentUser.uid);
       setDoc(userRef, this.currentUser, { merge: true }).catch(() => {});
     } catch (e) {}
 
+    window.dispatchEvent(new Event('tattoos-world-user-updated'));
+    window.dispatchEvent(new Event('tattoos-world-community-updated'));
     return this.currentUser;
   }
 
@@ -808,10 +838,30 @@ class TattooStoreService {
       this.saveUser();
     }
 
+    this.tattoos
+      .filter((tattoo) => tattoo.creatorId === uid)
+      .forEach((tattoo) => {
+        if (updates.displayName) tattoo.creatorName = updates.displayName;
+        if (updates.handle) tattoo.creatorHandle = updates.handle;
+        if (updates.photoURL) tattoo.creatorPhoto = updates.photoURL;
+        if (typeof updates.verified === 'boolean') tattoo.creatorVerified = updates.verified;
+        if (typeof updates.isArtist === 'boolean') tattoo.creatorRole = updates.isArtist ? 'Sanatçı' : 'Koleksiyoner';
+
+        updateDoc(doc(db, 'tattoos', tattoo.id), {
+          ...(updates.displayName ? { creatorName: tattoo.creatorName } : {}),
+          ...(updates.handle ? { creatorHandle: tattoo.creatorHandle } : {}),
+          ...(updates.photoURL ? { creatorPhoto: tattoo.creatorPhoto } : {}),
+          ...(typeof updates.verified === 'boolean' ? { creatorVerified: tattoo.creatorVerified } : {}),
+          ...(typeof updates.isArtist === 'boolean' ? { creatorRole: tattoo.creatorRole } : {}),
+        }).catch(() => {});
+      });
+    this.saveTattoos();
+
     setDoc(doc(db, 'users', uid), updates, { merge: true }).catch((err) => {
       console.warn('Admin user update failed:', err);
     });
 
+    window.dispatchEvent(new Event('tattoos-world-community-updated'));
     return true;
   }
 
