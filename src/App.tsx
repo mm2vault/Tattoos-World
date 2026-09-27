@@ -54,6 +54,24 @@ export default function App() {
 
   // Sync current user state on mount if session is active
   useEffect(() => {
+    const applyUiSettings = () => {
+      try {
+        const settings = JSON.parse(localStorage.getItem('tattos_world_settings_v1') || '{}');
+        document.documentElement.dataset.reduceMotion = settings.reduceMotion ? 'true' : 'false';
+      } catch {
+        document.documentElement.dataset.reduceMotion = 'false';
+      }
+    };
+
+    applyUiSettings();
+    window.addEventListener('tattoos-world-notification-settings', applyUiSettings);
+
+    return () => {
+      window.removeEventListener('tattoos-world-notification-settings', applyUiSettings);
+    };
+  }, []);
+
+  useEffect(() => {
     if (tattooStore.hasActiveSession()) {
       setCurrentUser(tattooStore.getCurrentUser());
     }
