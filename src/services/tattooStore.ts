@@ -472,8 +472,9 @@ class TattooStoreService {
         followSnap.docs.forEach((d) => {
           const value = d.data() as { uid?: string; handle?: string };
           if (!value.handle) return;
-          this.followerCounts[value.handle] = (this.followerCounts[value.handle] || 0) + 1;
-          if (value.uid === this.currentUser.uid) myFollows.add(value.handle);
+          const key = value.handle.trim().toLowerCase();
+          this.followerCounts[key] = (this.followerCounts[key] || 0) + 1;
+          if (value.uid === this.currentUser.uid) myFollows.add(key);
         });
         this.follows = myFollows;
         this.currentUser.followingCount = this.follows.size;
@@ -1207,33 +1208,34 @@ class TattooStoreService {
   }
 
   public isFollowing(handle: string): boolean {
-    return this.follows.has(handle);
+    return this.follows.has(handle.trim().toLowerCase());
   }
 
   public toggleFollow(handle: string): boolean {
+    const key = handle.trim().toLowerCase();
     let nowFollowing = false;
-    if (this.follows.has(handle)) {
-      this.follows.delete(handle);
+    if (this.follows.has(key)) {
+      this.follows.delete(key);
       nowFollowing = false;
     } else {
-      this.follows.add(handle);
+      this.follows.add(key);
       nowFollowing = true;
     }
 
     this.currentUser.followingCount = Math.max(0, this.follows.size);
-    this.followerCounts[handle] = Math.max(
+    this.followerCounts[key] = Math.max(
       0,
-      (this.followerCounts[handle] || 0) + (nowFollowing ? 1 : -1)
+      (this.followerCounts[key] || 0) + (nowFollowing ? 1 : -1)
     );
     this.saveFollows();
     this.saveUser();
 
-    const followId = `${this.currentUser.uid}_${encodeURIComponent(handle)}`;
+    const followId = `${this.currentUser.uid}_${encodeURIComponent(key)}`;
     const followRef = doc(db, 'follows', followId);
     if (nowFollowing) {
       setDoc(followRef, {
         uid: this.currentUser.uid,
-        handle,
+        handle: key,
         createdAt: new Date().toISOString(),
       }).catch(() => {});
     } else {
@@ -1251,7 +1253,7 @@ class TattooStoreService {
   }
 
   public getFollowerCount(handle: string): number {
-    return this.followerCounts[handle] || 0;
+    return this.followerCounts[handle.trim().toLowerCase()] || 0;
   }
 
   public getFollowingCount(): number {
