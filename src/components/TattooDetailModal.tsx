@@ -149,11 +149,17 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
 
         {/* LEFT COLUMN: Large High-Resolution Tattoo Artwork */}
         <div className="relative w-full md:w-[58%] h-[44dvh] sm:h-[52dvh] md:h-full bg-black flex items-center justify-center overflow-hidden select-none shrink-0">
+          <button
+            type="button"
+            onDoubleClick={handleToggleLike}
+            className="absolute inset-0 z-[1] cursor-zoom-in md:cursor-default"
+            aria-label="Görseli çift dokunarak beğen"
+          />
           <img
             src={currentImg}
             alt={tattoo.title}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-contain md:object-cover"
+            className="relative z-0 w-full h-full object-contain md:object-cover"
           />
 
           {/* Bottom Thumbnails Strip + < 1/5 > pagination */}
