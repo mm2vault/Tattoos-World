@@ -49,7 +49,7 @@ export const Gallery: React.FC<GalleryProps> = ({
     { id: 'black_and_grey', name: 'Siyah & Gri', image: './images/tattoos/rose_dark.jpg' },
     { id: 'color', name: 'Renkli', image: './images/tattoos/dragon_oriental.jpg' },
     { id: 'geometric', name: 'Geometrik', image: './images/tattoos/snake_serpent.jpg' },
-    { id: 'animals', name: 'Diğer', image: './images/tattoos/cross_gothic.jpg' },
+    { id: 'animals', name: 'Hayvanlar', image: './images/tattoos/cross_gothic.jpg' },
   ];
 
   const filteredTattoos = tattoos.filter((tattoo) => {
