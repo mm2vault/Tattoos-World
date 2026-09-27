@@ -3,6 +3,7 @@ import {
   Bell, Shield, Globe, Moon, User, LogOut, Check, Eye, Zap, Database 
 } from 'lucide-react';
 import { UserProfile, SupportedLanguage } from '../types';
+import { tattooStore } from '../services/tattooStore';
 
 interface SettingsViewProps {
   currentUser: UserProfile;
@@ -55,6 +56,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setProfilePublic(true);
     setReduceMotion(false);
     setAutoplay(true);
+    tattooStore.setProfilePublic(true);
     onToast('Tercihler varsayılan değerlere döndürüldü');
   };
 
@@ -186,6 +188,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   const next = !profilePublic;
                   setProfilePublic(next);
                   saveSetting('profilePublic', next);
+                  tattooStore.setProfilePublic(next);
                 },
               },
               {
