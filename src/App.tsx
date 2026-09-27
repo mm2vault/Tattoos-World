@@ -250,6 +250,12 @@ export default function App() {
             searchQuery={searchQuery}
             onSearchChange={(q) => setSearchQuery(q)}
             currentUser={currentUser}
+            currentTab={currentTab}
+            profileHandle={profileToDisplay.handle}
+            onBack={() => {
+              setSelectedCreatorHandle(null);
+              setCurrentTab('explore');
+            }}
             onProfileClick={() => {
                 setSelectedCreatorHandle(null);
               setCurrentTab('profile');
