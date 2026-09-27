@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search, Bell, Menu, Heart, MessageCircle, X
+  Search, Bell, Menu, Heart, MessageCircle, X, ArrowLeft, MoreHorizontal
 } from 'lucide-react';
 import { UserProfile, Notification } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -15,6 +15,9 @@ interface TopHeaderProps {
   onMessagesClick?: () => void;
   onFavoritesClick?: () => void;
   onOpenNotification?: (notification: Notification) => void;
+  currentTab?: string;
+  profileHandle?: string;
+  onBack?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -27,6 +30,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onMessagesClick,
   onFavoritesClick,
   onOpenNotification,
+  currentTab = 'explore',
+  profileHandle,
+  onBack,
 }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(() => tattooStore.getNotifications());
@@ -73,22 +79,141 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 h-[62px] border-b border-white/10 bg-black/90 backdrop-blur-xl">
       <div className="h-full w-full px-3 sm:px-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 lg:hidden min-w-0">
-          <button
-            type="button"
-            onClick={onToggleMobileMenu}
-            className="p-2 rounded-full text-white hover:bg-white/10 cursor-pointer"
-            aria-label="Menüyü aç"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            onClick={onProfileClick}
-            className="font-brush text-[18px] tracking-wide text-white truncate"
-          >
-            TATTOO'S WORLD
-          </button>
+        <div className="flex items-center lg:hidden min-w-0">
+          {currentTab === 'profile' ? (
+            <div className="w-full flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={onBack}
+                className="p-1.5 -ml-1 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                aria-label="Geri"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <span className="flex-1 text-center text-sm font-semibold text-white truncate">
+                {profileHandle || '@tattoo_user'}
+              </span>
+              <button
+                type="button"
+                onClick={onToggleMobileMenu}
+                className="p-1.5 -mr-1 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                aria-label="Profil menüsü"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+            </div>
+          ) : currentTab === 'gallery' ? (
+            <div className="w-full flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onToggleMobileMenu}
+                className="p-1.5 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                aria-label="Menüyü aç"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b8b8b]" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Dövme, sanatçı veya tarz ara..."
+                  aria-label="Dövme, sanatçı veya tarz ara"
+                  className="w-full h-9 bg-[#1a1a1a] border border-white/5 rounded-xl pl-9 pr-8 text-xs text-white placeholder-[#737373] outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#777] hover:text-white"
+                    aria-label="Aramayı temizle"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="w-full flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={onProfileClick}
+                className="font-script text-[27px] leading-none font-bold text-white tracking-wide"
+              >
+                Tattoogram
+              </button>
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={onMessagesClick}
+                  className="p-2 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                  aria-label="Mesajlar"
+                >
+                  <MessageCircle className="w-[21px] h-[21px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onFavoritesClick}
+                  className="p-2 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                  aria-label="Kaydedilenler"
+                >
+                  <Heart className="w-[21px] h-[21px]" />
+                </button>
+                <div className="relative" ref={popoverRef}>
+                  <button
+                    type="button"
+                    onClick={handleToggleNotifications}
+                    className="relative p-2 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                    aria-label="Bildirimler"
+                  >
+                    <Bell className="w-[20px] h-[20px]" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500 ring-2 ring-black" />
+                    )}
+                  </button>
+                  {notificationsOpen && (
+                    <div className="absolute right-0 top-10 w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                        <span className="font-semibold text-sm text-white">Bildirimler</span>
+                        <span className="text-[11px] text-[#777]">Tümü okundu</span>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="py-12 text-center">
+                            <Bell className="w-7 h-7 mx-auto text-[#555] mb-2" />
+                            <p className="text-sm text-[#888]">Henüz bildirim yok.</p>
+                          </div>
+                        ) : (
+                          notifications.slice(0, 30).map((notification) => (
+                            <button
+                              key={notification.id}
+                              type="button"
+                              onClick={() => {
+                                setNotificationsOpen(false);
+                                onOpenNotification?.(notification);
+                              }}
+                              className="w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer"
+                            >
+                              <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                                {notification.senderAvatar
+                                  ? <img src={notification.senderAvatar} alt="" className="w-full h-full object-cover" />
+                                  : notificationIcon(notification.type)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-white leading-relaxed">{notification.text}</p>
+                                {notification.tattooTitle && <p className="text-[11px] text-[#666] mt-0.5 truncate">{notification.tattooTitle}</p>}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="hidden lg:block w-[210px]">
