@@ -38,6 +38,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const [notifications, setNotifications] = useState<Notification[]>(() => tattooStore.getNotifications());
   const [unreadCount, setUnreadCount] = useState(() => tattooStore.getUnreadNotificationCount());
   const popoverRef = useRef<HTMLDivElement>(null);
+  const mobilePopoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const refreshNotifications = () => {
@@ -52,7 +53,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideDesktop = popoverRef.current?.contains(target);
+      const insideMobile = mobilePopoverRef.current?.contains(target);
+      if (!insideDesktop && !insideMobile) {
         setNotificationsOpen(false);
       }
     };
@@ -160,7 +164,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 >
                   <Heart className="w-[21px] h-[21px]" />
                 </button>
-                <div className="relative" ref={popoverRef}>
+                <div className="relative" ref={mobilePopoverRef}>
                   <button
                     type="button"
                     onClick={handleToggleNotifications}
