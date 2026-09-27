@@ -220,7 +220,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <span className="text-sm text-[#8e8e8e]">Topluluk akışı</span>
         </div>
 
-        <div className="flex-1 max-w-[360px]">
+        <div className="hidden lg:block flex-1 max-w-[360px]">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8d8d8d]" />
             <input
@@ -244,7 +244,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="hidden lg:flex items-center gap-1.5">
           <button type="button" onClick={onFavoritesClick} className="hidden sm:inline-flex p-2.5 rounded-full text-white hover:bg-white/10 cursor-pointer" aria-label="Kaydedilenler">
             <Heart className="w-5 h-5" />
           </button>
