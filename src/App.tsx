@@ -309,6 +309,7 @@ export default function App() {
                         currentUser={currentUser}
                         onToast={(msg) => setToastMessage(msg)}
                         onTattooUpdated={handleTattooUpdated}
+                        onSearchChange={setSearchQuery}
                         initialViewMode="feed"
                       />
                   </div>
@@ -327,6 +328,7 @@ export default function App() {
                     currentUser={currentUser}
                     onToast={(msg) => setToastMessage(msg)}
                     onTattooUpdated={handleTattooUpdated}
+                    onSearchChange={setSearchQuery}
                     initialViewMode="grid"
                   />
                 )}
