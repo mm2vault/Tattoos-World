@@ -53,7 +53,7 @@ export const FooterBar: React.FC<FooterBarProps> = ({
 
       {/* Right: Copyright matching image */}
       <div className="text-[#666666] text-[11px]">
-        <span>Tatto's World  © 2025  |  Tüm hakları saklıdır.</span>
+        <span>Tatto's World  © 2026  |  Tüm hakları saklıdır.</span>
       </div>
 
     </footer>
