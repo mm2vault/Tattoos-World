@@ -177,6 +177,7 @@ export const Gallery: React.FC<GalleryProps> = ({
     <div className="space-y-5 pb-8">
       <section className="border-b border-white/10 pb-5">
         <div className="mx-auto w-full max-w-2xl overflow-x-auto scrollbar-none">
+
           <div className="flex gap-4 px-3 sm:px-0">
             {storyCreators.map((creator) => (
               <button
@@ -185,7 +186,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                 onClick={() => creator.isCurrentUser ? onOpenCreate() : onSelectCreator(creator.handle)}
                 className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer"
               >
-                <div className="rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-fuchsia-500 to-purple-600">
+                <div className="relative rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-fuchsia-500 to-purple-600">
                   <div className="w-[58px] h-[58px] rounded-full bg-black p-[2px]">
                     <img
                       src={creator.image}
@@ -193,6 +194,11 @@ export const Gallery: React.FC<GalleryProps> = ({
                       className="w-full h-full rounded-full object-cover border border-black"
                     />
                   </div>
+                  {creator.isCurrentUser && (
+                    <span className="absolute -right-0.5 bottom-0.5 w-5 h-5 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-[12px] font-bold leading-none">
+                      +
+                    </span>
+                  )}
                 </div>
                 <span className="w-full truncate text-[11px] text-[#c7c7c7]">{creator.name}</span>
               </button>
