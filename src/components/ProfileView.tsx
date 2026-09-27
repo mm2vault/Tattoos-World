@@ -3,7 +3,8 @@ import {
   CheckCircle2, Globe, Sparkles, 
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
-  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle
+  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle,
+  Grid3X3, Bookmark, Info as InfoIcon
 } from 'lucide-react';
 import { Tattoo, UserProfile, SupportedLanguage } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -304,8 +305,77 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         className="hidden"
       />
 
-      {/* Profile Header Card */}
-      <div className="relative overflow-hidden bg-transparent">
+      {/* Mobile profile body matching the supplied Instagram-style reference */}
+      <section className="sm:hidden bg-black">
+        <div className="flex items-center gap-5 px-4 pt-3">
+          <div className="relative shrink-0">
+            <img
+              src={profileUser.photoURL || './images/users/avatar_inkedlife.jpg'}
+              alt={profileUser.displayName}
+              className="w-[82px] h-[82px] rounded-full object-cover border border-white/20 bg-[#111]"
+            />
+            {isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => avatarFileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white text-black flex items-center justify-center border-4 border-black cursor-pointer"
+                aria-label="Profil fotoğrafını değiştir"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 grid grid-cols-3 text-center gap-1">
+            <div><p className="text-[18px] font-bold text-white leading-none">{userTattoos.length}</p><p className="text-[10px] text-[#999] mt-1">Paylaşım</p></div>
+            <div><p className="text-[18px] font-bold text-white leading-none">{profileUser.followersCount > 1000 ? (profileUser.followersCount / 1000).toFixed(1) + 'K' : profileUser.followersCount}</p><p className="text-[10px] text-[#999] mt-1">Takipçi</p></div>
+            <div><p className="text-[18px] font-bold text-white leading-none">{profileUser.followingCount}</p><p className="text-[10px] text-[#999] mt-1">Takip</p></div>
+          </div>
+        </div>
+
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-sm font-bold text-white">{profileUser.displayName || profileUser.handle}</h1>
+            {(profileUser.verified || profileUser.isAdmin) && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+          </div>
+          <p className="text-[11px] text-[#8e8e8e] mt-0.5">{profileUser.handle}</p>
+          <p className="text-xs text-[#d5d5d5] leading-relaxed mt-2">{profileUser.bio || 'Tattoo art, styles and stories.'}</p>
+        </div>
+
+        <div className="flex gap-2 px-4 pt-3">
+          {isOwnProfile ? (
+            <>
+              <button type="button" onClick={openEditModal} className="flex-1 h-8 rounded-lg bg-[#1d1d1d] border border-white/10 text-[11px] font-semibold text-white cursor-pointer">Profili Düzenle</button>
+              <button type="button" onClick={onOpenCreate} className="w-10 h-8 rounded-lg bg-white text-black flex items-center justify-center cursor-pointer" aria-label="Yeni gönderi"><Plus className="w-4 h-4" /></button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={handleToggleFollow} className={isFollowing ? 'flex-1 h-8 rounded-lg bg-[#1d1d1d] border border-white/10 text-[11px] font-bold text-white cursor-pointer' : 'flex-1 h-8 rounded-lg bg-white text-black text-[11px] font-bold cursor-pointer'}>{isFollowing ? 'Takip Ediliyor' : 'Takip Et'}</button>
+              {onOpenMessages && <button type="button" onClick={() => onOpenMessages(profileUser.handle)} className="flex-1 h-8 rounded-lg bg-[#1d1d1d] border border-white/10 text-[11px] font-semibold text-white cursor-pointer">Mesaj Gönder</button>}
+            </>
+          )}
+        </div>
+
+        <div className="mt-4 px-4 overflow-x-auto scrollbar-none">
+          <div className="flex gap-4 pb-1">
+            {userTattoos.slice(0, 5).map((tattoo, index) => (
+              <button type="button" key={tattoo.id} onClick={() => onSelectTattoo(tattoo)} className="shrink-0 w-[58px] flex flex-col items-center gap-1.5 cursor-pointer">
+                <div className="w-[56px] h-[56px] rounded-full p-[2px] border border-white/20 bg-[#101010]"><img src={tattoo.image} alt={tattoo.title} className="w-full h-full rounded-full object-cover" /></div>
+                <span className="w-full truncate text-center text-[9px] text-[#aaa]">{index === 0 ? 'Çalışmalar' : 'Stil ' + index}</span>
+              </button>
+            ))}
+            {userTattoos.length === 0 && (
+              <button type="button" onClick={isOwnProfile ? onOpenCreate : undefined} className="shrink-0 w-[58px] flex flex-col items-center gap-1.5 cursor-pointer">
+                <div className="w-[56px] h-[56px] rounded-full border border-dashed border-white/20 bg-[#101010] flex items-center justify-center text-[#777]"><Plus className="w-4 h-4" /></div>
+                <span className="w-full truncate text-center text-[9px] text-[#aaa]">Yeni</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Desktop profile header */}
+      <div className="relative overflow-hidden bg-transparent hidden sm:block">
         
         {/* Banner Cover Artwork (profilin arkasındaki resim) */}
         <div 
@@ -482,51 +552,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       </div>
 
-      {/* Tabs: Paylaşımlar / Hakkında / Favorilerim */}
-      <div className="flex items-center justify-center gap-0 border-b border-white/10 text-xs font-semibold">
-        <button
-          onClick={() => setActiveTab('creations')}
-          className={`px-6 py-3 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'creations'
-              ? 'text-white border-b-2 border-white'
-              : 'text-[#888888] hover:text-white'
-          }`}
-        >
-          <span>Paylaşımlar</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10">
-            {userTattoos.length}
-          </span>
+      {/* Tabs: Instagram-style on mobile */}
+      <div className="flex items-center justify-around border-b border-white/10 text-xs font-semibold">
+        <button type="button" onClick={() => setActiveTab('creations')} className={activeTab === 'creations' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Paylaşımlar">
+          <Grid3X3 className="w-5 h-5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Paylaşımlar ({userTattoos.length})</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('about')}
-          className={`px-6 py-3 transition-all cursor-pointer ${
-            activeTab === 'about'
-              ? 'text-white border-b-2 border-white'
-              : 'text-[#888888] hover:text-white'
-          }`}
-        >
-          Hakkında
+        <button type="button" onClick={() => setActiveTab('about')} className={activeTab === 'about' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Hakkında">
+          <InfoIcon className="w-5 h-5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Hakkında</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('favorites')}
-          className={`px-6 py-3 transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'favorites'
-              ? 'text-white border-b-2 border-white'
-              : 'text-[#888888] hover:text-white'
-          }`}
-        >
-          <span>Favorilerim</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10">
-            {favoriteTattoos.length}
-          </span>
+        <button type="button" onClick={() => setActiveTab('favorites')} className={activeTab === 'favorites' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Kaydedilenler">
+          <Bookmark className={activeTab === 'favorites' ? 'w-5 h-5 sm:w-4 sm:h-4 fill-white' : 'w-5 h-5 sm:w-4 sm:h-4'} /><span className="hidden sm:inline">Favoriler ({favoriteTattoos.length})</span>
         </button>
       </div>
-
       {/* Tab 1: Paylaşımlar (Creations) with Delete Option */}
       {activeTab === 'creations' && (
-        <div className="grid grid-cols-3 gap-0 border border-white/10">
+        <div className="grid grid-cols-3 gap-[2px] sm:gap-0 border-0 sm:border border-white/10 bg-black">
           {userTattoos.length > 0 ? (
             userTattoos.map((item) => (
               <div
@@ -552,7 +592,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </button>
                 )}
 
-                <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black via-black/70 to-transparent">
+                <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black via-black/70 to-transparent hidden sm:block">
                   <p className="text-xs font-bold text-white truncate">{item.title}</p>
                   <div className="flex items-center gap-1 text-[11px] text-[#AAAAAA] mt-0.5">
                     <Heart className="w-3 h-3 text-red-500 fill-red-500" />
