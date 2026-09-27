@@ -232,10 +232,24 @@ export const Gallery: React.FC<GalleryProps> = ({
       </section>
       )}
 
-      <section className="space-y-4 pt-1">
+      <section className="space-y-3 pt-1">
+        {viewMode === 'grid' && (
+          <div className="flex items-center justify-between px-3 sm:px-0">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-white">
+                {searchQuery ? `"${searchQuery}" sonuçları` : 'Keşfet'}
+              </h2>
+              <p className="text-[10px] text-[#666] mt-0.5">
+                {filteredTattoos.length} dövme
+              </p>
+            </div>
+            <span className="text-[10px] text-[#666] hidden sm:block">Sanatçıları ve stilleri keşfet</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className={`sm:block ${viewMode === 'feed' ? 'hidden' : 'block'}`}>
-            <h2 className="text-sm sm:text-base font-semibold text-white">
+            <h2 className="text-sm sm:text-base font-semibold text-white sr-only">
               {searchQuery ? `"${searchQuery}" Sonuçları` : 'Keşfet'}
             </h2>
           </div>
@@ -484,7 +498,7 @@ export const Gallery: React.FC<GalleryProps> = ({
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-[2px] sm:gap-1 bg-black">
+          <div className="grid grid-cols-3 gap-[2px] sm:gap-[3px] bg-black">
             {filteredTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               return (
@@ -499,10 +513,10 @@ export const Gallery: React.FC<GalleryProps> = ({
                       onSelectTattoo(tattoo);
                     }
                   }}
-                  className="group relative aspect-square overflow-hidden bg-[#111] cursor-pointer"
+                  className="group relative aspect-square overflow-hidden bg-[#111] cursor-pointer focus:outline-none focus:ring-1 focus:ring-white/50"
                 >
                   <div className="relative w-full h-full overflow-hidden bg-black">
-                    <img src={tattoo.image} alt={tattoo.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <img src={tattoo.image} alt={tattoo.title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
                     <button
                       type="button"
@@ -515,7 +529,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                     >
                       <Heart className={`w-4 h-4 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                     </button>
-                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <p className="text-[10px] sm:text-xs font-semibold text-white truncate">{tattoo.creatorHandle}</p>
                       <p className="text-[9px] sm:text-[11px] text-white/70 truncate">{tattoo.categoryName}</p>
                     </div>
