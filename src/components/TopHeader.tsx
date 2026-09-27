@@ -72,14 +72,22 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [notificationsOpen]);
 
-  const handleToggleNotifications = async () => {
-    const nextOpen = !notificationsOpen;
-    setNotificationsOpen(nextOpen);
-    if (nextOpen) {
-      await tattooStore.markNotificationsRead();
-      setNotifications(tattooStore.getNotifications());
-      setUnreadCount(0);
-    }
+  const handleToggleNotifications = () => {
+    setNotificationsOpen((open) => !open);
+  };
+
+  const handleOpenNotification = async (notification: Notification) => {
+    await tattooStore.markNotificationRead(notification.id);
+    setNotifications(tattooStore.getNotifications());
+    setUnreadCount(tattooStore.getUnreadNotificationCount());
+    setNotificationsOpen(false);
+    onOpenNotification?.(notification);
+  };
+
+  const handleMarkAllRead = async () => {
+    await tattooStore.markNotificationsRead();
+    setNotifications(tattooStore.getNotifications());
+    setUnreadCount(tattooStore.getUnreadNotificationCount());
   };
 
   const notificationIcon = (type: Notification['type']) => {
@@ -189,7 +197,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                     <div className="absolute right-0 top-10 w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden z-50">
                       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                         <span className="font-semibold text-sm text-white">Bildirimler</span>
-                        <span className="text-[11px] text-[#777]">Tümü okundu</span>
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          className="text-[11px] text-[#777] hover:text-white cursor-pointer"
+                        >
+                          Tümü okundu
+                        </button>
                       </div>
                       <div className="max-h-80 overflow-y-auto">
                         {notifications.length === 0 ? (
@@ -203,10 +217,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                               key={notification.id}
                               type="button"
                               onClick={() => {
-                                setNotificationsOpen(false);
-                                onOpenNotification?.(notification);
+                                handleOpenNotification(notification);
                               }}
-                              className="w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer"
+                              className={`w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer ${notification.read ? '' : 'bg-white/[0.035]'}`}
                             >
                               <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
                                 {notification.senderAvatar
@@ -303,10 +316,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                       <button
                         key={notification.id}
                         type="button"
-                        onClick={() => {
-                          setNotificationsOpen(false);
-                          onOpenNotification?.(notification);
-                        }}
+                        onClick={() => handleOpenNotification(notification)}}
                         className="w-full text-left flex gap-3 px-4 py-3 hover:bg-white/[0.04] cursor-pointer"
                       >
                         <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
