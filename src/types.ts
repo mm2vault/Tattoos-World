@@ -54,7 +54,7 @@ export interface Notification {
   senderName: string;
   senderHandle: string;
   senderAvatar: string;
-  type: 'like' | 'comment' | 'follow' | 'new_post';
+  type: 'like' | 'comment' | 'follow' | 'new_post' | 'message';
   tattooId?: string;
   tattooTitle?: string;
   text: string;
