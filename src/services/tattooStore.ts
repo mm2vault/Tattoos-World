@@ -1320,7 +1320,7 @@ class TattooStoreService {
         profiles.push({
           uid,
           displayName: value.followerName || fromTattoo?.creatorName || '@user',
-          handle: fromTattoo?.creatorHandle || value.followerName ? (fromTattoo?.creatorHandle || value.followerName || '@user') : '@user',
+          handle: fromTattoo?.creatorHandle || '@' + (value.followerName || 'user').replace(/^@/, '').replace(/\s+/g, '_').toLowerCase(),
           email: '',
           photoURL: value.followerPhoto || fromTattoo?.creatorPhoto || './images/users/avatar_inkedlife.jpg',
           bio: '',
