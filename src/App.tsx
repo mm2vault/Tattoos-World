@@ -175,6 +175,10 @@ export default function App() {
   };
 
   const handleSelectCreator = (handle: string) => {
+    if (!tattooStore.isProfilePublic(handle)) {
+      setToastMessage('Bu profil gizli.');
+      return;
+    }
     setSelectedCreatorHandle(handle);
     setCurrentTab('profile');
   };
