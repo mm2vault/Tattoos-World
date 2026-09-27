@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Send, CheckCircle2, Info, Search } from 'lucide-react';
+import { Send, CheckCircle2, Info, Search, ArrowLeft } from 'lucide-react';
 import { UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
@@ -235,8 +235,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto rounded-3xl overflow-hidden bg-[#0d0d0d] border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7rem)] md:h-[72vh] min-h-[520px]">
-      <div className="w-full md:w-64 lg:w-80 border-b md:border-b-0 md:border-r border-white/10 flex flex-col bg-[#0a0a0a]">
+    <div className="w-full max-w-6xl mx-auto rounded-none md:rounded-2xl overflow-hidden bg-black md:bg-[#0d0d0d] border-y md:border border-white/10 shadow-2xl flex flex-col md:flex-row h-[calc(100dvh-7.2rem)] md:h-[72vh] min-h-[520px]">
+      <div className={"w-full md:w-64 lg:w-80 border-b md:border-b-0 md:border-r border-white/10 flex-col bg-[#0a0a0a] " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}>
         <div className="p-4 border-b border-white/10 space-y-3">
           <div>
             <h2 className="text-base font-bold text-white font-display">Mesajlar</h2>
@@ -285,17 +285,27 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col justify-between bg-[#0e0e0e] min-w-0">
+      <div className={"flex-1 flex-col justify-between bg-[#0e0e0e] min-w-0 " + (selectedPartnerUid ? 'flex' : 'hidden md:flex')}>
         {activePartner ? (
           <>
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0d0d0d]">
-              <button onClick={() => onSelectCreator(activePartner.handle)} className="flex items-center gap-3 cursor-pointer group min-w-0 text-left">
+            <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-[#0d0d0d]">
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPartnerUid('')}
+                  className="md:hidden p-2 -ml-1 rounded-full text-white hover:bg-white/10 cursor-pointer"
+                  aria-label="Mesaj listesine dön"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button onClick={() => onSelectCreator(activePartner.handle)} className="flex items-center gap-3 cursor-pointer group min-w-0 text-left">
                 {activePartner.photo ? <img src={activePartner.photo} alt={activePartner.name} className="w-9 h-9 rounded-full object-cover border border-white/20 shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xs font-bold shrink-0">{activePartner.name.charAt(0).toUpperCase()}</div>}
                 <div className="min-w-0">
                   <h3 className="text-xs font-bold text-white group-hover:underline truncate flex items-center gap-1.5">{activePartner.name}{activePartner.verified && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />}</h3>
                   <p className="text-[10px] text-[#888888] truncate">{activePartner.role}</p>
                 </div>
-              </button>
+                </button>
+              </div>
               <button onClick={() => onSelectCreator(activePartner.handle)} className="p-2 rounded-full text-[#888888] hover:bg-white/5 hover:text-white transition-colors" title="Profili Aç" aria-label="Profili Aç"><Info className="w-4 h-4" /></button>
             </div>
 
