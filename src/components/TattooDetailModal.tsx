@@ -29,6 +29,10 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<Comment[]>(() => tattooStore.getComments(tattoo.id));
+  const [isLiked, setIsLiked] = useState(() => tattooStore.isLiked(tattoo.id, currentUser.uid));
+  const [isSaved, setIsSaved] = useState(() => tattooStore.isSaved(tattoo.id));
+  const [isFollowing, setIsFollowing] = useState(() => tattooStore.isFollowing(tattoo.creatorHandle));
+  const [isLiking, setIsLiking] = useState(false);
 
   // Show the cover plus the extra photos uploaded with this tattoo (max 10 total).
   const thumbnails = React.useMemo(() => {
