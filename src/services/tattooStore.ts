@@ -855,13 +855,25 @@ class TattooStoreService {
     await Promise.all(current.map((n) => deleteDoc(doc(db, 'notifications', n.id)).catch(() => {})));
   }
 
+  private shouldNotify(type: Notification['type']): boolean {
+    try {
+      const settings = JSON.parse(localStorage.getItem('tattos_world_settings_v1') || '{}');
+      if (type === 'like') return settings.notifyLikes !== false;
+      if (type === 'comment') return settings.notifyComments !== false;
+      if (type === 'follow') return settings.notifyArtists !== false;
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
   private createNotification(
     recipientUid: string,
     type: Notification['type'],
     text: string,
     tattoo?: Tattoo
   ) {
-    if (!auth.currentUser || !recipientUid || recipientUid === auth.currentUser.uid) return;
+    if (!auth.currentUser || !recipientUid || recipientUid === auth.currentUser.uid || !this.shouldNotify(type)) return;
     const notification: Notification = {
       id: 'notification_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       recipientUid,
@@ -1088,6 +1100,24 @@ class TattooStoreService {
     // Firestore sync
     try {
       setDoc(doc(db, 'tattoos', newTattoo.id), newTattoo).catch(() => {});
+
+      // Notify followers when the creator publishes a new tattoo, respecting their
+      // "Takip Edilen Sanatçılar" notification preference.
+      getDocs(query(collection(db, 'follows'), where('handle', '==', this.currentUser.handle)))
+        .then((snap) => {
+          snap.docs.forEach((item) => {
+            const followerUid = String(item.data().uid || '');
+            if (followerUid && followerUid !== this.currentUser.uid) {
+              this.createNotification(
+                followerUid,
+                'follow',
+                `${this.currentUser.handle} yeni bir dövme paylaştı.`,
+                newTattoo
+              );
+            }
+          });
+        })
+        .catch(() => {});
     } catch (e) {}
 
     return newTattoo;
