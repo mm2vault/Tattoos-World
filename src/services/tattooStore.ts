@@ -831,11 +831,15 @@ class TattooStoreService {
 
   // ================= NOTIFICATIONS =================
   public getNotifications(): Notification[] {
-    return [...this.notifications].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    return [...this.notifications]
+      .filter((notification) => this.isNotificationVisible(notification.type))
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   }
 
   public getUnreadNotificationCount(): number {
-    return this.notifications.filter((n) => !n.read).length;
+    return this.notifications.filter(
+      (notification) => !notification.read && this.isNotificationVisible(notification.type)
+    ).length;
   }
 
   public async syncNotificationsFromFirestore(): Promise<void> {
@@ -872,7 +876,7 @@ class TattooStoreService {
     await Promise.all(current.map((n) => deleteDoc(doc(db, 'notifications', n.id)).catch(() => {})));
   }
 
-  private shouldNotify(type: Notification['type']): boolean {
+  private isNotificationVisible(type: Notification['type']): boolean {
     try {
       const settings = JSON.parse(localStorage.getItem('tattos_world_settings_v1') || '{}');
       if (type === 'like') return settings.notifyLikes !== false;
@@ -890,7 +894,7 @@ class TattooStoreService {
     text: string,
     tattoo?: Tattoo
   ) {
-    if (!auth.currentUser || !recipientUid || recipientUid === auth.currentUser.uid || !this.shouldNotify(type)) return;
+    if (!auth.currentUser || !recipientUid || recipientUid === auth.currentUser.uid) return;
     const notification: Notification = {
       id: 'notification_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       recipientUid,
