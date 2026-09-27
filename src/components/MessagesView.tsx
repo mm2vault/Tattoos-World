@@ -31,6 +31,7 @@ interface ChatPartner {
   role: string;
   lastMessage: string;
   time: string;
+  lastMessageAt: string;
   conversationId: string;
 }
 
@@ -57,6 +58,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         role: tattoo.creatorRole || 'Topluluk üyesi',
         lastMessage: 'Yeni bir sohbet başlat',
         time: '',
+        lastMessageAt: '',
         conversationId: buildConversationId(currentUser.uid, tattoo.creatorId),
       });
     });
@@ -75,11 +77,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   useEffect(() => {
     if (!initialCreatorHandle) return;
-    const match = Array.from(tattooCreators.values()).find(
+    const match = partners.find(
       (p) => p.handle.toLowerCase() === initialCreatorHandle.toLowerCase()
     );
     if (match) setSelectedPartnerUid(match.uid);
-  }, [initialCreatorHandle, tattooCreators]);
+  }, [initialCreatorHandle, partners]);
 
   useEffect(() => {
     if (initialMessage) {
@@ -150,6 +152,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               role: data.recipientRole || 'Topluluk üyesi',
               lastMessage: data.text,
               time: createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+              lastMessageAt: createdAt,
               conversationId,
             });
           }
@@ -168,6 +171,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 time: last?.createdAt
                   ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : fallback.time,
+                lastMessageAt: last?.createdAt || fallback.lastMessageAt,
               });
             }
           }
@@ -175,9 +179,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
         const mergedPartners = new Map<string, ChatPartner>(tattooCreators);
         partnerMeta.forEach((value, key) => mergedPartners.set(key, value));
-        const sortedPartners = Array.from(mergedPartners.values()).sort((a, b) =>
-          String(b.time).localeCompare(String(a.time))
-        );
+        const sortedPartners = Array.from(mergedPartners.values()).sort((a, b) => {
+          const ad = new Date(a.lastMessageAt || 0).getTime() || 0;
+          const bd = new Date(b.lastMessageAt || 0).getTime() || 0;
+          return bd - ad;
+        });
 
         setPartners(sortedPartners);
         setMessages(byConversation);
