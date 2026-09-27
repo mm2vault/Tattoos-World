@@ -882,6 +882,44 @@ class TattooStoreService {
     return true;
   }
 
+  public async getReports(): Promise<Array<{
+    id: string;
+    type: string;
+    targetId: string;
+    reporterUid: string;
+    reporterName: string;
+    reason: string;
+    createdAt: string;
+    status: 'open' | 'reviewed' | 'resolved';
+  }>> {
+    if (!this.isCurrentUserAdmin()) return [];
+    try {
+      const snap = await getDocs(collection(db, 'reports'));
+      return snap.docs
+        .map((item) => item.data() as any)
+        .filter((report) => Boolean(report?.id))
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    } catch (err) {
+      console.warn('Admin reports could not be loaded:', err);
+      return [];
+    }
+  }
+
+  public async updateReportStatus(reportId: string, status: 'open' | 'reviewed' | 'resolved'): Promise<boolean> {
+    if (!this.isCurrentUserAdmin() || !reportId) return false;
+    try {
+      await updateDoc(doc(db, 'reports', reportId), {
+        status,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: this.currentUser.uid,
+      });
+      return true;
+    } catch (err) {
+      console.warn('Admin report status update failed:', err);
+      return false;
+    }
+  }
+
   public async getAllUsers(): Promise<UserProfile[]> {
     if (!this.isCurrentUserAdmin()) return [];
     try {
