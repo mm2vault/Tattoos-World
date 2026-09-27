@@ -6,7 +6,7 @@ import {
   isUserAdmin, 
   db 
 } from './firebase';
-import { signInWithPopup, signInAnonymously, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, signInAnonymously, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
@@ -550,7 +550,7 @@ class TattooStoreService {
         followersCount: 0,
         followingCount: 0,
         createdAt: new Date().toISOString().split('T')[0],
-        savedTattooIds: ['tattoo_1', 'tattoo_2'],
+        savedTattooIds: [],
       };
 
       this.currentUser = user;
@@ -585,7 +585,7 @@ class TattooStoreService {
         followersCount: 0,
         followingCount: 0,
         createdAt: new Date().toISOString().split('T')[0],
-        savedTattooIds: ['tattoo_1'],
+        savedTattooIds: [],
       };
 
       this.currentUser = userProfile;
@@ -596,7 +596,24 @@ class TattooStoreService {
       return synced;
     } catch (popupError: any) {
       console.warn('Firebase signInWithPopup failed:', popupError);
-      // Never pretend a failed Google authentication succeeded.
+
+      const redirectEligible = [
+        'auth/popup-blocked',
+        'auth/popup-timeout',
+        'auth/operation-not-supported-in-this-environment',
+      ].includes(String(popupError?.code || ''));
+
+      if (redirectEligible) {
+        try {
+          localStorage.setItem('tattos_world_has_entered', 'true');
+          this.setSessionActive(true);
+          await signInWithRedirect(auth, googleProvider);
+          return this.currentUser;
+        } catch (redirectError) {
+          console.warn('Firebase signInWithRedirect failed:', redirectError);
+        }
+      }
+
       throw popupError;
     }
   }
@@ -1082,6 +1099,7 @@ class TattooStoreService {
       creatorPhoto: this.currentUser.photoURL,
       creatorRole: this.isCurrentUserAdmin() ? 'Master Admin' : (this.currentUser.isArtist ? 'Sanatçı' : 'Koleksiyoner'),
       creatorVerified: this.currentUser.verified || this.isCurrentUserAdmin(),
+      creatorProfilePublic: this.currentUser.profilePublic !== false,
       createdAt: new Date().toISOString(),
       likesCount: 0,
       commentsCount: 0,
@@ -1175,6 +1193,40 @@ class TattooStoreService {
     return this.follows.size;
   }
 
+  public isProfilePublic(handle: string): boolean {
+    if (!handle) return true;
+    if (handle.toLowerCase() === this.currentUser.handle.toLowerCase()) {
+      return this.currentUser.profilePublic !== false;
+    }
+
+    const tattoo = this.tattoos.find(
+      (t) => t.creatorHandle.toLowerCase() === handle.toLowerCase()
+    );
+    return tattoo?.creatorProfilePublic !== false;
+  }
+
+  public setProfilePublic(isPublic: boolean): UserProfile {
+    this.currentUser.profilePublic = isPublic;
+    this.saveUser();
+
+    const ownTattoos = this.tattoos.filter(
+      (t) => t.creatorId === this.currentUser.uid ||
+        t.creatorHandle.toLowerCase() === this.currentUser.handle.toLowerCase()
+    );
+
+    ownTattoos.forEach((tattoo) => {
+      tattoo.creatorProfilePublic = isPublic;
+      updateDoc(doc(db, 'tattoos', tattoo.id), {
+        creatorProfilePublic: isPublic,
+      }).catch(() => {});
+    });
+
+    this.saveTattoos();
+    window.dispatchEvent(new Event('tattoos-world-user-updated'));
+    window.dispatchEvent(new Event('tattoos-world-community-updated'));
+    return this.currentUser;
+  }
+
   public getArtistProfile(handle: string): UserProfile | undefined {
     if (handle === this.currentUser.handle) {
       return { ...this.currentUser, followersCount: this.getFollowerCount(handle), followingCount: this.getFollowingCount() };
@@ -1190,6 +1242,8 @@ class TattooStoreService {
       (t) => t.creatorHandle.toLowerCase() === handle.toLowerCase()
     );
     if (userTattoo) {
+      if (userTattoo.creatorProfilePublic === false) return undefined;
+
       return {
         uid: userTattoo.creatorId,
         displayName: userTattoo.creatorName,
