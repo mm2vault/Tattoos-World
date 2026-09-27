@@ -1293,7 +1293,7 @@ class TattooStoreService {
   }
 
   public getArtistProfile(handle: string): UserProfile | undefined {
-    if (handle === this.currentUser.handle) {
+    if (handle && handle.toLowerCase() === this.currentUser.handle.toLowerCase()) {
       return { ...this.currentUser, followersCount: this.getFollowerCount(handle), followingCount: this.getFollowingCount() };
     }
     const found = INITIAL_ARTISTS.find(a => a.handle.toLowerCase() === handle.toLowerCase());
