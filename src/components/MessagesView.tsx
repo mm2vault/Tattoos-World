@@ -228,6 +228,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         participants: [auth.currentUser.uid, activePartner.uid],
         createdAt,
       });
+      tattooStore.notifyMessage(
+        activePartner.uid,
+        `${currentUser.handle} sana bir mesaj gönderdi.`
+      );
       setNewMessageText('');
     } catch (error) {
       console.warn('Message was not saved:', error);
