@@ -88,7 +88,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 h-[62px] border-b border-white/10 bg-black/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 h-[54px] border-b border-white/10 bg-black/90 backdrop-blur-xl">
       <div className="h-full w-full px-3 sm:px-5 flex items-center justify-between gap-4">
         <div className="flex items-center lg:hidden min-w-0">
           {currentTab === 'profile' ? (
@@ -227,9 +227,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           )}
         </div>
 
-        <div className="hidden lg:block w-[210px]">
-          <span className="text-sm text-[#8e8e8e]">Topluluk akışı</span>
-        </div>
+        <div className="hidden lg:block w-[210px]" aria-hidden="true" />
 
         <div className="hidden lg:block flex-1 max-w-[360px]">
           {['explore', 'gallery'].includes(currentTab) ? (
