@@ -324,7 +324,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             )}
           </div>
 
-          {onLoginWithGoogle && (!currentUser.email || currentUser.email.includes('guest@') || currentUser.email.includes('alex@')) && (
+          {onLoginWithGoogle && (!currentUser.email || currentUser.email.includes('guest@')) && (
             <button
               type="button"
               onClick={onLoginWithGoogle}
