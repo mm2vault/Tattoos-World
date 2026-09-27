@@ -42,6 +42,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   initialTab = 'creations',
 }) => {
   const [activeTab, setActiveTab] = useState<'creations' | 'about' | 'favorites'>(initialTab);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [tattooToDelete, setTattooToDelete] = useState<Tattoo | null>(null);
+
+  const isOwnProfile =
+    profileUser.uid === currentUser.uid ||
+    profileUser.handle.toLowerCase() === currentUser.handle.toLowerCase();
 
   React.useEffect(() => {
     if (initialTab === 'favorites' && !isOwnProfile) {
@@ -52,12 +58,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setActiveTab(initialTab);
     }
   }, [initialTab, isOwnProfile]);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [tattooToDelete, setTattooToDelete] = useState<Tattoo | null>(null);
-
-  const isOwnProfile = 
-    profileUser.uid === currentUser.uid || 
-    profileUser.handle.toLowerCase() === currentUser.handle.toLowerCase();
 
   const isFollowing = tattooStore.isFollowing(profileUser.handle);
 
