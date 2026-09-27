@@ -349,6 +349,11 @@ function App() {
             searchQuery={searchQuery}
             onSearchChange={(q) => setSearchQuery(q)}
             currentUser={currentUser}
+            onSearchFocus={() => {
+              if (currentTab === 'explore') {
+                setCurrentTab('gallery');
+              }
+            }}
             currentTab={currentTab}
             profileHandle={profileToDisplay.handle}
             onBack={() => {
