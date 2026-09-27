@@ -8,6 +8,7 @@ import { tattooStore } from '../services/tattooStore';
 interface TopHeaderProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  onSearchFocus?: () => void;
   currentUser: UserProfile;
   onProfileClick: () => void;
   onHomeClick?: () => void;
@@ -24,6 +25,7 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({
   searchQuery,
   onSearchChange,
+  onSearchFocus,
   currentUser,
   onProfileClick,
   onHomeClick,
@@ -236,6 +238,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               <input
                 type="search"
                 value={searchQuery}
+                onFocus={() => onSearchFocus?.()}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={currentTab === 'gallery' ? 'Dövme, sanatçı veya tarz ara...' : 'Ara'}
                 aria-label="Dövme, sanatçı veya etiket ara"
