@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Image as ImageIcon, Instagram, Globe, Sparkles } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { CategoryId, SupportedLanguage } from '../types';
 
 interface CreateTattooModalProps {
@@ -26,6 +26,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
   onSubmit,
 }) => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [coverIndex, setCoverIndex] = useState(0);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CategoryId>('realism');
   const [description, setDescription] = useState('');
@@ -106,6 +107,11 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
 
   const removeImage = (index: number) => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    setCoverIndex((current) => {
+      if (current === index) return 0;
+      if (index < current) return current - 1;
+      return current;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -141,8 +147,8 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
         category,
         categoryName: categoryObj?.name || 'Realizm',
         description: description.trim(),
-        image: imagePreviews[0],
-        additionalImages: imagePreviews.slice(1),
+        image: imagePreviews[coverIndex],
+        additionalImages: imagePreviews.filter((_, index) => index !== coverIndex),
         socialLinks: {
           instagram: instagram.trim() || undefined,
           tiktok: tiktok.trim() || undefined,
@@ -159,10 +165,10 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-150">
       
       {/* Modal Container matching center right of image */}
-      <div className="relative w-full max-w-lg bg-[#111111] border border-white/10 rounded-xl overflow-hidden shadow-2xl p-4 sm:p-6 my-2 sm:my-6 max-h-[calc(100dvh-1rem)] sm:max-h-none overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-[#111111] border border-white/10 rounded-none sm:rounded-2xl overflow-hidden shadow-2xl p-3 sm:p-6 my-0 sm:my-6 max-h-[100dvh] sm:max-h-[calc(100dvh-3rem)] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="sticky top-0 z-10 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 flex items-center justify-between border-b border-white/10 bg-[#111111]/95 backdrop-blur-xl">
           <h2 className="text-base sm:text-lg font-bold text-white font-display">
             Yeni Dövme Gönderisi
           </h2>
@@ -223,17 +229,15 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
               <div className="space-y-2">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {imagePreviews.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-white/15 bg-black">
+                    <div key={index} onClick={() => setCoverIndex(index)} className={`relative aspect-square rounded-xl overflow-hidden border bg-black cursor-pointer ${coverIndex === index ? "border-white" : "border-white/15"}`}>
                       <img src={img} alt={`Dövme fotoğrafı ${index + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => removeImage(index)}
+                        onClick={(e) => { e.stopPropagation(); removeImage(index); }}
                         className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/75 text-white text-xs border border-white/20 hover:bg-red-500/80"
                         aria-label={`Fotoğrafı sil ${index + 1}`}
                       >×</button>
-                      <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] text-white">
-                        {index + 1}
-                      </span>
+                      <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-1"><span className="px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] text-white">{index + 1}</span>{coverIndex === index && <span className="px-1.5 py-0.5 rounded-md bg-white text-[9px] font-semibold text-black">Kapak</span>}</div>
                     </div>
                   ))}
                   {imagePreviews.length < 10 && (
@@ -247,7 +251,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-[#777777]">{imagePreviews.length}/10 fotoğraf · İlk fotoğraf kapak olarak kullanılır.</p>
+                <p className="text-[10px] text-[#777777]">{imagePreviews.length}/10 fotoğraf · Bir fotoğrafa dokunarak kapak fotoğrafını seç.</p>
               </div>
             )}
           </div>
@@ -292,12 +296,14 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
               Açıklama
             </label>
             <textarea
-              rows={3}
+              rows={4}
+              maxLength={2200}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Dövme hakkında kısa bir açıklama yaz..."
               className="w-full bg-[#161616] border border-white/10 rounded-xl px-3.5 py-2 text-white placeholder-[#555555] focus:outline-none focus:border-white/30 resize-none"
             />
+            <div className="mt-1 text-right text-[10px] text-[#666666]">{description.length}/2200</div>
           </div>
 
           {/* Sosyal Bağlantılar (İsteğe bağlı) matching image */}
