@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Bell, Shield, Globe, Moon, User, LogOut, Check, Eye, Zap, Database 
 } from 'lucide-react';
@@ -45,6 +45,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [autoplay, setAutoplay] = useState(() => {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').autoplay ?? true; } catch { return true; }
   });
+
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = reduceMotion ? 'true' : 'false';
+    return () => {
+      delete document.documentElement.dataset.reduceMotion;
+    };
+  }, [reduceMotion]);
 
   const saveSetting = (key: string, value: boolean) => {
     try {
@@ -191,7 +198,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {
                 icon: Eye,
                 title: 'Profilimi toplulukta göster',
-                desc: 'Profiliniz ve paylaşımlarınız diğer üyeler tarafından görülebilsin.',
+                desc: 'Profiliniz topluluk profillerinde görünür olsun.',
                 value: profilePublic,
                 toggle: () => {
                   const next = !profilePublic;
