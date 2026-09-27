@@ -920,6 +920,21 @@ class TattooStoreService {
     }
   }
 
+  public async markNotificationRead(notificationId: string): Promise<void> {
+    const target = this.notifications.find((n) => n.id === notificationId);
+    if (!target || target.read) return;
+
+    this.notifications = this.notifications.map((n) =>
+      n.id === notificationId ? { ...n, read: true } : n
+    );
+    this.saveNotifications();
+    this.emitNotificationUpdate();
+
+    if (auth.currentUser) {
+      await updateDoc(doc(db, 'notifications', notificationId), { read: true }).catch(() => {});
+    }
+  }
+
   public async markNotificationsRead(): Promise<void> {
     const unread = this.notifications.filter((n) => !n.read);
     this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
