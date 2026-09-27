@@ -62,6 +62,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setReduceMotion(false);
     setAutoplay(true);
     tattooStore.setProfilePublic(true);
+    window.dispatchEvent(new Event('tattoos-world-notification-settings'));
     onToast('Tercihler varsayılan değerlere döndürüldü');
   };
 
@@ -120,6 +121,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onClick={() => {
                   setNotifyLikes(!notifyLikes);
                   saveSetting('notifyLikes', !notifyLikes);
+                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
@@ -141,6 +143,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onClick={() => {
                   setNotifyComments(!notifyComments);
                   saveSetting('notifyComments', !notifyComments);
+                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
@@ -162,6 +165,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onClick={() => {
                   setNotifyArtists(!notifyArtists);
                   saveSetting('notifyArtists', !notifyArtists);
+                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
