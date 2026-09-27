@@ -44,10 +44,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [activeTab, setActiveTab] = useState<'creations' | 'about' | 'favorites'>(initialTab);
 
   React.useEffect(() => {
+    if (initialTab === 'favorites' && !isOwnProfile) {
+      setActiveTab('creations');
+      return;
+    }
     if (initialTab) {
       setActiveTab(initialTab);
     }
-  }, [initialTab]);
+  }, [initialTab, isOwnProfile]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [tattooToDelete, setTattooToDelete] = useState<Tattoo | null>(null);
 
@@ -580,9 +584,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <button type="button" onClick={() => setActiveTab('about')} className={activeTab === 'about' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Hakkında">
           <InfoIcon className="w-5 h-5 sm:w-4 sm:h-4" /><span className="hidden sm:inline">Hakkında</span>
         </button>
-        <button type="button" onClick={() => setActiveTab('favorites')} className={activeTab === 'favorites' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Kaydedilenler">
-          <Bookmark className={activeTab === 'favorites' ? 'w-5 h-5 sm:w-4 sm:h-4 fill-white' : 'w-5 h-5 sm:w-4 sm:h-4'} /><span className="hidden sm:inline">Favoriler ({favoriteTattoos.length})</span>
-        </button>
+        {isOwnProfile && (
+          <button type="button" onClick={() => setActiveTab('favorites')} className={activeTab === 'favorites' ? 'flex-1 flex items-center justify-center gap-1.5 py-3 text-white border-b-2 border-white cursor-pointer' : 'flex-1 flex items-center justify-center gap-1.5 py-3 text-[#777] cursor-pointer'} aria-label="Kaydedilenler">
+            <Bookmark className={activeTab === 'favorites' ? 'w-5 h-5 sm:w-4 sm:h-4 fill-white' : 'w-5 h-5 sm:w-4 sm:h-4'} /><span className="hidden sm:inline">Favoriler ({favoriteTattoos.length})</span>
+          </button>
+        )}
       </div>
       {/* Tab 1: Paylaşımlar (Creations) with Delete Option */}
       {activeTab === 'creations' && (
