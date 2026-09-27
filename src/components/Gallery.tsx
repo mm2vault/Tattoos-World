@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, ChevronLeft, ChevronRight, Grid3X3, LayoutList, Link2, Flag, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, ArrowRight, ChevronLeft, ChevronRight, Grid3X3, LayoutList, Link2, Flag, Trash2 } from 'lucide-react';
 import { Tattoo, CategoryId, UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 
