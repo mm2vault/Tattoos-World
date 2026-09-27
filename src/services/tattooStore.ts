@@ -1196,7 +1196,7 @@ class TattooStoreService {
   public isProfilePublic(handle: string): boolean {
     if (!handle) return true;
     if (handle.toLowerCase() === this.currentUser.handle.toLowerCase()) {
-      return this.currentUser.profilePublic !== false;
+      return true;
     }
 
     const tattoo = this.tattoos.find(
