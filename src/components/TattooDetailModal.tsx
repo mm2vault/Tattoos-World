@@ -239,10 +239,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
             {/* Creator Row */}
             <div className="flex items-center justify-between pt-1">
               <div
-                onClick={() => {
-                  onSelectCreator(tattoo.creatorHandle);
-                  onClose();
-                }}
+                onClick={() => handleOpenCreator(tattoo.creatorHandle)}
                 className="flex items-center gap-3 cursor-pointer group"
               >
                 <img
@@ -350,7 +347,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                 <div key={c.id} className="flex items-start gap-2.5 text-xs">
                   <button
                     type="button"
-                    onClick={() => c.userHandle && onSelectCreator(c.userHandle)}
+                    onClick={() => c.userHandle && handleOpenCreator(c.userHandle)}
                     className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer"
                     title="Profili aç"
                   >
