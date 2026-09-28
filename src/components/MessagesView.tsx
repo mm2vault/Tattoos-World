@@ -3,7 +3,7 @@ import { Send, CheckCircle2, Info, Search, ArrowLeft } from 'lucide-react';
 import { UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
-import { collection, doc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
+import { arrayUnion, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 interface MessagesViewProps {
   currentUser: UserProfile;
@@ -33,6 +33,7 @@ interface ChatPartner {
   time: string;
   lastMessageAt: string;
   conversationId: string;
+  unreadCount: number;
 }
 
 const buildConversationId = (a: string, b: string) => [a, b].sort().join('__');
@@ -60,6 +61,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         time: '',
         lastMessageAt: '',
         conversationId: buildConversationId(currentUser.uid, tattoo.creatorId),
+        unreadCount: 0,
       });
     });
     return map;
@@ -118,6 +120,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             recipientPhoto?: string;
             recipientVerified?: boolean;
             recipientRole?: string;
+            readBy?: string[];
           };
 
           const participants = data.participants || [];
@@ -138,6 +141,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             createdAt,
             isMine: data.senderId === auth.currentUser!.uid,
           };
+          (message as ChatMessage & { readBy?: string[] }).readBy = Array.isArray(data.readBy) ? data.readBy : [];
 
           if (!byConversation[conversationId]) byConversation[conversationId] = [];
           byConversation[conversationId].push(message);
@@ -154,6 +158,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               time: createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
               lastMessageAt: createdAt,
               conversationId,
+              unreadCount: 0,
             });
           }
         });
@@ -172,13 +177,18 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : fallback.time,
                 lastMessageAt: last?.createdAt || fallback.lastMessageAt,
+                unreadCount: list.filter((msg) => !msg.isMine && !(msg as ChatMessage & { readBy?: string[] }).readBy?.includes(auth.currentUser!.uid)).length,
               });
             }
           }
         });
 
         const mergedPartners = new Map<string, ChatPartner>(tattooCreators);
-        partnerMeta.forEach((value, key) => mergedPartners.set(key, value));
+        partnerMeta.forEach((value, key) => {
+          const conversation = byConversation[value.conversationId] || [];
+          value.unreadCount = conversation.filter((msg) => !msg.isMine && !(msg as ChatMessage & { readBy?: string[] }).readBy?.includes(auth.currentUser!.uid)).length;
+          mergedPartners.set(key, value);
+        });
         const sortedPartners = Array.from(mergedPartners.values()).sort((a, b) => {
           const ad = new Date(a.lastMessageAt || 0).getTime() || 0;
           const bd = new Date(b.lastMessageAt || 0).getTime() || 0;
@@ -204,6 +214,13 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const activeConversationId = activePartner ? buildConversationId(currentUser.uid, activePartner.uid) : '';
   const activeMessages = messages[activeConversationId] || [];
 
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) return;
+    const unread = activeMessages.filter((msg) => !msg.isMine && !(msg as ChatMessage & { readBy?: string[] }).readBy?.includes(auth.currentUser!.uid));
+    if (!unread.length) return;
+    unread.forEach((msg) => updateDoc(doc(db, 'messages', msg.id), { readBy: arrayUnion(auth.currentUser!.uid) }).catch(() => {}));
+  }, [activeConversationId, activeMessages]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser || !activePartner || !newMessageText.trim()) return;
@@ -225,6 +242,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         recipientVerified: activePartner.verified,
         recipientRole: activePartner.role,
         text,
+        readBy: [auth.currentUser.uid],
         participants: [auth.currentUser.uid, activePartner.uid],
         createdAt,
       });
@@ -281,7 +299,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                     <span className="text-[10px] text-[#777777] shrink-0">{last?.createdAt ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : partner.time}</span>
                   </div>
                   <p className="text-[11px] text-[#888888] font-mono truncate">{partner.handle}</p>
-                  <p className="text-[11px] text-[#AAAAAA] truncate mt-0.5">{last?.text || partner.lastMessage}</p>
+                  <div className="flex items-center gap-2 mt-0.5"><p className="text-[11px] text-[#AAAAAA] truncate flex-1">{last?.text || partner.lastMessage}</p>{partner.unreadCount > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-white text-black text-[9px] font-bold flex items-center justify-center">{partner.unreadCount > 99 ? '99+' : partner.unreadCount}</span>}</div>
                 </div>
               </button>
             );
@@ -333,6 +351,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 type="text"
                 value={newMessageText}
                 onChange={(e) => setNewMessageText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newMessageText.trim()) e.currentTarget.form?.requestSubmit(); } }}
                 placeholder={'@' + activePartner.handle.replace(/^@/, '') + ' kullanıcısına mesaj yaz...'}
                 className="flex-1 bg-[#161616] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30"
               />
