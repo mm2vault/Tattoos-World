@@ -174,12 +174,23 @@ function App() {
 
   // Shared post links use the hash so the exact tattoo opens when the link is visited.
   useEffect(() => {
-    const openPostFromHash = () => {
+    let disposed = false;
+
+    const openPostFromHash = async () => {
       const match = window.location.hash.match(/(?:^|#)post=([^&]+)/);
       if (!match) return;
+
       const tattooId = decodeURIComponent(match[1]);
-      const tattoo = tattooStore.getTattooById(tattooId);
-      if (tattoo) {
+      let tattoo = tattooStore.getTattooById(tattooId);
+
+      // Shared links can be opened before the initial Firestore sync finishes.
+      // Refresh once so remote posts are available before giving up.
+      if (!tattoo) {
+        await tattooStore.syncCommunityFromFirestore().catch(() => {});
+        tattoo = tattooStore.getTattooById(tattooId);
+      }
+
+      if (!disposed && tattoo) {
         setSelectedCreatorHandle(null);
         setCurrentTab('explore');
         setSelectedTattoo(tattoo);
@@ -188,7 +199,10 @@ function App() {
 
     openPostFromHash();
     window.addEventListener('hashchange', openPostFromHash);
-    return () => window.removeEventListener('hashchange', openPostFromHash);
+    return () => {
+      disposed = true;
+      window.removeEventListener('hashchange', openPostFromHash);
+    };
   }, []);
 
   const handleLanguageChange = (lang: SupportedLanguage) => {
