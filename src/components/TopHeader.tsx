@@ -53,9 +53,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     tattooStore.syncNotificationsFromFirestore().catch(() => {});
     window.addEventListener('tattoos-world-notifications', refreshNotifications);
     window.addEventListener('tattoos-world-notification-settings', refreshNotifications);
+    const refreshRemote = () => tattooStore.syncNotificationsFromFirestore().catch(() => {});
+    window.addEventListener('focus', refreshRemote);
+    const timer = window.setInterval(refreshRemote, 20000);
     return () => {
       window.removeEventListener('tattoos-world-notifications', refreshNotifications);
       window.removeEventListener('tattoos-world-notification-settings', refreshNotifications);
+      window.removeEventListener('focus', refreshRemote);
+      window.clearInterval(timer);
     };
   }, [currentUser.uid]);
 
@@ -191,7 +196,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   >
                     <Bell className="w-[20px] h-[20px]" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500 ring-2 ring-black" />
+                      <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-black">{unreadCount > 99 ? '99+' : unreadCount}</span>
                     )}
                   </button>
                   {notificationsOpen && (
@@ -296,7 +301,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 ring-2 ring-black" />
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-black">{unreadCount > 99 ? '99+' : unreadCount}</span>
               )}
             </button>
 
@@ -304,7 +309,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                   <span className="font-semibold text-sm text-white">Bildirimler</span>
-                  <span className="text-[11px] text-[#777]">Tümü okundu</span>
+                  <button type="button" onClick={handleMarkAllRead} className="text-[11px] text-[#777] hover:text-white cursor-pointer">Tümü okundu</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.length === 0 ? (
