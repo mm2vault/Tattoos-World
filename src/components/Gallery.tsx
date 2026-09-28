@@ -53,6 +53,24 @@ export const Gallery: React.FC<GalleryProps> = ({
     { id: 'animals', name: 'Hayvanlar', image: './images/tattoos/cross_gothic.jpg' },
   ];
 
+  const trendingTags = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    tattoos.forEach((tattoo) => (tattoo.tags || []).forEach((tag) => {
+      const clean = String(tag).trim().replace(/^#/, '');
+      if (clean) counts.set(clean.toLowerCase(), (counts.get(clean.toLowerCase()) || 0) + 1);
+    }));
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag, count]) => ({ tag, count }));
+  }, [tattoos]);
+
+  const styleCounts = React.useMemo(() => {
+    const counts = new Map<CategoryId, number>();
+    tattoos.forEach((tattoo) => counts.set(tattoo.category, (counts.get(tattoo.category) || 0) + 1));
+    return counts;
+  }, [tattoos]);
+
   const filteredTattoos = tattoos.filter((tattoo) => {
     const matchesCategory = selectedCategory === 'all' || tattoo.category === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
@@ -279,6 +297,58 @@ export const Gallery: React.FC<GalleryProps> = ({
           ))}
         </div>
       </section>
+      )}
+
+      {viewMode === 'grid' && !searchQuery.trim() && (
+        <section className="px-3 sm:px-0 space-y-4">
+          <div>
+            <h2 className="text-sm sm:text-base font-semibold text-white">Tattoo stillerini keşfet</h2>
+            <p className="text-[10px] text-[#666] mt-0.5">Topluluktaki en çok kullanılan tarzlara göz at</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {categoriesList.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => onSelectCategory(category.id)}
+                className={`group relative h-24 sm:h-28 overflow-hidden rounded-2xl border transition-all cursor-pointer ${
+                  selectedCategory === category.id ? 'border-white' : 'border-white/10 hover:border-white/25'
+                }`}
+              >
+                <img src={category.image} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute inset-0 bg-black/55 group-hover:bg-black/40 transition-colors" />
+                <div className="absolute inset-x-0 bottom-0 p-2 text-left">
+                  <p className="text-[11px] font-bold text-white">{category.name}</p>
+                  <p className="text-[9px] text-white/60">{styleCounts.get(category.id) || 0} paylaşım</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {trendingTags.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-[#101010] p-3.5">
+              <div className="flex items-center justify-between mb-2.5">
+                <div>
+                  <h3 className="text-xs font-bold text-white">Trend etiketler</h3>
+                  <p className="text-[9px] text-[#666] mt-0.5">Toplulukta öne çıkan dövme etiketleri</p>
+                </div>
+                <span className="text-[9px] text-[#555]">#{trendingTags.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {trendingTags.map(({ tag, count }) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => onSearchChange('#' + tag)}
+                    className="px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-[#bbb] hover:text-white hover:border-white/25 transition-colors cursor-pointer"
+                  >
+                    #{tag} <span className="text-[#666] ml-0.5">{count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {viewMode === 'grid' && searchQuery.trim() && profileResults.length > 0 && (
