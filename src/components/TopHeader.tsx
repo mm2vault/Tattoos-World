@@ -104,7 +104,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 h-[54px] border-b border-white/10 bg-black/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 h-[58px] border-b border-white/[0.08] bg-[#080808]/85 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,.22)]">
       <div className="h-full w-full px-3 sm:px-5 flex items-center justify-between gap-4">
         <div className="flex items-center lg:hidden min-w-0">
           {currentTab === 'profile' ? (
@@ -145,7 +145,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                   type="search"
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Dövme, sanatçı veya tarz ara..."
+                  placeholder="Dövme, sanatçı, #etiket ara..."
                   aria-label="Dövme, sanatçı veya tarz ara"
                   className="w-full h-9 bg-[#1a1a1a] border border-white/5 rounded-xl pl-9 pr-8 text-xs text-white placeholder-[#737373] outline-none"
                 />
@@ -166,7 +166,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               <button
                 type="button"
                 onClick={onHomeClick || onProfileClick}
-                className="font-script text-[27px] leading-none font-bold text-white tracking-wide"
+                className="font-brush text-[19px] leading-none font-bold text-white tracking-[.08em]"
               >
                 Tattoogram
               </button>
