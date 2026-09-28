@@ -381,6 +381,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     new Set(userTattoos.map((item) => item.categoryName).filter(Boolean))
   ).slice(0, 4);
 
+  const isArtistProfile = Boolean(profileUser.isArtist || profileUser.role === 'artist');
+  const artistSpecialties = Array.from(
+    new Set(userTattoos.flatMap((item) => [item.categoryName, ...(item.tags || [])]).filter(Boolean))
+  ).slice(0, 6);
+
   const formatCount = (value: number) =>
     value >= 1000000 ? (value / 1000000).toFixed(1).replace('.0', '') + 'M'
       : value >= 1000 ? (value / 1000).toFixed(1).replace('.0', '') + 'K'
@@ -579,6 +584,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <p className="text-xs text-[#CCCCCC] max-w-md mx-auto pt-1 leading-relaxed">
               {profileUser.bio || 'Sanat, hayatın en gerçek halidir. Daha fazla dövme, daha fazla hikaye...'}
             </p>
+            {isArtistProfile && (
+              <div className="mt-3 tw-surface rounded-2xl p-3 border border-white/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="tw-kicker">TATTOO ARTIST</span>
+                  {profileUser.verified && <span className="text-[9px] font-bold text-sky-300">✓ Doğrulanmış</span>}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {(artistSpecialties.length ? artistSpecialties : ['Tattoo Art']).map((style) => (
+                    <span key={style} className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] text-[#aaa]">{style}</span>
+                  ))}
+                </div>
+                {!isOwnProfile && onOpenMessages && (
+                  <button type="button" onClick={() => onOpenMessages(profileUser.handle)} className="mt-3 w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-black text-[10px] font-bold cursor-pointer">
+                    Randevu / İletişim
+                  </button>
+                )}
+              </div>
+            )}
+
             {profileStyleTags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-2 justify-center sm:justify-start">
                 {profileStyleTags.map((style) => (
