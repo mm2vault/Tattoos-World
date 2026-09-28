@@ -284,7 +284,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
               {onOpenMessages && (
                 <button
                   onClick={() => onOpenMessages(tattoo.creatorHandle, `Merhaba ${tattoo.creatorHandle}, bu dövmeniz hakkında bilgi almak ve randevu oluşturmak istiyorum. Uygun gün ve saatleriniz nedir?`)}
-                  className="px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white whitespace-nowrap" text-black hover:bg-[#e8e8e8] transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white text-black whitespace-nowrap hover:bg-[#e8e8e8] transition-all cursor-pointer"
                 >Randevu Mesajı</button>
               )}
               <button
