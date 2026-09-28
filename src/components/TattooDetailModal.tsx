@@ -190,7 +190,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
           {/* Bottom Thumbnails Strip + < 1/5 > pagination */}
           <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:inset-x-4 z-10 flex items-center justify-between gap-2">
             {/* Thumbnails */}
-            <div className="flex items-center gap-2 overflow-x-auto p-1 max-w-[68%]" bg-black/60 backdrop-blur-md rounded-xl border border-white/10">
+            <div className="flex items-center gap-2 overflow-x-auto p-1 max-w-[68%] bg-black/60 backdrop-blur-md rounded-xl border border-white/10">
               {thumbnails.map((img, idx) => (
                 <button
                   key={idx}
