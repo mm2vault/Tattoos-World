@@ -121,6 +121,7 @@ export const ShowcaseBoard: React.FC<ShowcaseBoardProps> = ({
                 currentUser={currentUser}
                 onToast={() => {}}
                 onTattooUpdated={() => {}}
+                onSearchChange={() => {}}
               />
             </div>
           </div>
