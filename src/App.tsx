@@ -338,9 +338,10 @@ function App() {
 
   // 2. MAIN APPLICATION DASHBOARD (Sidebar + TopHeader + Main Content)
   return (
-    <div className="min-h-screen bg-[#080808] text-[#F5F5F5] flex flex-col selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-[#070707] text-[#F5F5F5] flex flex-col selection:bg-white selection:text-black relative overflow-x-clip">
       
-      <div className="flex-1 flex w-full lg:pl-[238px]">
+      <div className="flex-1 flex w-full lg:pl-[238px] relative">
+        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 h-[360px] bg-[radial-gradient(circle_at_55%_0%,rgba(255,255,255,.075),transparent_55%)]" />
         {/* Left Desktop Sidebar matching image */}
         <Sidebar
           currentTab={currentTab}
@@ -356,7 +357,7 @@ function App() {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           
           {/* Top Header with Search, Switcher & Icons */}
           <TopHeader
