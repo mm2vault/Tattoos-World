@@ -176,32 +176,50 @@ function App() {
   useEffect(() => {
     let disposed = false;
 
-    const openPostFromHash = async () => {
-      const match = window.location.hash.match(/(?:^|#)post=([^&]+)/);
-      if (!match) return;
+    const openSharedTargetFromHash = async () => {
+      const hash = window.location.hash;
+      const postMatch = hash.match(/(?:^|#)post=([^&]+)/);
+      const profileMatch = hash.match(/(?:^|#)profile=([^&]+)/);
 
-      const tattooId = decodeURIComponent(match[1]);
-      let tattoo = tattooStore.getTattooById(tattooId);
+      if (!postMatch && !profileMatch) return;
 
-      // Shared links can be opened before the initial Firestore sync finishes.
-      // Refresh once so remote posts are available before giving up.
-      if (!tattoo) {
-        await tattooStore.syncCommunityFromFirestore().catch(() => {});
-        tattoo = tattooStore.getTattooById(tattooId);
+      if (postMatch) {
+        const tattooId = decodeURIComponent(postMatch[1]);
+        let tattoo = tattooStore.getTattooById(tattooId);
+
+        // Shared links can be opened before the initial Firestore sync finishes.
+        // Refresh once so remote posts are available before giving up.
+        if (!tattoo) {
+          await tattooStore.syncCommunityFromFirestore().catch(() => {});
+          tattoo = tattooStore.getTattooById(tattooId);
+        }
+
+        if (!disposed && tattoo) {
+          setSelectedCreatorHandle(null);
+          setCurrentTab('explore');
+          setSelectedTattoo(tattoo);
+        }
+        return;
       }
 
-      if (!disposed && tattoo) {
-        setSelectedCreatorHandle(null);
-        setCurrentTab('explore');
-        setSelectedTattoo(tattoo);
+      if (profileMatch) {
+        const rawHandle = decodeURIComponent(profileMatch[1]).trim();
+        const handle = rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle;
+        const profile = tattooStore.getArtistProfile(handle);
+
+        if (!disposed && profile && tattooStore.isProfilePublic(handle)) {
+          setSelectedTattoo(null);
+          setSelectedCreatorHandle(profile.handle);
+          setCurrentTab('profile');
+        }
       }
     };
 
-    openPostFromHash();
-    window.addEventListener('hashchange', openPostFromHash);
+    openSharedTargetFromHash();
+    window.addEventListener('hashchange', openSharedTargetFromHash);
     return () => {
       disposed = true;
-      window.removeEventListener('hashchange', openPostFromHash);
+      window.removeEventListener('hashchange', openSharedTargetFromHash);
     };
   }, []);
 
@@ -265,6 +283,7 @@ function App() {
     description: string;
     image: string;
     additionalImages?: string[];
+    tags?: string[];
     socialLinks?: {
       instagram?: string;
       tiktok?: string;
