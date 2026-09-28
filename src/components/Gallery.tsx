@@ -84,7 +84,11 @@ export const Gallery: React.FC<GalleryProps> = ({
     }>();
 
     tattoos.forEach((tattoo) => {
-      const isArtist = tattoo.creatorRole === 'artist' || Boolean(tattoo.creatorVerified);
+      const creatorRole = String(tattoo.creatorRole || '').trim().toLowerCase();
+      const isArtist =
+        creatorRole === 'artist' ||
+        creatorRole.includes('sanat') ||
+        Boolean(tattoo.creatorVerified);
       if (!isArtist) return;
       const handle = String(tattoo.creatorHandle || '').trim();
       if (!handle) return;
@@ -114,7 +118,12 @@ export const Gallery: React.FC<GalleryProps> = ({
 
   const filteredTattoos = tattoos.filter((tattoo) => {
     const matchesCategory = selectedCategory === 'all' || tattoo.category === selectedCategory;
-    const matchesArtist = !artistOnly || tattoo.creatorRole === 'artist' || Boolean(tattoo.creatorVerified);
+    const creatorRole = String(tattoo.creatorRole || '').trim().toLowerCase();
+    const matchesArtist =
+      !artistOnly ||
+      creatorRole === 'artist' ||
+      creatorRole.includes('sanat') ||
+      Boolean(tattoo.creatorVerified);
     const query = searchQuery.toLowerCase().trim();
     const normalizedQuery = query.replace(/^#/, '').replace(/^@/, '');
     if (!query) return matchesCategory && matchesArtist;
