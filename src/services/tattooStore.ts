@@ -55,7 +55,9 @@ class TattooStoreService {
   private follows: Set<string> = new Set();
   private followerCounts: Record<string, number> = {};
   private followingCountsByUid: Record<string, number> = {};
-  private notifications: Notification[] = [];
+  private notifications: Notification[] = {};
+  private publicUserProfiles: Record<string, UserProfile> = {};
+
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
   private static readonly SEED_CLEANUP_KEY = 'tattos_world_seed_cleanup_v3';
 
@@ -1434,6 +1436,73 @@ class TattooStoreService {
     return this.followingCountsByUid[profile.uid] || 0;
   }
 
+  /**
+   * Search real public users, including users who have never published a tattoo.
+   * Results are cached so App can open the profile synchronously after a result is clicked.
+   */
+  public async searchPublicUsers(searchTerm: string): Promise<UserProfile[]> {
+    const queryText = String(searchTerm || '').trim().toLowerCase().replace(/^@/, '');
+    if (!queryText || !auth.currentUser) return [];
+
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const results: UserProfile[] = [];
+
+      snap.docs.forEach((item) => {
+        const raw = item.data() as Partial<UserProfile>;
+        if (raw.profilePublic === false) return;
+
+        const uid = String(raw.uid || item.id);
+        const handle = String(raw.handle || '').trim();
+        const name = String(raw.displayName || '').trim();
+        if (!handle && !name) return;
+
+        const handleMatch = handle.toLowerCase().replace(/^@/, '').includes(queryText);
+        const nameMatch = name.toLowerCase().includes(queryText);
+        if (!handleMatch && !nameMatch) return;
+
+        const safeHandle = handle || '@user_' + uid.slice(0, 10);
+        const profile: UserProfile = {
+          ...INITIAL_USER,
+          ...raw,
+          uid,
+          displayName: name || safeHandle,
+          handle: safeHandle,
+          email: String(raw.email || ''),
+          photoURL: String(raw.photoURL || './images/users/avatar_inkedlife.jpg'),
+          bio: String(raw.bio || ''),
+          instagram: String(raw.instagram || ''),
+          tiktok: String(raw.tiktok || ''),
+          discord: String(raw.discord || ''),
+          website: String(raw.website || ''),
+          customLinks: Array.isArray(raw.customLinks) ? raw.customLinks : [],
+          savedTattooIds: Array.isArray(raw.savedTattooIds) ? raw.savedTattooIds : [],
+          isArtist: Boolean(raw.isArtist),
+          verified: Boolean(raw.verified),
+          role: String(raw.role || (raw.isArtist ? 'artist' : 'user')),
+          isAdmin: false,
+          followersCount: this.getFollowerCount(safeHandle),
+          followingCount: this.followingCountsByUid[uid] || 0,
+        };
+
+        this.publicUserProfiles[safeHandle.toLowerCase()] = profile;
+        results.push(profile);
+      });
+
+      return results
+        .filter((profile) => profile.uid !== this.currentUser.uid)
+        .sort((a, b) => {
+          const ah = a.handle.toLowerCase().replace(/^@/, '');
+          const bh = b.handle.toLowerCase().replace(/^@/, '');
+          return ah.localeCompare(bh);
+        })
+        .slice(0, 20);
+    } catch (err) {
+      console.warn('Public user search skipped:', err);
+      return [];
+    }
+  }
+
   public async getFollowerProfiles(handle: string): Promise<UserProfile[]> {
     const key = handle.trim().toLowerCase();
     if (!key || !auth.currentUser) return [];
@@ -1581,6 +1650,11 @@ class TattooStoreService {
       return true;
     }
 
+    const cachedPublic = this.publicUserProfiles[handle.toLowerCase()];
+    if (cachedPublic) {
+      return cachedPublic.profilePublic !== false;
+    }
+
     const tattoo = this.tattoos.find(
       (t) => t.creatorHandle.toLowerCase() === handle.toLowerCase()
     );
@@ -1616,6 +1690,15 @@ class TattooStoreService {
     const found = INITIAL_ARTISTS.find(a => a.handle.toLowerCase() === handle.toLowerCase());
     if (found) {
       return { ...found, followersCount: this.getFollowerCount(found.handle), followingCount: this.getProfileFollowingCount(found.handle) };
+    }
+
+    const cachedPublic = this.publicUserProfiles[handle.toLowerCase()];
+    if (cachedPublic) {
+      return {
+        ...cachedPublic,
+        followersCount: this.getFollowerCount(cachedPublic.handle),
+        followingCount: this.getProfileFollowingCount(cachedPublic.handle),
+      };
     }
 
     // Community users who are not in the starter artist list still get a real profile
