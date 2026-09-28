@@ -11,6 +11,7 @@ interface CreateTattooModalProps {
     description: string;
     image: string;
     additionalImages?: string[];
+    tags?: string[];
     socialLinks?: {
       instagram?: string;
       tiktok?: string;
@@ -30,6 +31,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CategoryId>('realism');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState('');
   const [instagram, setInstagram] = useState('');
   const [tiktok, setTiktok] = useState('');
   const [discord, setDiscord] = useState('');
@@ -152,6 +154,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
         category,
         categoryName: categoryObj?.name || 'Realizm',
         description: description.trim(),
+        tags: Array.from(new Set(tags.split(/[\s,]+/).map((tag) => tag.trim().replace(/^#/, '').toLowerCase()).filter(Boolean))).slice(0, 12),
         image: imagePreviews[coverIndex],
         additionalImages: imagePreviews.filter((_, index) => index !== coverIndex),
         socialLinks: {
@@ -353,6 +356,22 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
               className="w-full bg-[#161616] border border-white/10 rounded-xl px-3.5 py-2 text-white placeholder-[#555555] focus:outline-none focus:border-white/30 resize-none"
             />
             <div className="mt-1 text-right text-[10px] text-[#666666]">{description.length}/2200</div>
+          </div>
+
+          {/* Etiketler */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-[#888888]">Etiketler</label>
+              <span className="text-[9px] text-[#555555]">En fazla 12</span>
+            </div>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="#blackwork #realism #tattoo"
+              className="w-full bg-[#161616] border border-white/10 rounded-xl px-3.5 py-2.5 text-white placeholder-[#555555] focus:outline-none focus:border-white/30"
+            />
+            <p className="mt-1 text-[10px] text-[#666666]">Virgül veya boşlukla ayır. Etiketler Keşfet bölümünde aranabilir.</p>
           </div>
 
           {/* Sosyal Bağlantılar (İsteğe bağlı) matching image */}
