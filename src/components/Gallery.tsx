@@ -131,12 +131,12 @@ export const Gallery: React.FC<GalleryProps> = ({
     return (
       matchesCategory &&
       matchesArtist &&
-      (tattoo.title.toLowerCase().includes(normalizedQuery) ||
-        tattoo.description.toLowerCase().includes(normalizedQuery) ||
-        tattoo.categoryName.toLowerCase().includes(normalizedQuery) ||
-        tattoo.creatorHandle.toLowerCase().includes(normalizedQuery) ||
-        tattoo.creatorName.toLowerCase().includes(normalizedQuery) ||
-        tattoo.tags.some((tag) => String(tag).replace(/^#/, '').toLowerCase().includes(normalizedQuery)))
+      (String(tattoo.title || '').toLowerCase().includes(normalizedQuery) ||
+        String(tattoo.description || '').toLowerCase().includes(normalizedQuery) ||
+        String(tattoo.categoryName || '').toLowerCase().includes(normalizedQuery) ||
+        String(tattoo.creatorHandle || '').toLowerCase().includes(normalizedQuery) ||
+        String(tattoo.creatorName || '').toLowerCase().includes(normalizedQuery) ||
+        (Array.isArray(tattoo.tags) && tattoo.tags.some((tag) => String(tag).replace(/^#/, '').toLowerCase().includes(normalizedQuery))))
     );
   }).sort((a, b) => {
     const ad = new Date(a.createdAt).getTime() || 0;
@@ -626,7 +626,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                             <Flag className="w-4 h-4" />
                             Bildir
                           </button>
-                          {(tattoo.creatorId === currentUser.uid || tattoo.creatorHandle.toLowerCase() === currentUser.handle.toLowerCase() || tattooStore.isCurrentUserAdmin()) && (
+                          {(tattoo.creatorId === currentUser.uid || String(tattoo.creatorHandle || '').toLowerCase() === String(currentUser.handle || '').toLowerCase() || tattooStore.isCurrentUserAdmin()) && (
                             <button type="button" onClick={() => handlePostAction('delete', tattoo)} className="w-full px-4 py-3 text-left text-xs text-red-300 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer">
                               <Trash2 className="w-4 h-4" />
                               Gönderiyi sil
