@@ -33,13 +33,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[238px] border-r border-white/10 bg-black z-40 px-4 py-7 flex-col">
+    <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[238px] border-r border-white/[0.08] bg-[#070707]/96 backdrop-blur-2xl z-40 px-4 py-7 shadow-[10px_0_40px_rgba(0,0,0,.18)] flex-col">
       <button
         onClick={() => onSelectTab('explore')}
-        className="px-3 mb-9 text-left cursor-pointer group"
+        className="px-3 mb-10 text-left cursor-pointer group tw-ink-line"
         aria-label="Tattoos World ana sayfa"
       >
-        <span className="font-brush text-[24px] tracking-wide text-white uppercase group-hover:opacity-80 transition-opacity">
+        <span className="font-brush text-[22px] tracking-[.1em] text-white uppercase group-hover:opacity-80 transition-opacity">
           TATTOO'S WORLD
         </span>
       </button>
@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => onSelectTab(item.id)}
               className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm transition-all cursor-pointer ${
                 active
-                  ? 'bg-white/[0.08] text-white font-semibold'
+                  ? 'bg-white/[0.085] text-white font-semibold shadow-[inset_3px_0_0_rgba(255,255,255,.85)]'
                   : 'text-[#b4b4b4] hover:text-white hover:bg-white/[0.05]'
               }`}
             >
