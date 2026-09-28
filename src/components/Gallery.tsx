@@ -42,6 +42,7 @@ export const Gallery: React.FC<GalleryProps> = ({
     if (initialViewMode === 'feed') {
       if (selectedCategory !== 'all') onSelectCategory('all');
       if (searchQuery) onSearchChange('');
+      setArtistOnly(false);
     }
   }, [initialViewMode]);
 
