@@ -140,25 +140,39 @@ class TattooStoreService {
               const snap = await getDoc(userRef);
               if (snap.exists()) {
                 const remote = snap.data() as Partial<UserProfile>;
-                // Keep locally selected profile images when an older Firestore document
-                // has no image (or still contains the starter image). This prevents a
-                // reload/auth-state race from making a newly uploaded avatar/banner disappear.
+                // Some older user documents may be missing newer profile fields.
+                // Only merge defined remote values and always keep safe defaults so
+                // desktop sessions cannot crash the React tree with undefined handles.
+                const remoteDefined = Object.fromEntries(
+                  Object.entries(remote).filter(([, value]) => value !== undefined && value !== null)
+                ) as Partial<UserProfile>;
                 const localPhoto = this.currentUser.photoURL;
                 const localBanner = this.currentUser.bannerURL;
-                const remotePhoto = remote.photoURL;
-                const remoteBanner = remote.bannerURL;
+                const remotePhoto = remoteDefined.photoURL;
+                const remoteBanner = remoteDefined.bannerURL;
                 const keepLocalPhoto = Boolean(localPhoto?.startsWith('data:image/'));
                 const keepLocalBanner = Boolean(localBanner?.startsWith('data:image/'));
+                const fallbackHandleBase = (fbUser.email || 'tattoo_user')
+                  .split('@')[0]
+                  .replace(/[^a-zA-Z0-9._-]/g, '')
+                  .slice(0, 20) || 'tattoo_user';
+
                 this.currentUser = {
+                  ...INITIAL_USER,
                   ...this.currentUser,
-                  ...remote,
+                  ...remoteDefined,
+                  uid: fbUser.uid,
+                  email: fbUser.email || remoteDefined.email || this.currentUser.email || INITIAL_USER.email,
+                  displayName: remoteDefined.displayName || this.currentUser.displayName || fbUser.displayName || INITIAL_USER.displayName,
+                  handle: remoteDefined.handle || this.currentUser.handle || ('@' + fallbackHandleBase),
                   photoURL: keepLocalPhoto ? localPhoto : (remotePhoto || localPhoto || './images/users/avatar_inkedlife.jpg'),
                   bannerURL: keepLocalBanner ? localBanner : (remoteBanner || localBanner || ''),
-                  uid: fbUser.uid,
-                  email: fbUser.email || this.currentUser.email,
                   isAdmin,
-                  role: isAdmin ? 'admin' : (remote.role || 'user'),
-                  verified: isAdmin || remote.verified || false,
+                  role: isAdmin ? 'admin' : (remoteDefined.role || this.currentUser.role || 'user'),
+                  verified: isAdmin || Boolean(remoteDefined.verified || this.currentUser.verified),
+                  savedTattooIds: Array.isArray(remoteDefined.savedTattooIds)
+                    ? remoteDefined.savedTattooIds
+                    : (this.currentUser.savedTattooIds || []),
                 };
                 this.saveUser();
                 window.dispatchEvent(new Event('tattoos-world-user-updated'));
