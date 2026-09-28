@@ -74,16 +74,17 @@ export const Gallery: React.FC<GalleryProps> = ({
   const filteredTattoos = tattoos.filter((tattoo) => {
     const matchesCategory = selectedCategory === 'all' || tattoo.category === selectedCategory;
     const query = searchQuery.toLowerCase().trim();
+    const normalizedQuery = query.replace(/^#/, '').replace(/^@/, '');
     if (!query) return matchesCategory;
 
     return (
       matchesCategory &&
-      (tattoo.title.toLowerCase().includes(query) ||
-        tattoo.description.toLowerCase().includes(query) ||
-        tattoo.categoryName.toLowerCase().includes(query) ||
-        tattoo.creatorHandle.toLowerCase().includes(query) ||
-        tattoo.creatorName.toLowerCase().includes(query) ||
-        tattoo.tags.some((tag) => tag.toLowerCase().includes(query)))
+      (tattoo.title.toLowerCase().includes(normalizedQuery) ||
+        tattoo.description.toLowerCase().includes(normalizedQuery) ||
+        tattoo.categoryName.toLowerCase().includes(normalizedQuery) ||
+        tattoo.creatorHandle.toLowerCase().includes(normalizedQuery) ||
+        tattoo.creatorName.toLowerCase().includes(normalizedQuery) ||
+        tattoo.tags.some((tag) => String(tag).replace(/^#/, '').toLowerCase().includes(normalizedQuery)))
     );
   }).sort((a, b) => {
     const ad = new Date(a.createdAt).getTime() || 0;
@@ -241,8 +242,8 @@ export const Gallery: React.FC<GalleryProps> = ({
   }, [currentUser.handle, currentUser.photoURL, tattoos]);
 
   return (
-    <div className="space-y-5 pb-8">
-      <section className="border-b border-white/10 pb-5">
+    <div className="space-y-6 pb-8">
+      <section className="border-b border-white/[0.08] pb-5">
         <div className="mx-auto w-full max-w-2xl overflow-x-auto scrollbar-none">
 
           <div className="flex gap-4 px-3 sm:px-0">
@@ -251,14 +252,14 @@ export const Gallery: React.FC<GalleryProps> = ({
                 key={creator.handle}
                 type="button"
                 onClick={() => creator.isCurrentUser ? onOpenCreate() : onSelectCreator(creator.handle)}
-                className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer"
+                className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
               >
-                <div className="relative rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-fuchsia-500 to-purple-600">
+                <div className="relative rounded-full p-[2px] bg-gradient-to-tr from-white via-white/50 to-white/10">
                   <div className="w-[58px] h-[58px] rounded-full bg-black p-[2px]">
                     <img
                       src={creator.image}
                       alt={creator.name}
-                      className="w-full h-full rounded-full object-cover border border-black"
+                      className="w-full h-full rounded-full object-cover border border-black transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
                   {creator.isCurrentUser && (
@@ -305,7 +306,7 @@ export const Gallery: React.FC<GalleryProps> = ({
             <h2 className="text-sm sm:text-base font-semibold text-white">Tattoo stillerini keşfet</h2>
             <p className="text-[10px] text-[#666] mt-0.5">Topluluktaki en çok kullanılan tarzlara göz at</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             {categoriesList.map((category) => (
               <button
                 key={category.id}
