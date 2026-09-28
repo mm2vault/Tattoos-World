@@ -35,6 +35,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
   const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [doubleTapId, setDoubleTapId] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialViewMode === 'feed') {
@@ -457,15 +458,27 @@ export const Gallery: React.FC<GalleryProps> = ({
 
                   <div
                     className="relative aspect-[4/5] sm:aspect-square rounded-[4px] bg-black overflow-hidden cursor-pointer border border-white/10"
-                    onDoubleClick={() => !liked && toggleLike(tattoo.id)}
+                    onDoubleClick={() => {
+                      if (liked) return;
+                      toggleLike(tattoo.id);
+                      setDoubleTapId(tattoo.id);
+                      window.setTimeout(() => setDoubleTapId((current) => current === tattoo.id ? null : current), 850);
+                    }}
                     onClick={() => onSelectTattoo(tattoo)}
                   >
                     <img
                       src={slides[activeIndex] || tattoo.image}
                       alt={tattoo.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover select-none"
                       loading="lazy"
+                      draggable={false}
                     />
+
+                    {doubleTapId === tattoo.id && (
+                      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                        <Heart className="w-28 h-28 text-white fill-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.55)] animate-[ping_0.7s_ease-out_1]" />
+                      </div>
+                    )}
 
                     {slides.length > 1 && (
                       <>
@@ -533,6 +546,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                         type="button"
                         onClick={() => {
                           const next = tattooStore.toggleSaveTattoo(tattoo.id);
+                          onTattooUpdated();
                           onToast(next ? 'Kaydedildi' : 'Kaydedilenlerden kaldırıldı');
                         }}
                         className={`p-2 rounded-full ${saved ? 'text-white' : 'text-white'} hover:bg-white/5`}
