@@ -22,6 +22,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   tattoos,
   onSelectTattoo,
   onSelectCreator,
+  onOpenCreate,
   searchQuery,
   selectedCategory,
   onSelectCategory,
