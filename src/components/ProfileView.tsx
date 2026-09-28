@@ -1,4 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { auth, db } from '../services/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { 
   CheckCircle2, Globe, Sparkles, 
   Edit3, Heart, Image as ImageIcon, X, Save, 
@@ -94,6 +97,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // Edit form state
   const [editName, setEditName] = useState(currentUser.displayName);
+  const [editHandle, setEditHandle] = useState(currentUser.handle || '@kullanici');
   const [editBio, setEditBio] = useState(currentUser.bio);
   const [editPhotoURL, setEditPhotoURL] = useState(currentUser.photoURL || '');
   const [editBannerURL, setEditBannerURL] = useState(currentUser.bannerURL || '');
@@ -117,6 +121,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Open Edit Modal with fresh data from currentUser
   const openEditModal = () => {
     setEditName(currentUser.displayName);
+    setEditHandle(currentUser.handle || '@kullanici');
     setEditBio(currentUser.bio);
     setEditPhotoURL(currentUser.photoURL || '');
     setEditBannerURL(currentUser.bannerURL || '');
@@ -282,8 +287,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   // Save profile changes
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const normalizedHandle = editHandle.trim().replace(/^@+/, '').toLowerCase();
+    if (!/^[\\p{L}\\p{N}._-]{3,24}$/u.test(normalizedHandle)) {
+      onToast('Kullanıcı adı 3-24 karakter olmalı ve sadece harf, rakam, nokta, alt çizgi veya tire içermeli.');
+      return;
+    }
+    const currentHandle = (currentUser.handle || '').replace(/^@+/, '').toLowerCase();
+    if (normalizedHandle !== currentHandle) {
+      const lastChanged = (currentUser as any).handleChangedAt;
+      const lastMs = typeof lastChanged === 'number' ? lastChanged : (lastChanged?.toMillis ? lastChanged.toMillis() : 0);
+      const days = lastMs ? Math.floor((Date.now() - lastMs) / 86400000) : 30;
+      if (lastMs && days < 30) {
+        onToast('Kullanıcı adını değiştirmek için ' + (30 - days) + ' gün daha beklemelisin.');
+        return;
+      }
+      try {
+        const taken = await getDocs(query(collection(db, 'users'), where('handle', '==', '@' + normalizedHandle)));
+        const other = taken.docs.find((d) => d.id !== currentUser.uid);
+        if (other) {
+          onToast('Bu kullanıcı adı zaten kullanılıyor.');
+          return;
+        }
+      } catch {
+        onToast('Kullanıcı adı kontrol edilemedi. Tekrar dene.');
+        return;
+      }
+    }
 
     // Map backwards compatible fields
     const instaLink = editCustomLinks.find(l => l.includes('instagram.com'));
@@ -298,6 +330,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const updated: UserProfile = {
       ...currentUser,
       displayName: editName.trim() || currentUser.displayName,
+      handle: '@' + normalizedHandle,
+      handleChangedAt: normalizedHandle !== currentHandle ? Date.now() : (currentUser as any).handleChangedAt,
       bio: editBio.trim(),
       photoURL: editPhotoURL || currentUser.photoURL,
       bannerURL: editBannerURL || currentUser.bannerURL,
@@ -309,6 +343,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
     tattooStore.setCurrentUser(updated);
     tattooStore.updateProfile(updated);
+    if (auth.currentUser && editName.trim() && editName.trim() !== auth.currentUser.displayName) {
+      updateFirebaseProfile(auth.currentUser, { displayName: editName.trim() }).catch(() => {});
+    }
     onUserUpdated(updated);
     setEditModalOpen(false);
     onToast('Profil ve sosyal medya bağlantıları güncellendi');
@@ -918,6 +955,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div>
                 <label className="block text-[#AAAAAA] mb-1 font-medium">Ad Soyad / İsim</label>
                 <input
+                value={editHandle}
+                onChange={(e) => setEditHandle(e.target.value)}
+                maxLength={25}
+                placeholder="@kullaniciadi"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-white/30"
+              />
+              <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
