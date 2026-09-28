@@ -21,7 +21,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const t = translations[currentLanguage];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-[68px] bg-black/95 backdrop-blur-xl border-t border-white/10 px-3 flex items-center justify-around safe-area-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-[72px] bg-[#080808]/92 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-12px_40px_rgba(0,0,0,.35)] px-3 flex items-center justify-around safe-area-bottom">
       <button
         type="button"
         onClick={() => onSelectTab('explore')}
@@ -47,7 +47,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <button
         type="button"
         onClick={onOpenCreate}
-        className="min-w-[52px] min-h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-white hover:bg-white/10 cursor-pointer"
+        className="min-w-[52px] min-h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-2xl text-white bg-white/[0.08] border border-white/10 hover:bg-white/[0.13] cursor-pointer transition-all"
         aria-label={t.navCreate}
       >
         <Plus className="w-6 h-6" /><span className="text-[9px]">Paylaş</span>
@@ -70,7 +70,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         className="min-w-[52px] min-h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl cursor-pointer"
         aria-label={t.navProfile}
       >
-        <div className={`rounded-full p-[2px] ${currentTab === 'profile' ? 'ring-2 ring-white' : ''}`}>
+        <div className={`flex flex-col items-center gap-0.5 rounded-2xl px-2 py-1 ${currentTab === 'profile' ? 'bg-white/[0.07]' : ''}`}>
           <div className="w-7 h-7 rounded-full overflow-hidden border border-white/20">
             <img
               src={currentUser.photoURL || './images/users/avatar_inkedlife.jpg'}
@@ -78,8 +78,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className="w-full h-full object-cover"
             />
           </div>
-          <span className="text-[9px]">Profil</span>
         </div>
+        <span className="text-[9px]">Profil</span>
       </button>
     </nav>
   );
