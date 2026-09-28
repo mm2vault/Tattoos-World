@@ -76,7 +76,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   };
 
   const handleToggleFollow = () => {
-    if (currentUser.handle.toLowerCase() === tattoo.creatorHandle.toLowerCase()) {
+    if (String(currentUser.handle || '').toLowerCase() === String(tattoo.creatorHandle || '').toLowerCase()) {
       onToast('Kendi profilini takip edemezsin.');
       return;
     }
@@ -240,7 +240,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
               </button>
 
               <div className="flex items-center gap-2">
-                {(currentUser.isAdmin || currentUser.uid === tattoo.creatorId || currentUser.handle.toLowerCase() === tattoo.creatorHandle.toLowerCase()) && (
+                {(currentUser.isAdmin || currentUser.uid === tattoo.creatorId || String(currentUser.handle || '').toLowerCase() === String(tattoo.creatorHandle || '').toLowerCase()) && (
                   <button
                     onClick={() => {
                       if (window.confirm(`"${tattoo.title}" dövmesini silmek istediğinizden emin misiniz?`)) {
