@@ -73,7 +73,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="w-full max-w-[935px] mx-auto space-y-6 pb-12">
       
-      <div className="bg-transparent border border-white/10 rounded-xl p-4 sm:p-6 space-y-6">
+      <div className="tw-surface rounded-2xl p-4 sm:p-6 space-y-6">
         
         <div>
           <h2 className="text-xl font-bold text-white font-display">Ayarlar</h2>
@@ -89,7 +89,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Hesap Bilgileri</span>
           </h3>
 
-          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div className="tw-surface rounded-2xl p-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img
                 src={currentUser.photoURL || './images/users/avatar_inkedlife.jpg'}
@@ -118,7 +118,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Bildirim Tercihleri</span>
           </h3>
 
-          <div className="bg-[#0f0f0f] border border-white/10 rounded-xl divide-y divide-white/5">
+          <div className="tw-surface rounded-2xl divide-y divide-white/5">
             <div className="p-4 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-white">Beğeni Bildirimleri</h4>
@@ -211,7 +211,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Shield className="w-3.5 h-3.5" />
             <span>Gizlilik & Deneyim</span>
           </h3>
-          <div className="bg-[#141414] border border-white/10 rounded-2xl divide-y divide-white/5">
+          <div className="tw-surface rounded-2xl divide-y divide-white/5">
             {[
               {
                 icon: Eye,
