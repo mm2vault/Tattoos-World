@@ -105,7 +105,21 @@ class TattooStoreService {
             parsed.isAdmin = false;
             if (parsed.role === 'admin') parsed.role = 'user';
           }
-          this.currentUser = parsed;
+          const safeHandleBase = String(parsed.handle || parsed.email || 'tattoo_user')
+            .replace(/^@+/, '')
+            .split('@')[0]
+            .replace(/[^a-zA-Z0-9._-]/g, '')
+            .slice(0, 20) || 'tattoo_user';
+
+          this.currentUser = {
+            ...INITIAL_USER,
+            ...parsed,
+            displayName: parsed.displayName || INITIAL_USER.displayName,
+            handle: parsed.handle || '@' + safeHandleBase,
+            bio: typeof parsed.bio === 'string' ? parsed.bio : INITIAL_USER.bio,
+            customLinks: Array.isArray(parsed.customLinks) ? parsed.customLinks : [],
+            savedTattooIds: Array.isArray(parsed.savedTattooIds) ? parsed.savedTattooIds : [],
+          };
         } catch {
           this.currentUser = { ...INITIAL_USER };
         }
