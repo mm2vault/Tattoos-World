@@ -168,12 +168,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h4 className="text-xs font-bold text-white">Takip Edilen Sanatçılar</h4>
                 <p className="text-[11px] text-[#777777]">Takip ettiğiniz sanatçılar yeni dövme yüklediğinde bildir.</p>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !notifyArtists;
+                  setNotifyArtists(next);
+                  saveSetting('notifyArtists', next);
+                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
+                  onToast('Bildirim ayarı kaydedildi');
+                }}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyArtists ? 'bg-white' : 'bg-[#2a2a2a]'}`}
+                aria-label="Takip edilen sanatçı bildirimlerini aç/kapat"
+              >
+                <div className={`w-4 h-4 rounded-full transition-transform absolute top-1 ${notifyArtists ? 'right-1 bg-black' : 'left-1 bg-white/60'}`} />
+              </button>
+            </div>
+
             <div className="p-4 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-white">Mesaj Bildirimleri</h4>
                 <p className="text-[11px] text-[#777777]">Yeni bir özel mesaj geldiğinde bildirim göster.</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   const next = !notifyMessages;
                   setNotifyMessages(next);
@@ -182,24 +199,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onToast('Bildirim ayarı kaydedildi');
                 }}
                 className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${notifyMessages ? 'bg-white' : 'bg-[#2a2a2a]'}`}
+                aria-label="Mesaj bildirimlerini aç/kapat"
               >
                 <div className={`w-4 h-4 rounded-full transition-transform absolute top-1 ${notifyMessages ? 'right-1 bg-black' : 'left-1 bg-white/60'}`} />
-              </button>
-            </div>
-              <button
-                onClick={() => {
-                  setNotifyArtists(!notifyArtists);
-                  saveSetting('notifyArtists', !notifyArtists);
-                  window.dispatchEvent(new Event('tattoos-world-notification-settings'));
-                  onToast('Bildirim ayarı kaydedildi');
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  notifyArtists ? 'bg-white' : 'bg-[#2a2a2a]'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full transition-transform absolute top-1 ${
-                  notifyArtists ? 'right-1 bg-black' : 'left-1 bg-white/60'
-                }`} />
               </button>
             </div>
           </div>
