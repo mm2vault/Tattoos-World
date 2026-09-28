@@ -52,7 +52,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const isOwnProfile =
     profileUser.uid === currentUser.uid ||
-    profileUser.handle.toLowerCase() === currentUser.handle.toLowerCase();
+    String(profileUser.handle || '').toLowerCase() === String(currentUser.handle || '').toLowerCase();
 
   React.useEffect(() => {
     if (initialTab === 'favorites' && !isOwnProfile) {
@@ -368,7 +368,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // User's own creations
   const userTattoos = tattoos.filter(
-    (item) => item.creatorId === profileUser.uid || item.creatorHandle.toLowerCase() === profileUser.handle.toLowerCase()
+    (item) => item.creatorId === profileUser.uid || String(item.creatorHandle || '').toLowerCase() === String(profileUser.handle || '').toLowerCase()
   );
 
   const favoriteTattoos = tattoos.filter((item) =>
