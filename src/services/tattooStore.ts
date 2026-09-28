@@ -55,7 +55,7 @@ class TattooStoreService {
   private follows: Set<string> = new Set();
   private followerCounts: Record<string, number> = {};
   private followingCountsByUid: Record<string, number> = {};
-  private notifications: Notification[] = {};
+  private notifications: Notification[] = [];
   private publicUserProfiles: Record<string, UserProfile> = {};
 
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
