@@ -33,6 +33,8 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   const [isSaved, setIsSaved] = useState(() => tattooStore.isSaved(tattoo.id));
   const [isFollowing, setIsFollowing] = useState(() => tattooStore.isFollowing(tattoo.creatorHandle));
   const [isLiking, setIsLiking] = useState(false);
+  const [showLikeBurst, setShowLikeBurst] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   // Show the cover plus the extra photos uploaded with this tattoo (max 10 total).
   const thumbnails = React.useMemo(() => {
@@ -54,7 +56,23 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   const handleToggleSave = () => {
     const saved = tattooStore.toggleSaveTattoo(tattoo.id);
     setIsSaved(saved);
+    onTattooUpdated();
     onToast(saved ? 'Kaydedildi' : 'Kaydedilenlerden kaldırıldı');
+  };
+
+  const handleImageDoubleTap = () => {
+    if (!isLiked) handleToggleLike();
+    setShowLikeBurst(true);
+    window.setTimeout(() => setShowLikeBurst(false), 800);
+  };
+
+  const handleReply = (handle?: string) => {
+    if (!handle) return;
+    const cleanHandle = handle.startsWith('@') ? handle : `@${handle}`;
+    setReplyingTo(cleanHandle);
+    setCommentText(`${cleanHandle} `);
+    onToast(`${cleanHandle} kullanıcısına yanıt yazıyorsun`);
+    window.setTimeout(() => document.getElementById('tattoo-comment-input')?.focus(), 0);
   };
 
   const handleToggleFollow = () => {
@@ -128,6 +146,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
     tattooStore.addComment(tattoo.id, commentText);
     setComments(tattooStore.getComments(tattoo.id));
     setCommentText('');
+    setReplyingTo(null);
     onTattooUpdated();
     onToast('Yorum gönderildi');
   };
@@ -151,7 +170,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
         <div className="relative w-full md:w-[58%] h-[44dvh] sm:h-[52dvh] md:h-full bg-black flex items-center justify-center overflow-hidden select-none shrink-0">
           <button
             type="button"
-            onDoubleClick={handleToggleLike}
+            onDoubleClick={handleImageDoubleTap}
             className="absolute inset-0 z-[1] cursor-zoom-in md:cursor-default"
             aria-label="Görseli çift dokunarak beğen"
           />
@@ -159,8 +178,14 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
             src={currentImg}
             alt={tattoo.title}
             referrerPolicy="no-referrer"
-            className="relative z-0 w-full h-full object-contain md:object-cover"
+            className="relative z-0 w-full h-full object-contain md:object-cover select-none" draggable={false}
           />
+
+          {showLikeBurst && (
+            <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
+              <Heart className="w-28 h-28 text-white fill-white drop-shadow-[0_10px_35px_rgba(0,0,0,0.7)] animate-[ping_0.7s_ease-out_1]" />
+            </div>
+          )}
 
           {/* Bottom Thumbnails Strip + < 1/5 > pagination */}
           <div className="absolute bottom-4 inset-x-4 z-10 flex items-center justify-between">
@@ -337,7 +362,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
           </div>
 
           {/* Comments Feed matching image */}
-          <div className="px-4 sm:px-5 py-4 flex-1 min-h-0 overflow-y-auto space-y-4">
+          <div className="px-4 sm:px-5 py-4 flex-1 min-h-0 overflow-y-auto space-y-4 scrollbar-thin">
             <h3 className="text-xs font-bold text-[#888888]">
               Yorumlar ({comments.length})
             </h3>
@@ -360,7 +385,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                   </button>
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <button type="button" onClick={() => c.userHandle && onSelectCreator(c.userHandle)} className="font-bold text-white hover:underline text-left cursor-pointer">{c.userName}</button>
+                      <div className="flex items-center gap-2 min-w-0"><button type="button" onClick={() => c.userHandle && onSelectCreator(c.userHandle)} className="font-bold text-white hover:underline text-left cursor-pointer truncate">{c.userName}</button><button type="button" onClick={() => handleReply(c.userHandle)} className="text-[10px] text-[#777] hover:text-white cursor-pointer">Yanıtla</button></div>
                       {(currentUser.isAdmin || currentUser.uid === c.userId) && (
                         <button
                           onClick={() => {
@@ -400,7 +425,8 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Yorum yaz..."
+              id="tattoo-comment-input"
+              placeholder={replyingTo ? `${replyingTo} yanıtla...` : 'Yorum yaz...'}
               className="flex-1 bg-[#161616] border border-white/10 rounded-full px-4 py-2.5 text-xs text-white placeholder-[#666666] focus:outline-none focus:border-white/30"
             />
             <button
