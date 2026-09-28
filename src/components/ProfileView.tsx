@@ -953,7 +953,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               {/* 3. Ad Soyad */}
               <div>
-                <label className="block text-[#AAAAAA] mb-1 font-medium">Ad Soyad / İsim</label>
+                <label className="block text-[#AAAAAA] mb-1 font-medium">Kullanıcı adı ve Ad Soyad</label>
                 <input
                 value={editHandle}
                 onChange={(e) => setEditHandle(e.target.value)}
@@ -961,6 +961,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 placeholder="@kullaniciadi"
                 className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-white/30"
               />
+              <p className="text-[10px] text-[#777] mt-1 mb-2">@kullanıcı adını 30 günde bir değiştirebilirsin.</p>
               <input
                   type="text"
                   value={editName}
