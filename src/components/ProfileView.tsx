@@ -341,12 +341,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       website: webLink || currentUser.website || '',
     };
 
-    tattooStore.setCurrentUser(updated);
-    tattooStore.updateProfile(updated);
+    const savedProfile = tattooStore.updateProfile(updated);
     if (auth.currentUser && editName.trim() && editName.trim() !== auth.currentUser.displayName) {
       updateFirebaseProfile(auth.currentUser, { displayName: editName.trim() }).catch(() => {});
     }
-    onUserUpdated(updated);
+    onUserUpdated(savedProfile);
     setEditModalOpen(false);
     onToast('Profil ve sosyal medya bağlantıları güncellendi');
   };
