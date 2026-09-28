@@ -29,7 +29,8 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
       .slice()
       .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
       .map((tattoo) => tattooStore.getArtistProfile(tattoo.creatorHandle))
-      .filter((artist): artist is UserProfile => Boolean(artist) && artist.uid !== currentUser.uid)
+      .filter((artist): artist is UserProfile => Boolean(artist))
+      .filter((artist) => artist.uid !== currentUser.uid)
       .filter((artist) => {
         const key = artist.uid || artist.handle;
         if (seen.has(key)) return false;
