@@ -755,6 +755,9 @@ class TattooStoreService {
    * Update current user profile (photoURL, bannerURL, displayName, bio, etc.)
    */
   public updateProfile(updates: Partial<UserProfile>): UserProfile {
+    const previousHandle = this.currentUser.handle;
+    const nextHandle = updates.handle || previousHandle;
+    const handleChanged = Boolean(nextHandle && previousHandle && nextHandle.toLowerCase() !== previousHandle.toLowerCase());
     this.currentUser = {
       ...this.currentUser,
       ...updates,
@@ -788,6 +791,19 @@ class TattooStoreService {
       }).catch(() => {});
     });
     this.saveTattoos();
+
+    // Keep incoming follower records attached when a user changes their @handle.
+    // Follow documents store the target handle, so old records must be migrated.
+    if (handleChanged && auth.currentUser) {
+      const oldKey = previousHandle.trim().toLowerCase();
+      const newKey = nextHandle.trim().toLowerCase();
+      const oldCount = this.followerCounts[oldKey] || 0;
+      this.followerCounts[newKey] = oldCount;
+      delete this.followerCounts[oldKey];
+      getDocs(query(collection(db, 'follows'), where('handle', '==', oldKey)))
+        .then((snap) => Promise.all(snap.docs.map((item) => updateDoc(item.ref, { handle: newKey }))))
+        .catch(() => {});
+    }
 
     // Sync in Firestore
     try {
