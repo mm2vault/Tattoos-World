@@ -36,7 +36,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <button
         type="button"
         onClick={() => onSelectTab('gallery')}
-        className={`p-2 rounded-full cursor-pointer ${
+        className={`min-w-[52px] min-h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl cursor-pointer ${
           currentTab === 'gallery' ? 'text-white' : 'text-[#888]'
         }`}
         aria-label={t.navGallery}
@@ -56,7 +56,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <button
         type="button"
         onClick={() => onSelectTab('favorites')}
-        className={`p-2 rounded-full cursor-pointer ${
+        className={`min-w-[52px] min-h-[52px] flex flex-col items-center justify-center gap-0.5 rounded-xl cursor-pointer ${
           currentTab === 'favorites' ? 'text-white' : 'text-[#888]'
         }`}
         aria-label="Kaydedilenler"
@@ -78,6 +78,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className="w-full h-full object-cover"
             />
           </div>
+          <span className="text-[9px]">Profil</span>
         </div>
       </button>
     </nav>
