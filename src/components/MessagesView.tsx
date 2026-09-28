@@ -3,7 +3,7 @@ import { Send, CheckCircle2, Info, Search, ArrowLeft } from 'lucide-react';
 import { UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
-import { arrayUnion, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { arrayUnion, collection, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 interface MessagesViewProps {
   currentUser: UserProfile;
@@ -96,11 +96,61 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   useEffect(() => {
     if (!initialCreatorHandle) return;
+
+    const normalizedHandle = initialCreatorHandle.trim().toLowerCase();
     const match = partners.find(
-      (p) => p.handle.toLowerCase() === initialCreatorHandle.toLowerCase()
+      (p) => p.handle.toLowerCase() === normalizedHandle
     );
-    if (match) setSelectedPartnerUid(match.uid);
-  }, [initialCreatorHandle, partners]);
+
+    if (match) {
+      setSelectedPartnerUid(match.uid);
+      return;
+    }
+
+    // A user may have a profile but no tattoo yet. Resolve the profile directly
+    // so profile -> message still works instead of silently doing nothing.
+    let cancelled = false;
+    const loadProfileAsPartner = async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'users'), where('handle', '==', initialCreatorHandle.startsWith('@') ? initialCreatorHandle : '@' + initialCreatorHandle))
+        );
+        const docSnap = snap.docs[0];
+        if (!docSnap || cancelled) return;
+
+        const profile = docSnap.data() as Partial<UserProfile>;
+        const uid = String(profile.uid || docSnap.id);
+        if (!uid || uid === currentUser.uid) return;
+
+        const partner: ChatPartner = {
+          uid,
+          name: String(profile.displayName || initialCreatorHandle),
+          handle: String(profile.handle || initialCreatorHandle),
+          photo: String(profile.photoURL || ''),
+          verified: Boolean(profile.verified),
+          role: String(profile.role || (profile.isArtist ? 'Sanatçı' : 'Topluluk üyesi')),
+          lastMessage: 'Yeni bir sohbet başlat',
+          time: '',
+          lastMessageAt: '',
+          conversationId: buildConversationId(currentUser.uid, uid),
+          unreadCount: 0,
+        };
+
+        setPartners((prev) => {
+          const next = prev.filter((item) => item.uid !== partner.uid);
+          return [partner, ...next];
+        });
+        setSelectedPartnerUid(uid);
+      } catch (error) {
+        console.warn('Message partner profile lookup skipped:', error);
+      }
+    };
+
+    loadProfileAsPartner();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialCreatorHandle, partners, currentUser.uid]);
 
   useEffect(() => {
     if (initialMessage) {
