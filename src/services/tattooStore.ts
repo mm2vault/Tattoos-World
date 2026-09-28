@@ -641,6 +641,7 @@ class TattooStoreService {
         followingCount: 0,
         createdAt: new Date().toISOString().split('T')[0],
         savedTattooIds: [],
+        customLinks: Array.isArray(manualUser.customLinks) ? manualUser.customLinks : [],
       };
 
       this.currentUser = user;
