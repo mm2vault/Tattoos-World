@@ -160,7 +160,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
         {/* Top Left Close 'X' Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-40 p-2.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-black transition-all cursor-pointer shadow-lg"
+          className="absolute top-[max(0.75rem,env(safe-area-inset-top))] left-3 md:left-4 z-40 p-2.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-black transition-all cursor-pointer shadow-lg"
           aria-label="Kapat"
         >
           <X className="w-5 h-5" />
@@ -188,9 +188,9 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
           )}
 
           {/* Bottom Thumbnails Strip + < 1/5 > pagination */}
-          <div className="absolute bottom-4 inset-x-4 z-10 flex items-center justify-between">
+          <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] inset-x-3 md:inset-x-4 z-10 flex items-center justify-between gap-2">
             {/* Thumbnails */}
-            <div className="flex items-center gap-2 overflow-x-auto p-1 bg-black/60 backdrop-blur-md rounded-xl border border-white/10">
+            <div className="flex items-center gap-2 overflow-x-auto p-1 max-w-[68%]" bg-black/60 backdrop-blur-md rounded-xl border border-white/10">
               {thumbnails.map((img, idx) => (
                 <button
                   key={idx}
@@ -262,7 +262,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
             </div>
 
             {/* Creator Row */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
               <div
                 onClick={() => handleOpenCreator(tattoo.creatorHandle)}
                 className="flex items-center gap-3 cursor-pointer group"
@@ -284,12 +284,12 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
               {onOpenMessages && (
                 <button
                   onClick={() => onOpenMessages(tattoo.creatorHandle, `Merhaba ${tattoo.creatorHandle}, bu dövmeniz hakkında bilgi almak ve randevu oluşturmak istiyorum. Uygun gün ve saatleriniz nedir?`)}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white text-black hover:bg-[#e8e8e8] transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white whitespace-nowrap" text-black hover:bg-[#e8e8e8] transition-all cursor-pointer"
                 >Randevu Mesajı</button>
               )}
               <button
                 onClick={handleToggleFollow}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold transition-all cursor-pointer ${
                   isFollowing
                     ? 'bg-white/15 text-white hover:bg-red-500/20 hover:text-red-400'
                     : 'bg-[#1e1e1e] border border-white/20 text-white hover:bg-white hover:text-black'
