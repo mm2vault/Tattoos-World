@@ -6,7 +6,7 @@ import {
   CheckCircle2, Globe, Sparkles, 
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
-  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2, Copy,
+  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2,
   Grid3X3, Bookmark, Info as InfoIcon, Users
 } from 'lucide-react';
 import { Tattoo, UserProfile, SupportedLanguage } from '../types';
