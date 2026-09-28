@@ -439,7 +439,38 @@ class TattooStoreService {
 
       const legacyIds = new Set(['tattoo_1','tattoo_2','tattoo_3','tattoo_4','tattoo_5','tattoo_6','tattoo_7']);
       const legacyCreators = new Set(['artist_inkedlife','artist_luna','artist_darksoul','@inkedlife','@lunatattoos','@darksoul','@tattoartist','@blackink']);
-      const remoteTattoos = tattooSnap.docs.map((d) => d.data() as Tattoo).filter((t) => !legacyIds.has(t.id) && !legacyCreators.has(t.creatorId) && !legacyCreators.has(t.creatorHandle));
+      const remoteTattoos = tattooSnap.docs
+        .map((d) => {
+          const raw = d.data() as Partial<Tattoo>;
+          const safeHandle = String(raw.creatorHandle || '@unknown').startsWith('@')
+            ? String(raw.creatorHandle || '@unknown')
+            : '@' + String(raw.creatorHandle || 'unknown');
+
+          return {
+            ...raw,
+            id: String(raw.id || d.id),
+            title: String(raw.title || 'Untitled Tattoo'),
+            category: String(raw.category || 'all'),
+            categoryName: String(raw.categoryName || 'Tattoo'),
+            description: String(raw.description || ''),
+            image: String(raw.image || ''),
+            additionalImages: Array.isArray(raw.additionalImages) ? raw.additionalImages.filter((v) => typeof v === 'string') : [],
+            creatorId: String(raw.creatorId || ''),
+            creatorName: String(raw.creatorName || 'Tattoo Artist'),
+            creatorHandle: safeHandle,
+            creatorPhoto: String(raw.creatorPhoto || './images/users/avatar_inkedlife.jpg'),
+            creatorRole: String(raw.creatorRole || 'Koleksiyoner'),
+            creatorVerified: Boolean(raw.creatorVerified),
+            creatorProfilePublic: raw.creatorProfilePublic !== false,
+            createdAt: String(raw.createdAt || new Date().toISOString()),
+            likesCount: Number.isFinite(Number(raw.likesCount)) ? Math.max(0, Number(raw.likesCount)) : 0,
+            commentsCount: Number.isFinite(Number(raw.commentsCount)) ? Math.max(0, Number(raw.commentsCount)) : 0,
+            tags: Array.isArray(raw.tags)
+              ? raw.tags.map((tag) => String(tag).trim()).filter(Boolean)
+              : [],
+          } as Tattoo;
+        })
+        .filter((t) => !legacyIds.has(t.id) && !legacyCreators.has(t.creatorId) && !legacyCreators.has(t.creatorHandle));
       const merged = new Map<string, Tattoo>();
       this.tattoos.forEach((t) => merged.set(t.id, t));
       remoteTattoos.forEach((t) => merged.set(t.id, t));
