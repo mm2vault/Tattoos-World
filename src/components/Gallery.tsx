@@ -37,6 +37,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [doubleTapId, setDoubleTapId] = useState<string | null>(null);
   const [artistOnly, setArtistOnly] = useState(false);
+  const [remoteProfiles, setRemoteProfiles] = useState<UserProfile[]>([]);
 
   useEffect(() => {
     if (initialViewMode === 'feed') {
@@ -45,6 +46,25 @@ export const Gallery: React.FC<GalleryProps> = ({
       setArtistOnly(false);
     }
   }, [initialViewMode]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2 || initialViewMode !== 'grid') {
+      setRemoteProfiles([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const results = await tattooStore.searchPublicUsers(query);
+      if (!cancelled) setRemoteProfiles(results);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery, initialViewMode]);
 
   const categoriesList: { id: CategoryId; name: string; image: string }[] = [
     { id: 'realism', name: 'Realizm', image: './images/tattoos/lion_clock.jpg' },
@@ -261,11 +281,36 @@ export const Gallery: React.FC<GalleryProps> = ({
       });
     });
 
-    const query = searchQuery.trim().toLowerCase();
-    return Array.from(profiles.values())
-      .filter((profile) => !query || profile.handle.toLowerCase().includes(query) || profile.name.toLowerCase().includes(query))
-      .slice(0, 12);
-  }, [currentUser, searchQuery, tattoos]);
+    const query = searchQuery.trim().toLowerCase().replace(/^@/, '');
+    const merged = new Map<string, {
+      handle: string;
+      name: string;
+      image: string;
+      role: string;
+      verified: boolean;
+    }>();
+
+    Array.from(profiles.values()).forEach((profile) => {
+      if (!query || profile.handle.toLowerCase().replace(/^@/, '').includes(query) || profile.name.toLowerCase().includes(query)) {
+        merged.set(profile.handle.toLowerCase(), profile);
+      }
+    });
+
+    remoteProfiles.forEach((profile) => {
+      const handle = String(profile.handle || '').trim();
+      if (!handle) return;
+      const key = handle.toLowerCase();
+      merged.set(key, {
+        handle,
+        name: profile.displayName || handle,
+        image: profile.photoURL || './images/users/avatar_inkedlife.jpg',
+        role: profile.isArtist || profile.role === 'artist' ? 'Sanatçı' : 'Üye',
+        verified: Boolean(profile.verified),
+      });
+    });
+
+    return Array.from(merged.values()).slice(0, 12);
+  }, [currentUser, searchQuery, tattoos, remoteProfiles]);
 
   const storyCreators = React.useMemo(() => {
     const result: { handle: string; name: string; image: string; isCurrentUser?: boolean }[] = [
@@ -467,7 +512,9 @@ export const Gallery: React.FC<GalleryProps> = ({
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-sm font-semibold text-white">Kişiler ve sanatçılar</h2>
-              <p className="text-[10px] text-[#666] mt-0.5">{profileResults.length} profil</p>
+              <p className="text-[10px] text-[#666] mt-0.5">
+                {profileResults.length} profil{remoteProfiles.length > 0 ? ' · Topluluktan' : ''}
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
