@@ -389,42 +389,65 @@ class TattooStoreService {
     try {
       const alreadyReset = localStorage.getItem(TattooStoreService.INTERACTION_RESET_KEY) === 'done';
       if (alreadyReset) return;
+
       const resetMarker = await getDoc(doc(db, 'system', 'interaction_reset_v2'));
       if (resetMarker.exists()) {
         localStorage.setItem(TattooStoreService.INTERACTION_RESET_KEY, 'done');
         return;
       }
 
+      // Never wipe all interaction collections. Only remove records that can
+      // be positively identified as belonging to the old demo dataset.
+      const legacyTattooIds = new Set([
+        'tattoo_1', 'tattoo_2', 'tattoo_3', 'tattoo_4',
+        'tattoo_5', 'tattoo_6', 'tattoo_7',
+      ]);
+      const legacyUserIds = new Set([
+        'artist_inkedlife', 'artist_luna', 'artist_darksoul',
+      ]);
+      const legacyHandles = new Set([
+        '@inkedlife', '@lunatattoos', '@darksoul',
+        '@tattoartist', '@blackink',
+      ]);
+
       const [commentSnap, likeSnap, followSnap] = await Promise.all([
         getDocs(collection(db, 'comments')),
         getDocs(collection(db, 'likes')),
         getDocs(collection(db, 'follows')),
       ]);
+
       await Promise.all([
-        ...commentSnap.docs.map((d) => deleteDoc(d.ref)),
-        ...likeSnap.docs.map((d) => deleteDoc(d.ref)),
-        ...followSnap.docs.map((d) => deleteDoc(d.ref)),
+        ...commentSnap.docs
+          .filter((d) => {
+            const value = d.data() as { tattooId?: string; userId?: string };
+            return legacyTattooIds.has(String(value.tattooId || '')) ||
+              legacyUserIds.has(String(value.userId || ''));
+          })
+          .map((d) => deleteDoc(d.ref)),
+        ...likeSnap.docs
+          .filter((d) => {
+            const value = d.data() as { tattooId?: string; uid?: string };
+            return legacyTattooIds.has(String(value.tattooId || '')) ||
+              legacyUserIds.has(String(value.uid || ''));
+          })
+          .map((d) => deleteDoc(d.ref)),
+        ...followSnap.docs
+          .filter((d) => {
+            const value = d.data() as { uid?: string; handle?: string };
+            return legacyUserIds.has(String(value.uid || '')) ||
+              legacyHandles.has(String(value.handle || '').toLowerCase());
+          })
+          .map((d) => deleteDoc(d.ref)),
       ]);
 
-      this.comments = {};
-      this.userLikes = {};
-      this.follows = new Set();
-      this.followerCounts = {};
-      this.tattoos = this.tattoos.map((t) => ({ ...t, likesCount: 0, commentsCount: 0 }));
-      this.currentUser.followersCount = 0;
-      this.currentUser.followingCount = 0;
-      this.saveComments();
-      this.saveLikes();
-      this.saveFollows();
-      this.saveTattoos();
-      this.saveUser();
       await setDoc(doc(db, 'system', 'interaction_reset_v2'), {
         completedAt: new Date().toISOString(),
-        version: 2,
+        version: 3,
+        scope: 'legacy-demo-only',
       });
       localStorage.setItem(TattooStoreService.INTERACTION_RESET_KEY, 'done');
     } catch (err) {
-      console.warn('Old interaction cleanup skipped:', err);
+      console.warn('Legacy interaction cleanup skipped:', err);
     }
   }
 
@@ -1433,11 +1456,19 @@ class TattooStoreService {
           try {
             const userSnap = await getDoc(doc(db, 'users', uid));
             if (userSnap.exists()) {
-              const user = userSnap.data() as UserProfile;
+              const user = userSnap.data() as Partial<UserProfile>;
+              const safeHandle = String(user.handle || '@' + uid.slice(0, 12));
               return {
+                ...INITIAL_USER,
                 ...user,
                 uid,
-                followersCount: this.getFollowerCount(user.handle),
+                displayName: String(user.displayName || value.followerName || '@user'),
+                handle: safeHandle,
+                email: String(user.email || ''),
+                photoURL: String(user.photoURL || value.followerPhoto || './images/users/avatar_inkedlife.jpg'),
+                customLinks: Array.isArray(user.customLinks) ? user.customLinks : [],
+                savedTattooIds: Array.isArray(user.savedTattooIds) ? user.savedTattooIds : [],
+                followersCount: this.getFollowerCount(safeHandle),
                 followingCount: this.followingCountsByUid[uid] || 0,
               } as UserProfile;
             }
@@ -1507,12 +1538,21 @@ class TattooStoreService {
             );
             const userDoc = userSnap.docs[0];
             if (!userDoc) return null;
-            const user = userDoc.data() as UserProfile;
+            const user = userDoc.data() as Partial<UserProfile>;
+            const resolvedUid = String(user.uid || userDoc.id);
+            const safeHandle = String(user.handle || handle);
             return {
+              ...INITIAL_USER,
               ...user,
-              uid: user.uid || userDoc.id,
-              followersCount: this.getFollowerCount(user.handle),
-              followingCount: this.followingCountsByUid[user.uid || userDoc.id] || 0,
+              uid: resolvedUid,
+              displayName: String(user.displayName || safeHandle),
+              handle: safeHandle,
+              email: String(user.email || ''),
+              photoURL: String(user.photoURL || './images/users/avatar_inkedlife.jpg'),
+              customLinks: Array.isArray(user.customLinks) ? user.customLinks : [],
+              savedTattooIds: Array.isArray(user.savedTattooIds) ? user.savedTattooIds : [],
+              followersCount: this.getFollowerCount(safeHandle),
+              followingCount: this.followingCountsByUid[resolvedUid] || 0,
             } as UserProfile;
           } catch {
             return null;
