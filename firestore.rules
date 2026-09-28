@@ -51,11 +51,19 @@ service cloud.firestore {
       allow read: if true;
       allow create: if signedIn() &&
         request.resource.data.creatorId == request.auth.uid &&
-        request.resource.data.creatorVerified == false &&
         (
-          request.resource.data.creatorRole == 'Koleksiyoner' ||
-          request.resource.data.creatorRole == 'Sanatçı' ||
-          isAdmin()
+          isAdmin() ||
+          (
+            request.resource.data.creatorVerified == false &&
+            (
+              request.resource.data.creatorRole == 'Koleksiyoner' ||
+              request.resource.data.creatorRole == 'Sanatçı'
+            )
+          ) ||
+          (
+            request.resource.data.creatorVerified == true &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verified == true
+          )
         );
       allow update: if signedIn() && (
         isAdmin() ||
