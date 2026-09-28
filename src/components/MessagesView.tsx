@@ -47,12 +47,29 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 }) => {
   const tattooCreators = useMemo(() => {
     const map = new Map<string, ChatPartner>();
+
+    // Self-conversation is supported so the user can test/persist messages
+    // without requiring a second account.
+    map.set(currentUser.uid, {
+      uid: currentUser.uid,
+      name: currentUser.displayName || 'Kendim',
+      handle: currentUser.handle || '@kullanici',
+      photo: currentUser.photoURL || '',
+      verified: Boolean(currentUser.verified),
+      role: 'Kendin',
+      lastMessage: 'Kendine yeni bir mesaj gönder',
+      time: '',
+      lastMessageAt: '',
+      conversationId: buildConversationId(currentUser.uid, currentUser.uid),
+      unreadCount: 0,
+    });
+
     tattooStore.getTattoos().forEach((tattoo) => {
       if (!tattoo.creatorId || !tattoo.creatorHandle || tattoo.creatorId === currentUser.uid) return;
       if (map.has(tattoo.creatorId)) return;
       map.set(tattoo.creatorId, {
         uid: tattoo.creatorId,
-        name: tattoo.creatorName,
+        name: tattoo.creatorName || tattoo.creatorHandle,
         handle: tattoo.creatorHandle,
         photo: tattoo.creatorPhoto || '',
         verified: Boolean(tattoo.creatorVerified),
@@ -65,7 +82,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       });
     });
     return map;
-  }, [currentUser.uid]);
+  }, [currentUser.uid, currentUser.displayName, currentUser.handle, currentUser.photoURL, currentUser.verified]);
 
   const [partners, setPartners] = useState<ChatPartner[]>([]);
   const [selectedPartnerUid, setSelectedPartnerUid] = useState<string>('');
@@ -243,13 +260,15 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         recipientRole: activePartner.role,
         text,
         readBy: [auth.currentUser.uid],
-        participants: [auth.currentUser.uid, activePartner.uid],
+        participants: Array.from(new Set([auth.currentUser.uid, activePartner.uid])),
         createdAt,
       });
-      tattooStore.notifyMessage(
-        activePartner.uid,
-        `${currentUser.handle} sana bir mesaj gönderdi.`
-      );
+      if (activePartner.uid !== auth.currentUser.uid) {
+        tattooStore.notifyMessage(
+          activePartner.uid,
+          `${currentUser.handle} sana bir mesaj gönderdi.`
+        );
+      }
       setNewMessageText('');
     } catch (error) {
       console.warn('Message was not saved:', error);
