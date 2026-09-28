@@ -1357,43 +1357,70 @@ class TattooStoreService {
     if (!key || !auth.currentUser) return [];
     try {
       const snap = await getDocs(query(collection(db, 'follows'), where('handle', '==', key)));
+      const profiles = await Promise.all(
+        snap.docs.map(async (item) => {
+          const value = item.data() as {
+            uid?: string;
+            followerName?: string;
+            followerPhoto?: string;
+            followerVerified?: boolean;
+            followerRole?: string;
+          };
+          const uid = String(value.uid || '');
+          if (!uid) return null;
+
+          // Prefer the real users/{uid} profile so a follower without tattoos
+          // still has the correct @handle, name and links.
+          try {
+            const userSnap = await getDoc(doc(db, 'users', uid));
+            if (userSnap.exists()) {
+              const user = userSnap.data() as UserProfile;
+              return {
+                ...user,
+                uid,
+                followersCount: this.getFollowerCount(user.handle),
+                followingCount: this.followingCountsByUid[uid] || 0,
+              } as UserProfile;
+            }
+          } catch {
+            // Fall back to the follow snapshot below.
+          }
+
+          const fromTattoo = this.tattoos.find((tattoo) => tattoo.creatorId === uid);
+          return {
+            uid,
+            displayName: value.followerName || fromTattoo?.creatorName || '@user',
+            handle: fromTattoo?.creatorHandle || '@' + uid.slice(0, 12),
+            email: '',
+            photoURL: value.followerPhoto || fromTattoo?.creatorPhoto || './images/users/avatar_inkedlife.jpg',
+            bio: '',
+            instagram: fromTattoo?.socialLinks?.instagram || '',
+            tiktok: fromTattoo?.socialLinks?.tiktok || '',
+            discord: fromTattoo?.socialLinks?.discord || '',
+            website: fromTattoo?.socialLinks?.website || '',
+            customLinks: [],
+            isArtist: value.followerRole === 'artist' || fromTattoo?.creatorRole === 'artist',
+            verified: Boolean(value.followerVerified || fromTattoo?.creatorVerified),
+            role: value.followerRole || fromTattoo?.creatorRole || 'user',
+            isAdmin: false,
+            followersCount: fromTattoo ? this.getFollowerCount(fromTattoo.creatorHandle) : 0,
+            followingCount: this.followingCountsByUid[uid] || 0,
+            createdAt: '',
+            savedTattooIds: [],
+          } as UserProfile;
+        })
+      );
+
       const seen = new Set<string>();
-      const profiles: UserProfile[] = [];
-      snap.docs.forEach((item) => {
-        const value = item.data() as {
-          uid?: string;
-          followerName?: string;
-          followerPhoto?: string;
-          followerVerified?: boolean;
-          followerRole?: string;
-        };
-        const uid = String(value.uid || '');
-        if (!uid || seen.has(uid)) return;
-        seen.add(uid);
-        const fromTattoo = this.tattoos.find((tattoo) => tattoo.creatorId === uid);
-        profiles.push({
-          uid,
-          displayName: value.followerName || fromTattoo?.creatorName || '@user',
-          handle: fromTattoo?.creatorHandle || '@' + (value.followerName || 'user').replace(/^@/, '').replace(/\s+/g, '_').toLowerCase(),
-          email: '',
-          photoURL: value.followerPhoto || fromTattoo?.creatorPhoto || './images/users/avatar_inkedlife.jpg',
-          bio: '',
-          instagram: fromTattoo?.socialLinks?.instagram || '',
-          tiktok: fromTattoo?.socialLinks?.tiktok || '',
-          discord: fromTattoo?.socialLinks?.discord || '',
-          website: fromTattoo?.socialLinks?.website || '',
-          customLinks: [],
-          isArtist: value.followerRole === 'artist' || fromTattoo?.creatorRole === 'artist',
-          verified: Boolean(value.followerVerified || fromTattoo?.creatorVerified),
-          role: value.followerRole || fromTattoo?.creatorRole || 'user',
-          isAdmin: false,
-          followersCount: fromTattoo ? this.getFollowerCount(fromTattoo.creatorHandle) : 0,
-          followingCount: this.followingCountsByUid[uid] || 0,
-          createdAt: '',
-          savedTattooIds: [],
-        });
-      });
-      return profiles.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      return profiles
+        .filter((profile): profile is UserProfile => Boolean(profile))
+        .filter((profile) => {
+          const key = profile.uid || profile.handle.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
     } catch {
       return [];
     }
@@ -1403,17 +1430,47 @@ class TattooStoreService {
     if (!auth.currentUser) return [];
     try {
       const snap = await getDocs(query(collection(db, 'follows'), where('uid', '==', uid)));
+      const profiles = await Promise.all(
+        snap.docs.map(async (item) => {
+          const value = item.data() as { handle?: string };
+          const handle = String(value.handle || '').trim();
+          if (!handle) return null;
+
+          const local = this.getArtistProfile(handle);
+          if (local) return local;
+
+          // A user may follow someone who has never posted a tattoo.
+          // Resolve that target from the real users collection instead of
+          // dropping them from the list.
+          try {
+            const userSnap = await getDocs(
+              query(collection(db, 'users'), where('handle', '==', handle))
+            );
+            const userDoc = userSnap.docs[0];
+            if (!userDoc) return null;
+            const user = userDoc.data() as UserProfile;
+            return {
+              ...user,
+              uid: user.uid || userDoc.id,
+              followersCount: this.getFollowerCount(user.handle),
+              followingCount: this.followingCountsByUid[user.uid || userDoc.id] || 0,
+            } as UserProfile;
+          } catch {
+            return null;
+          }
+        })
+      );
+
       const seen = new Set<string>();
-      const profiles: UserProfile[] = [];
-      snap.docs.forEach((item) => {
-        const value = item.data() as { handle?: string };
-        const handle = String(value.handle || '').trim();
-        if (!handle || seen.has(handle.toLowerCase())) return;
-        seen.add(handle.toLowerCase());
-        const profile = this.getArtistProfile(handle);
-        if (profile) profiles.push(profile);
-      });
-      return profiles.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      return profiles
+        .filter((profile): profile is UserProfile => Boolean(profile))
+        .filter((profile) => {
+          const key = profile.uid || profile.handle.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
     } catch {
       return [];
     }
