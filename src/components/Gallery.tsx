@@ -36,6 +36,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [expandedCaptions, setExpandedCaptions] = useState<Record<string, boolean>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [doubleTapId, setDoubleTapId] = useState<string | null>(null);
+  const [artistOnly, setArtistOnly] = useState(false);
 
   useEffect(() => {
     if (initialViewMode === 'feed') {
@@ -71,14 +72,55 @@ export const Gallery: React.FC<GalleryProps> = ({
     return counts;
   }, [tattoos]);
 
+  const artistProfiles = React.useMemo(() => {
+    const profiles = new Map<string, {
+      handle: string;
+      name: string;
+      image: string;
+      verified: boolean;
+      posts: number;
+      styles: string[];
+    }>();
+
+    tattoos.forEach((tattoo) => {
+      const isArtist = tattoo.creatorRole === 'artist' || Boolean(tattoo.creatorVerified);
+      if (!isArtist) return;
+      const handle = String(tattoo.creatorHandle || '').trim();
+      if (!handle) return;
+      const key = handle.toLowerCase();
+      const existing = profiles.get(key);
+      const style = tattoo.categoryName || '';
+      if (existing) {
+        existing.posts += 1;
+        if (style && !existing.styles.includes(style) && existing.styles.length < 3) existing.styles.push(style);
+        existing.verified = existing.verified || Boolean(tattoo.creatorVerified);
+      } else {
+        profiles.set(key, {
+          handle,
+          name: tattoo.creatorName || handle,
+          image: tattoo.creatorPhoto || tattoo.image,
+          verified: Boolean(tattoo.creatorVerified),
+          posts: 1,
+          styles: style ? [style] : [],
+        });
+      }
+    });
+
+    return Array.from(profiles.values())
+      .sort((a, b) => b.posts - a.posts)
+      .slice(0, 8);
+  }, [tattoos]);
+
   const filteredTattoos = tattoos.filter((tattoo) => {
     const matchesCategory = selectedCategory === 'all' || tattoo.category === selectedCategory;
+    const matchesArtist = !artistOnly || tattoo.creatorRole === 'artist' || Boolean(tattoo.creatorVerified);
     const query = searchQuery.toLowerCase().trim();
     const normalizedQuery = query.replace(/^#/, '').replace(/^@/, '');
-    if (!query) return matchesCategory;
+    if (!query) return matchesCategory && matchesArtist;
 
     return (
       matchesCategory &&
+      matchesArtist &&
       (tattoo.title.toLowerCase().includes(normalizedQuery) ||
         tattoo.description.toLowerCase().includes(normalizedQuery) ||
         tattoo.categoryName.toLowerCase().includes(normalizedQuery) ||
@@ -298,6 +340,64 @@ export const Gallery: React.FC<GalleryProps> = ({
           ))}
         </div>
       </section>
+      )}
+
+      {viewMode === 'grid' && !searchQuery.trim() && artistProfiles.length > 0 && (
+        <section className="px-3 sm:px-0 space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="tw-kicker">INK ARTISTS</p>
+              <h2 className="text-sm sm:text-base font-semibold text-white mt-1">Sanatçıları keşfet</h2>
+              <p className="text-[10px] text-[#666] mt-0.5">Portföylerini incele ve doğrudan iletişime geç</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setArtistOnly((value) => !value)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-colors cursor-pointer ${artistOnly ? 'bg-white text-black border-white' : 'bg-white/5 text-[#aaa] border-white/10 hover:text-white'}`}
+            >
+              {artistOnly ? 'Tüm gönderiler' : 'Sadece sanatçılar'}
+            </button>
+          </div>
+
+          <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
+            {artistProfiles.map((artist) => (
+              <button
+                key={artist.handle}
+                type="button"
+                onClick={() => onSelectCreator(artist.handle)}
+                className="group min-w-[190px] sm:min-w-[215px] rounded-2xl border border-white/10 bg-[#101010] p-3 text-left hover:border-white/25 hover:bg-white/[0.035] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={artist.image}
+                    alt={artist.name}
+                    className="w-11 h-11 rounded-full object-cover border border-white/15 shrink-0 group-hover:border-white/30 transition-colors"
+                  />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white truncate">{artist.name}</span>
+                      {artist.verified && <span className="text-[9px] text-sky-300">✓</span>}
+                    </span>
+                    <span className="block text-[10px] text-[#666] truncate">{artist.handle}</span>
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[9px] text-[#777]">{artist.posts} portföy paylaşımı</span>
+                  <span className="text-[9px] text-white/60 group-hover:text-white transition-colors">Profili aç →</span>
+                </div>
+                {artist.styles.length > 0 && (
+                  <div className="flex gap-1 mt-2 overflow-hidden">
+                    {artist.styles.map((style) => (
+                      <span key={style} className="px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[8px] text-[#999] whitespace-nowrap">
+                        {style}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {viewMode === 'grid' && !searchQuery.trim() && (
