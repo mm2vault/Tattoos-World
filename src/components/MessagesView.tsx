@@ -380,7 +380,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     };
 
     resolveUser();
-    return (
+    return () => {
+      cancelled = true;
+    };
+  }, [initialCreatorHandle, partners, firebaseUid]);
+
+  return (
     <div className="w-full h-full min-h-0 bg-[#050505] text-white flex overflow-hidden">
       <aside
         className={"w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-white/[0.08] bg-[#080808] flex-col " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}
