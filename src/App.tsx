@@ -432,6 +432,8 @@ function App() {
   const profileToDisplay = selectedProfileUser
     || (selectedCreatorHandle ? tattooStore.getArtistProfile(selectedCreatorHandle) || currentUser : currentUser);
 
+  // Profile navigation keeps a sanitized public profile selected for mobile search results.
+
   const isUserAdminActive = tattooStore.isCurrentUserAdmin();
 
   // 1. WELCOME SCREEN (When not logged in and never entered before)
