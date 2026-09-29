@@ -6,7 +6,7 @@ import {
   isUserAdmin, 
   db 
 } from './firebase';
-import { signInWithPopup, signInWithRedirect, signInAnonymously, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, signInAnonymously, onAuthStateChanged, signOut as fbSignOut, linkWithPopup, linkWithRedirect } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
@@ -777,7 +777,71 @@ class TattooStoreService {
     }
 
     try {
-      // Attempt Firebase popup
+      // Upgrade the current anonymous account in-place when possible.
+      // This preserves the Firebase UID, so messages and other data stay synced
+      // across devices after the user signs into the same Google account.
+      if (auth.currentUser?.isAnonymous) {
+        try {
+          const result = await linkWithPopup(auth.currentUser, googleProvider);
+          const fbUser = result.user;
+          const isAdmin = isUserAdmin(fbUser.email);
+
+          const userProfile: UserProfile = {
+            uid: fbUser.uid,
+            displayName: fbUser.displayName || this.currentUser.displayName || 'Google User',
+            handle: this.currentUser.handle || '@google_user',
+            email: fbUser.email || '',
+            photoURL: fbUser.photoURL || this.currentUser.photoURL || './images/users/avatar_inkedlife.jpg',
+            bio: this.currentUser.bio || (isAdmin ? 'Tatto\'s World Master Admin' : 'Tattoo lover and collector.'),
+            instagram: this.currentUser.instagram || '',
+            tiktok: this.currentUser.tiktok || '',
+            discord: this.currentUser.discord || '',
+            website: this.currentUser.website || '',
+            isArtist: isAdmin || Boolean(this.currentUser.isArtist),
+            verified: isAdmin || Boolean(this.currentUser.verified),
+            role: isAdmin ? 'admin' : (this.currentUser.role || 'user'),
+            isAdmin,
+            followersCount: this.currentUser.followersCount || 0,
+            followingCount: this.currentUser.followingCount || 0,
+            createdAt: this.currentUser.createdAt || new Date().toISOString().split('T')[0],
+            savedTattooIds: Array.isArray(this.currentUser.savedTattooIds) ? this.currentUser.savedTattooIds : [],
+            customLinks: Array.isArray(this.currentUser.customLinks) ? this.currentUser.customLinks : [],
+          };
+
+          this.currentUser = userProfile;
+          this.saveUser();
+          this.setSessionActive(true);
+          const synced = await this.syncUserToFirestore(userProfile);
+          this.syncNotificationsFromFirestore().catch(() => {});
+          return synced;
+        } catch (linkError: any) {
+          const linkCode = String(linkError?.code || '');
+          if (linkCode !== 'auth/credential-already-in-use' && linkCode !== 'auth/provider-already-linked') {
+            const redirectEligible = [
+              'auth/popup-blocked',
+              'auth/popup-timeout',
+              'auth/operation-not-supported-in-this-environment',
+            ].includes(linkCode);
+
+            if (redirectEligible) {
+              localStorage.setItem('tattos_world_has_entered', 'true');
+              this.setSessionActive(true);
+              try {
+                await linkWithRedirect(auth.currentUser!, googleProvider);
+                return this.currentUser;
+              } catch (redirectError) {
+                console.warn('Firebase anonymous Google link redirect failed:', redirectError);
+              }
+            } else {
+              console.warn('Firebase anonymous Google link failed:', linkError);
+            }
+          }
+          // If the Google credential already belongs to a permanent account,
+          // fall through to the normal sign-in path below.
+        }
+      }
+
+      // Normal Google sign-in for an existing permanent account.
       const result = await signInWithPopup(auth, googleProvider);
       const fbUser = result.user;
       const isAdmin = isUserAdmin(fbUser.email);
