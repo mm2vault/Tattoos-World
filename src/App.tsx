@@ -91,6 +91,7 @@ function App() {
   // Active Modals & Selections
   const [selectedTattoo, setSelectedTattoo] = useState<Tattoo | null>(null);
   const [selectedCreatorHandle, setSelectedCreatorHandle] = useState<string | null>(null);
+  const [selectedProfileUser, setSelectedProfileUser] = useState<UserProfile | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createStoryOpen, setCreateStoryOpen] = useState(false);
   const [storyViewerId, setStoryViewerId] = useState<string | null>(null);
@@ -354,20 +355,44 @@ function App() {
     setStories(tattooStore.getStories());
   };
 
+  const openResolvedProfile = (profile: UserProfile) => {
+    const safeProfile: UserProfile = {
+      uid: String(profile.uid || ''),
+      displayName: String(profile.displayName || profile.handle || 'Kullanıcı'),
+      handle: String(profile.handle || '@user'),
+      email: '',
+      photoURL: String(profile.photoURL || './images/users/avatar_inkedlife.jpg'),
+      bio: String(profile.bio || ''),
+      instagram: String(profile.instagram || ''),
+      tiktok: String(profile.tiktok || ''),
+      discord: String(profile.discord || ''),
+      website: String(profile.website || ''),
+      customLinks: Array.isArray(profile.customLinks) ? profile.customLinks.slice(0, 20).map(String) : [],
+      isArtist: Boolean(profile.isArtist),
+      verified: Boolean(profile.verified),
+      role: String(profile.role || (profile.isArtist ? 'artist' : 'user')),
+      isAdmin: false,
+      followersCount: Number(profile.followersCount || 0),
+      followingCount: Number(profile.followingCount || 0),
+      createdAt: String(profile.createdAt || ''),
+      savedTattooIds: Array.isArray(profile.savedTattooIds) ? profile.savedTattooIds.slice(0, 200).map(String) : [],
+      profilePublic: profile.profilePublic !== false,
+    };
+    setSelectedProfileUser(safeProfile);
+    setSelectedCreatorHandle(safeProfile.handle);
+    setCurrentTab('profile');
+  };
+
   const handleSelectCreator = async (handle: string) => {
     const normalizedHandle = String(handle || '').trim();
     if (!normalizedHandle) return;
 
-    // First use any profile already available in memory. This makes Explore
-    // search cards open instantly instead of waiting on a Firestore round-trip.
     const immediateProfile = tattooStore.getArtistProfile(normalizedHandle);
     if (immediateProfile && immediateProfile.profilePublic !== false && tattooStore.isProfilePublic(immediateProfile.handle)) {
-      setSelectedCreatorHandle(immediateProfile.handle);
-      setCurrentTab('profile');
+      openResolvedProfile(immediateProfile);
       return;
     }
 
-    // Search can also return a real public user who has never published a tattoo.
     const profile = await tattooStore.resolvePublicProfile(normalizedHandle);
     if (!profile) {
       setToastMessage('Bu profil bulunamadı veya gizli.');
@@ -378,8 +403,7 @@ function App() {
       return;
     }
 
-    setSelectedCreatorHandle(profile.handle);
-    setCurrentTab('profile');
+    openResolvedProfile(profile);
   };
 
   const handleOpenMessagesWithCreator = (handle: string, prefill?: string) => {
@@ -405,9 +429,8 @@ function App() {
     }
   };
 
-  const profileToDisplay = selectedCreatorHandle
-    ? tattooStore.getArtistProfile(selectedCreatorHandle) || currentUser
-    : currentUser;
+  const profileToDisplay = selectedProfileUser
+    || (selectedCreatorHandle ? tattooStore.getArtistProfile(selectedCreatorHandle) || currentUser : currentUser);
 
   const isUserAdminActive = tattooStore.isCurrentUserAdmin();
 
@@ -442,7 +465,7 @@ function App() {
           currentTab={currentTab}
           onSelectTab={(tab) => {
             setCurrentTab(tab);
-            if (tab !== 'profile') setSelectedCreatorHandle(null);
+            if (tab !== 'profile') { setSelectedCreatorHandle(null); setSelectedProfileUser(null); }
           }}
           onOpenCreate={() => setCreateModalOpen(true)}
           onLogout={handleLogout}
@@ -523,10 +546,7 @@ function App() {
                         tattoos={tattoos}
                         onSelectTattoo={(t) => setSelectedTattoo(t)}
                         onSelectCreator={handleSelectCreator}
-                        onSelectProfile={(profile) => {
-                          setSelectedCreatorHandle(profile.handle);
-                          setCurrentTab('profile');
-                        }}
+                        onSelectProfile={(profile) => openResolvedProfile(profile)}
                         onOpenCreate={() => setCreateModalOpen(true)}
                         searchQuery={searchQuery}
                         selectedCategory={selectedCategory}
@@ -549,10 +569,7 @@ function App() {
                     tattoos={tattoos}
                     onSelectTattoo={(t) => setSelectedTattoo(t)}
                     onSelectCreator={handleSelectCreator}
-                    onSelectProfile={(profile) => {
-                      setSelectedCreatorHandle(profile.handle);
-                      setCurrentTab('profile');
-                    }}
+                    onSelectProfile={(profile) => openResolvedProfile(profile)}
                     onOpenCreate={() => setCreateModalOpen(true)}
                     searchQuery={searchQuery}
                     selectedCategory={selectedCategory}
@@ -748,7 +765,7 @@ function App() {
                           setCreateModalOpen(true);
                         } else {
                           setCurrentTab(item.id);
-                          if (item.id !== 'profile') setSelectedCreatorHandle(null);
+                          if (item.id !== 'profile') { setSelectedCreatorHandle(null); setSelectedProfileUser(null); }
                         }
                       }}
                       className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
