@@ -1,4 +1,4 @@
-import { Tattoo, Comment, UserProfile, CategoryId, Notification } from '../types';
+import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story } from '../types';
 import { 
   auth, 
   googleProvider, 
@@ -57,6 +57,7 @@ class TattooStoreService {
   private followingCountsByUid: Record<string, number> = {};
   private notifications: Notification[] = [];
   private publicUserProfiles: Record<string, UserProfile> = {};
+  private stories: Story[] = [];
 
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
   private static readonly SEED_CLEANUP_KEY = 'tattos_world_seed_cleanup_v3';
@@ -128,6 +129,12 @@ class TattooStoreService {
       } else {
         this.currentUser = { ...INITIAL_USER };
         this.saveUser();
+      }
+
+      const storedStories = localStorage.getItem('tattos_world_stories_v1');
+      if (storedStories) {
+        const now = Date.now();
+        this.stories = (JSON.parse(storedStories) as Story[]).filter((story) => new Date(story.expiresAt).getTime() > now);
       }
 
       const storedNotifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
@@ -330,6 +337,14 @@ class TattooStoreService {
     try { window.dispatchEvent(new CustomEvent('tattoos-world-notifications')); } catch {}
   }
 
+  private saveStories() {
+    try {
+      localStorage.setItem('tattos_world_stories_v1', JSON.stringify(this.stories));
+    } catch (e) {
+      console.error('Error saving stories', e);
+    }
+  }
+
   private saveFollows() {
     try {
       localStorage.setItem(STORAGE_KEYS.FOLLOWS, JSON.stringify(Array.from(this.follows)));
@@ -354,6 +369,115 @@ class TattooStoreService {
   public setCurrentUser(user: UserProfile) {
     this.currentUser = user;
     this.saveUser();
+  }
+
+
+  public getStories(): Story[] {
+    const now = Date.now();
+    this.stories = this.stories.filter((story) => new Date(story.expiresAt).getTime() > now);
+    this.saveStories();
+    return [...this.stories].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  public async syncStoriesFromFirestore(): Promise<void> {
+    try {
+      const snap = await getDocs(collection(db, 'stories'));
+      const now = Date.now();
+      const remoteStories = snap.docs
+        .map((d) => {
+          const raw = d.data() as Partial<Story>;
+          const expiresAt = String(raw.expiresAt || '');
+          return {
+            ...raw,
+            id: String(raw.id || d.id),
+            creatorId: String(raw.creatorId || ''),
+            creatorName: String(raw.creatorName || 'Tattoo User'),
+            creatorHandle: String(raw.creatorHandle || '@tattoo_user'),
+            creatorPhoto: String(raw.creatorPhoto || './images/users/avatar_inkedlife.jpg'),
+            mediaUrl: String(raw.mediaUrl || ''),
+            mediaType: 'image' as const,
+            text: typeof raw.text === 'string' ? raw.text : '',
+            createdAt: String(raw.createdAt || new Date().toISOString()),
+            expiresAt,
+            viewedBy: Array.isArray(raw.viewedBy) ? raw.viewedBy.map(String) : [],
+          } as Story;
+        })
+        .filter((story) => story.mediaUrl && new Date(story.expiresAt).getTime() > now);
+
+      const merged = new Map<string, Story>();
+      remoteStories.forEach((story) => merged.set(story.id, story));
+      this.stories.forEach((story) => {
+        if (new Date(story.expiresAt).getTime() > now && !merged.has(story.id)) {
+          merged.set(story.id, story);
+        }
+      });
+      this.stories = Array.from(merged.values())
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      this.saveStories();
+    } catch (err) {
+      console.warn('Story sync skipped:', err);
+    }
+  }
+
+  public async createStory(mediaUrl: string, text?: string): Promise<Story> {
+    if (!auth.currentUser) {
+      throw new Error('Hikâye paylaşmak için giriş yapmalısın.');
+    }
+    if (!mediaUrl || mediaUrl.length > 820000) {
+      throw new Error('Hikâye görseli çok büyük.');
+    }
+
+    const now = new Date();
+    const story: Story = {
+      id: 'story_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      creatorId: auth.currentUser.uid,
+      creatorName: this.currentUser.displayName,
+      creatorHandle: this.currentUser.handle,
+      creatorPhoto: this.currentUser.photoURL,
+      mediaUrl,
+      mediaType: 'image',
+      text: text?.trim().slice(0, 140) || '',
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      viewedBy: [],
+    };
+
+    await setDoc(doc(db, 'stories', story.id), story);
+    this.stories.push(story);
+    this.saveStories();
+    return story;
+  }
+
+  public async viewStory(storyId: string): Promise<void> {
+    const uid = auth.currentUser?.uid || this.currentUser.uid;
+    if (!uid) return;
+
+    const index = this.stories.findIndex((item) => item.id === storyId);
+    if (index < 0) return;
+    if (this.stories[index].viewedBy.includes(uid)) return;
+
+    this.stories[index] = {
+      ...this.stories[index],
+      viewedBy: [...this.stories[index].viewedBy, uid],
+    };
+    this.saveStories();
+
+    await updateDoc(doc(db, 'stories', storyId), {
+      viewedBy: this.stories[index].viewedBy,
+    }).catch(() => {});
+  }
+
+  public async deleteStory(storyId: string): Promise<boolean> {
+    const story = this.stories.find((item) => item.id === storyId);
+    if (!story) return false;
+    if (!this.isCurrentUserAdmin() && story.creatorId !== this.currentUser.uid && story.creatorId !== auth.currentUser?.uid) {
+      return false;
+    }
+
+    this.stories = this.stories.filter((item) => item.id !== storyId);
+    this.saveStories();
+    await deleteDoc(doc(db, 'stories', storyId)).catch(() => {});
+    return true;
   }
 
   /**
