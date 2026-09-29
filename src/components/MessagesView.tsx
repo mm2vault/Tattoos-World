@@ -518,46 +518,59 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     if (!auth.currentUser || !activePartner || !text || sending) return;
 
     const createdAt = new Date().toISOString();
+    const senderUid = String(auth.currentUser.uid || '');
+    const recipientUid = String(activePartner.uid || '');
+    const senderHandle = String(currentUser.handle || '@kullanici');
+    const senderName = String(currentUser.displayName || currentUser.handle || 'Kullanıcı');
+    const senderPhoto = String(currentUser.photoURL || '');
+    const senderRole = currentUser.isArtist ? 'Sanatçı' : String(currentUser.role || 'Kullanıcı');
+    const recipientHandle = String(activePartner.handle || '@kullanici');
+    const recipientName = String(activePartner.name || activePartner.handle || 'Kullanıcı');
+    const recipientPhoto = String(activePartner.photo || '');
+    const recipientRole = String(activePartner.role || 'Kullanıcı');
     const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const participants = Array.from(new Set([auth.currentUser.uid, activePartner.uid]));
+    const conversationId = buildConversationId(senderUid, recipientUid);
+    const participants = [senderUid, recipientUid].filter(Boolean);
+
+    if (!senderUid || !recipientUid || !conversationId) return;
 
     setSending(true);
     setSendError('');
 
     const outgoing: ChatMessage = {
       id: messageId,
-      senderId: auth.currentUser.uid,
-      senderHandle: currentUser.handle,
+      senderId: senderUid,
+      senderHandle,
       text,
       createdAt,
       isMine: true,
-      readBy: [auth.currentUser.uid],
+      readBy: [senderUid],
       reactions: {},
     };
 
     setMessages((prev) => ({
       ...prev,
-      [activeConversationId]: [...(prev[activeConversationId] || []), outgoing],
+      [conversationId]: [...(prev[conversationId] || []), outgoing],
     }));
 
     try {
       await setDoc(doc(db, 'messages', messageId), {
         id: messageId,
-        conversationId: activeConversationId,
-        senderId: auth.currentUser.uid,
-        senderHandle: currentUser.handle,
-        senderName: currentUser.displayName,
-        senderPhoto: currentUser.photoURL || '',
+        conversationId,
+        senderId: senderUid,
+        senderHandle,
+        senderName,
+        senderPhoto,
         senderVerified: Boolean(currentUser.verified),
-        senderRole: currentUser.isArtist ? 'Sanatçı' : (currentUser.role || 'Kullanıcı'),
-        recipientId: activePartner.uid,
-        recipientHandle: activePartner.handle,
-        recipientName: activePartner.name,
-        recipientPhoto: activePartner.photo || '',
+        senderRole,
+        recipientId: recipientUid,
+        recipientHandle,
+        recipientName,
+        recipientPhoto,
         recipientVerified: Boolean(activePartner.verified),
-        recipientRole: activePartner.role || 'Kullanıcı',
+        recipientRole,
         text,
-        readBy: [auth.currentUser.uid],
+        readBy: [senderUid],
         reactions: {},
         participants,
         createdAt,
@@ -565,10 +578,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
       setNewMessageText('');
 
-      if (activePartner.uid !== auth.currentUser.uid) {
+      if (recipientUid !== senderUid) {
         tattooStore.notifyMessage(
-          activePartner.uid,
-          currentUser.handle + ' sana bir mesaj gönderdi.'
+          recipientUid,
+          senderHandle + ' sana bir mesaj gönderdi.'
         );
       }
     } catch (error: any) {
