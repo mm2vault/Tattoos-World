@@ -23,6 +23,7 @@ interface MessagesViewProps {
   initialCreatorHandle?: string | null;
   initialMessage?: string;
   onPrefillConsumed?: () => void;
+  onRequestLogin?: () => void;
 }
 
 interface ChatMessage {
@@ -66,6 +67,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   initialCreatorHandle,
   initialMessage = '',
   onPrefillConsumed,
+  onRequestLogin,
 }) => {
   const [partners, setPartners] = useState<ChatPartner[]>([]);
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -80,6 +82,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [typingPartnerName, setTypingPartnerName] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const firebaseUid = auth.currentUser?.uid || currentUser.uid;
+  const isGuestAuth = Boolean(auth.currentUser?.isAnonymous);
 
   const tattooPartners = useMemo(() => {
     const map = new Map<string, ChatPartner>();
@@ -101,17 +105,33 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     return map;
   }, [currentUser.uid]);
 
+  const selfPartner: ChatPartner = useMemo(() => ({
+    uid: firebaseUid,
+    name: 'Notlarım',
+    handle: currentUser.handle,
+    photo: currentUser.photoURL || '',
+    verified: Boolean(currentUser.verified),
+    role: 'Kişisel',
+    lastMessage: 'Kendine not gönder',
+    lastMessageAt: '',
+    conversationId: buildConversationId(firebaseUid, firebaseUid),
+    unreadCount: 0,
+  }), [firebaseUid, currentUser.handle, currentUser.photoURL, currentUser.verified]);
+
   useEffect(() => {
     setPartners((prev) => {
       const map = new Map(prev.map((item) => [item.uid, item]));
       tattooPartners.forEach((item, uid) => {
         if (!map.has(uid)) map.set(uid, item);
       });
+      if (!map.has(selfPartner.uid) || selfPartner.uid === firebaseUid) {
+        map.set(selfPartner.uid, selfPartner);
+      }
       return Array.from(map.values()).sort(
         (a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()
       );
     });
-  }, [tattooPartners]);
+  }, [tattooPartners, selfPartner, firebaseUid]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -221,6 +241,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
         const merged = new Map<string, ChatPartner>();
         tattooPartners.forEach((value, key) => merged.set(key, value));
+        merged.set(selfPartner.uid, {
+          ...selfPartner,
+          lastMessage: grouped[selfPartner.conversationId]?.slice(-1)[0]?.text || selfPartner.lastMessage,
+          lastMessageAt: grouped[selfPartner.conversationId]?.slice(-1)[0]?.createdAt || selfPartner.lastMessageAt,
+          unreadCount: 0,
+        });
         remotePartners.forEach((value, key) => merged.set(key, value));
 
         const sorted = Array.from(merged.values()).sort(
@@ -236,7 +262,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         setSendError('Mesajlar Firestore tarafından okunamadı. Firebase Rules kısmını kontrol et.');
       }
     );
-  }, [currentUser.uid, tattooPartners]);
+  }, [currentUser.uid, tattooPartners, selfPartner]);
 
   useEffect(() => {
     if (!initialCreatorHandle) return;
@@ -362,10 +388,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   const activePartner = partners.find((partner) => partner.uid === selectedPartnerUid)
     || userSearchResults.find((partner) => partner.uid === selectedPartnerUid)
-    || null;
+    || (selectedPartnerUid === selfPartner.uid ? selfPartner : null);
 
   const activeConversationId = activePartner
-    ? buildConversationId(currentUser.uid, activePartner.uid)
+    ? buildConversationId(firebaseUid, activePartner.uid)
     : '';
 
   const activeMessages = messages[activeConversationId] || [];
@@ -518,7 +544,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     if (!auth.currentUser || !activePartner || !text || sending) return;
 
     const createdAt = new Date().toISOString();
-    const senderUid = String(auth.currentUser.uid || '');
+    const senderUid = String(auth.currentUser.uid || firebaseUid || '');
     const recipientUid = String(activePartner.uid || '');
     const senderHandle = String(currentUser.handle || '@kullanici');
     const senderName = String(currentUser.displayName || currentUser.handle || 'Kullanıcı');
