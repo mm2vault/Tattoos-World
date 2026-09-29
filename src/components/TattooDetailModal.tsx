@@ -348,6 +348,33 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
               </div>
 
               <div className="flex items-center gap-3 text-[#AAAAAA]">
+                {onOpenMessages && (
+                  <button
+                    onClick={() => {
+                      const payload = {
+                        type: 'tattoo-share',
+                        tattoo: {
+                          id: tattoo.id,
+                          title: tattoo.title,
+                          image: tattoo.image,
+                          creatorName: tattoo.creatorName,
+                          creatorHandle: tattoo.creatorHandle,
+                          categoryName: tattoo.categoryName,
+                        },
+                      };
+                      sessionStorage.setItem(
+                        'tattos_world_message_prefill',
+                        '__TATTOO_SHARE__' + JSON.stringify(payload)
+                      );
+                      onOpenMessages(tattoo.creatorHandle);
+                    }}
+                    className="hover:text-white cursor-pointer"
+                    title="DM ile paylaş"
+                    aria-label="DM ile paylaş"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
+                )}
                 <button onClick={handleShare} className="hover:text-white cursor-pointer" title="Paylaş">
                   <Share2 className="w-4 h-4" />
                 </button>
