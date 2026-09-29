@@ -558,6 +558,7 @@ function App() {
                     initialCreatorHandle={selectedCreatorHandle}
                     initialMessage={sessionStorage.getItem('tattos_world_message_prefill') || ''}
                     onPrefillConsumed={() => sessionStorage.removeItem('tattos_world_message_prefill')}
+                    onRequestLogin={handleLoginWithGoogle}
                   />
                 )}
 
