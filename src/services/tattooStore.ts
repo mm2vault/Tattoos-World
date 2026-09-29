@@ -1855,6 +1855,58 @@ class TattooStoreService {
     }
   }
 
+  /** Resolve any searchable public user from Firestore, including users without tattoos. */
+  public async resolvePublicProfile(handle: string): Promise<UserProfile | undefined> {
+    const cleanHandle = String(handle || '').trim();
+    if (!cleanHandle || !auth.currentUser) return this.getArtistProfile(cleanHandle);
+
+    const local = this.getArtistProfile(cleanHandle);
+    if (local) return local;
+
+    try {
+      const normalized = cleanHandle.replace(/^@/, '').toLowerCase();
+      const snap = await getDocs(collection(db, 'users'));
+      const docSnap = snap.docs.find((item) => {
+        const data = item.data() as Partial<UserProfile>;
+        const value = String(data.handle || '').replace(/^@/, '').toLowerCase();
+        return value === normalized;
+      });
+      if (!docSnap) return undefined;
+
+      const raw = docSnap.data() as Partial<UserProfile>;
+      if (raw.profilePublic === false) return undefined;
+      const uid = String(raw.uid || docSnap.id);
+      const safeHandle = String(raw.handle || cleanHandle);
+      const profile: UserProfile = {
+        ...INITIAL_USER,
+        ...raw,
+        uid,
+        displayName: String(raw.displayName || safeHandle),
+        handle: safeHandle,
+        email: String(raw.email || ''),
+        photoURL: String(raw.photoURL || './images/users/avatar_inkedlife.jpg'),
+        bio: String(raw.bio || ''),
+        instagram: String(raw.instagram || ''),
+        tiktok: String(raw.tiktok || ''),
+        discord: String(raw.discord || ''),
+        website: String(raw.website || ''),
+        customLinks: Array.isArray(raw.customLinks) ? raw.customLinks : [],
+        savedTattooIds: Array.isArray(raw.savedTattooIds) ? raw.savedTattooIds : [],
+        isArtist: Boolean(raw.isArtist),
+        verified: Boolean(raw.verified),
+        role: String(raw.role || (raw.isArtist ? 'artist' : 'user')),
+        isAdmin: false,
+        followersCount: this.getFollowerCount(safeHandle),
+        followingCount: this.followingCountsByUid[uid] || 0,
+      };
+      this.publicUserProfiles[safeHandle.toLowerCase()] = profile;
+      return profile;
+    } catch (err) {
+      console.warn('Public profile resolve skipped:', err);
+      return undefined;
+    }
+  }
+
   public isProfilePublic(handle: string): boolean {
     if (!handle) return true;
     if (handle.toLowerCase() === this.currentUser.handle.toLowerCase()) {
