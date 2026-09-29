@@ -87,7 +87,6 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [reactionOpenId, setReactionOpenId] = useState('');
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [typingPartnerName, setTypingPartnerName] = useState('');
-  const [reactionOpenId, setReactionOpenId] = useState('');
   const [actionOpenId, setActionOpenId] = useState('');
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessageId, setEditingMessageId] = useState('');
