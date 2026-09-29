@@ -365,10 +365,10 @@ export const Gallery: React.FC<GalleryProps> = ({
   }, [stories, currentUser.uid, currentUser.handle, currentUser.photoURL]);
 
   return (
-    <div className="space-y-6 pb-8">
-      <section className="border-b border-white/[0.08] pb-5">
-        <div className="mx-auto w-full max-w-2xl overflow-x-auto scrollbar-none">
-          <div className="flex gap-4 px-3 sm:px-0">
+    <div className="w-full pb-12">
+      <section className="border-b border-white/[0.08] pb-4 mb-2">
+        <div className="mx-auto w-full max-w-[640px] overflow-x-auto scrollbar-none">
+          <div className="flex gap-4 px-4 sm:px-2 py-1">
             {storyCreators.map((creator) => (
               <button
                 key={creator.handle}
@@ -646,7 +646,7 @@ export const Gallery: React.FC<GalleryProps> = ({
             </button>
           </div>
         ) : viewMode === 'feed' ? (
-          <div className="mx-auto w-full max-w-[630px] space-y-0">
+          <div className="mx-auto w-full max-w-[620px]">
             {filteredTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               const saved = tattooStore.isSaved(tattoo.id);
@@ -664,24 +664,24 @@ export const Gallery: React.FC<GalleryProps> = ({
               return (
                 <article
                   key={tattoo.id}
-                  className="overflow-hidden bg-black border-b border-white/10 pb-6 mb-6"
+                  className="overflow-hidden bg-black border-b border-white/[0.08] pb-8 mb-8"
                 >
-                  <header className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
+                  <header className="flex items-center justify-between gap-3 px-1 sm:px-2 py-3">
                     <button
                       type="button"
                       onClick={() => onSelectCreator(tattoo.creatorHandle)}
                       className="flex items-center gap-3 min-w-0 text-left cursor-pointer"
                     >
                       {tattoo.creatorPhoto ? (
-                        <img src={tattoo.creatorPhoto} alt={tattoo.creatorName} className="w-10 h-10 rounded-full object-cover border border-white/15 shrink-0" />
+                        <img src={tattoo.creatorPhoto} alt={tattoo.creatorName} className="w-9 h-9 rounded-full object-cover border border-white/15 shrink-0" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0">
                           {tattoo.creatorName.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs sm:text-sm font-bold text-white truncate">{tattoo.creatorHandle}</span>
+                          <span className="text-[13px] font-semibold text-white truncate">{tattoo.creatorHandle}</span>
                           {tattoo.creatorVerified && <span className="text-[10px] text-blue-400">✓</span>}
                         </div>
                         <p className="text-[10px] text-[#777777] truncate">{tattoo.categoryName}{daysAgo ? ` · ${daysAgo}` : ''}</p>
@@ -730,7 +730,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                   </header>
 
                   <div
-                    className="relative aspect-[4/5] sm:aspect-square rounded-[4px] bg-black overflow-hidden cursor-pointer border border-white/10"
+                    className="relative aspect-[4/5] sm:aspect-square bg-black overflow-hidden cursor-pointer"
                     onDoubleClick={() => {
                       if (liked) return;
                       toggleLike(tattoo.id);
@@ -786,7 +786,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                     )}
                   </div>
 
-                  <div className="px-4 sm:px-5 pt-3.5 pb-4">
+                  <div className="px-1 sm:px-2 pt-3 pb-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-0.5">
                         <button
@@ -829,11 +829,11 @@ export const Gallery: React.FC<GalleryProps> = ({
                       </button>
                     </div>
 
-                    <p className="text-xs font-bold text-white mt-1">
+                    <p className="text-[13px] font-semibold text-white mt-1.5">
                       {tattoo.likesCount.toLocaleString()} beğeni
                     </p>
 
-                    <div className="mt-2 text-sm text-[#e8e8e8] leading-relaxed">
+                    <div className="mt-2 text-[13px] text-[#e8e8e8] leading-[1.45]">
                       <span className="font-bold mr-2">{tattoo.creatorHandle}</span>
                       <span className={captionExpanded ? '' : 'line-clamp-2'}>{tattoo.description}</span>
                       {tattoo.description.length > 100 && (
@@ -850,13 +850,13 @@ export const Gallery: React.FC<GalleryProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectTattoo(tattoo)}
-                      className="text-xs text-[#777777] mt-2 hover:text-white cursor-pointer"
+                      className="text-[11px] text-[#707070] mt-2 hover:text-white cursor-pointer"
                     >
                       {tattoo.commentsCount > 0 ? `${tattoo.commentsCount} yorumu gör` : 'Yorum ekle...'}
                     </button>
 
                     {tattoo.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
+                      <div className="flex flex-wrap gap-x-2 gap-y-1 mt-3">
                         {tattoo.tags.slice(0, 5).map((tag) => (
                           <span key={tag} className="text-[10px] text-[#777777]">#{tag}</span>
                         ))}
