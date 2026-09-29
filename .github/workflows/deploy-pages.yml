@@ -1,4 +1,5 @@
 name: Deploy Tattoos-World to GitHub Pages
+# Pages deployment workflow: keep production builds on the main branch merge event.
 
 on:
   push:
