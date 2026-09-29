@@ -42,6 +42,14 @@ interface ChatMessage {
     text: string;
   };
   editedAt?: string;
+  sharedTattoo?: {
+    id: string;
+    title: string;
+    image: string;
+    creatorName: string;
+    creatorHandle: string;
+    categoryName: string;
+  };
 }
 
 interface ChatPartner {
@@ -112,6 +120,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [editingMessageId, setEditingMessageId] = useState('');
   const [editingText, setEditingText] = useState('');
   const [partnerPresence, setPartnerPresence] = useState('');
+  const [pendingSharedTattoo, setPendingSharedTattoo] = useState<ChatMessage['sharedTattoo']>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firebaseUid = auth.currentUser?.uid || currentUser.uid;
   const isGuestAuth = Boolean(auth.currentUser?.isAnonymous);
@@ -200,6 +209,14 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             reactions?: Record<string, string>;
             replyTo?: { id?: string; senderHandle?: string; text?: string };
             editedAt?: string;
+            sharedTattoo?: {
+              id?: string;
+              title?: string;
+              image?: string;
+              creatorName?: string;
+              creatorHandle?: string;
+              categoryName?: string;
+            };
           };
 
           const uid = auth.currentUser!.uid;
@@ -231,6 +248,16 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 }
               : undefined,
             editedAt: data.editedAt ? String(data.editedAt) : undefined,
+            sharedTattoo: data.sharedTattoo?.id
+              ? {
+                  id: String(data.sharedTattoo.id),
+                  title: String(data.sharedTattoo.title || 'Paylaşılan dövme'),
+                  image: String(data.sharedTattoo.image || ''),
+                  creatorName: String(data.sharedTattoo.creatorName || ''),
+                  creatorHandle: String(data.sharedTattoo.creatorHandle || ''),
+                  categoryName: String(data.sharedTattoo.categoryName || 'Dövme'),
+                }
+              : undefined,
           };
 
           if (!grouped[conversationId]) grouped[conversationId] = [];
@@ -358,7 +385,29 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   useEffect(() => {
     if (!initialMessage) return;
-    setNewMessageText(initialMessage);
+
+    if (initialMessage.startsWith('__TATTOO_SHARE__')) {
+      try {
+        const payload = JSON.parse(initialMessage.slice('__TATTOO_SHARE__'.length));
+        const tattoo = payload?.tattoo;
+        if (payload?.type === 'tattoo-share' && tattoo?.id && tattoo?.image) {
+          setPendingSharedTattoo({
+            id: String(tattoo.id),
+            title: String(tattoo.title || 'Paylaşılan dövme'),
+            image: String(tattoo.image),
+            creatorName: String(tattoo.creatorName || ''),
+            creatorHandle: String(tattoo.creatorHandle || ''),
+            categoryName: String(tattoo.categoryName || 'Dövme'),
+          });
+          setNewMessageText('Şuna bak! 👀');
+        }
+      } catch {
+        setNewMessageText('');
+      }
+    } else {
+      setNewMessageText(initialMessage);
+    }
+
     onPrefillConsumed?.();
   }, [initialMessage, onPrefillConsumed]);
 
@@ -566,6 +615,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     setReplyingTo(null);
     setEditingMessageId('');
     setEditingText('');
+    setPendingSharedTattoo(undefined);
     setSelectedPartnerUid(partner.uid);
     setUserSearchResults([]);
     setSearch('');
@@ -704,6 +754,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             text: replyingTo.text,
           }
         : undefined,
+      sharedTattoo: pendingSharedTattoo,
     };
 
     setMessages((prev) => ({
@@ -737,6 +788,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             text: replyingTo.text,
           }
         } : {}),
+        ...(pendingSharedTattoo ? { sharedTattoo: pendingSharedTattoo } : {}),
         participants,
         createdAt,
       };
@@ -744,6 +796,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       await setDoc(doc(db, 'messages', messageId), messagePayload);
       setNewMessageText('');
       setReplyingTo(null);
+      setPendingSharedTattoo(undefined);
 
       // Bildirim ayrı çalışır; bildirimdeki bir problem mesajın gönderilmesini bozmaz.
       if (recipientUid !== senderUid) {
@@ -976,6 +1029,29 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                                 <div className="truncate">{message.replyTo.text}</div>
                               </div>
                             )}
+                            {message.sharedTattoo && (
+                              <div className={"mb-2 overflow-hidden rounded-2xl border " + (message.isMine ? 'border-black/10 bg-black/5' : 'border-white/10 bg-[#151515]')}>
+                                {message.sharedTattoo.image && (
+                                  <img
+                                    src={message.sharedTattoo.image}
+                                    alt={message.sharedTattoo.title}
+                                    className="w-full max-h-56 object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                )}
+                                <div className="px-3 py-2.5">
+                                  <p className={"text-[10px] uppercase tracking-[0.16em] " + (message.isMine ? 'text-black/45' : 'text-[#666]')}>
+                                    Paylaşılan dövme
+                                  </p>
+                                  <p className={"text-[13px] font-semibold mt-1 " + (message.isMine ? 'text-black' : 'text-white')}>
+                                    {message.sharedTattoo.title}
+                                  </p>
+                                  <p className={"text-[10px] mt-0.5 " + (message.isMine ? 'text-black/55' : 'text-[#777]')}>
+                                    {message.sharedTattoo.creatorHandle}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                             <div className={"px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap " + (message.isMine
                               ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
                               : 'bg-[#1b1b1b] text-[#f0f0f0] border border-white/[0.06] rounded-[20px] rounded-bl-[6px]')}>
@@ -1082,6 +1158,24 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               className="shrink-0 sticky bottom-0 z-20 px-3 sm:px-5 py-2.5 sm:py-3 border-t border-white/[0.08] bg-[#0b0b0b]/95 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]"
             >
               <div className="max-w-2xl mx-auto relative">
+                {pendingSharedTattoo && (
+                  <div className="mb-2 rounded-2xl border border-white/10 bg-[#151515] px-3 py-2 flex items-center gap-3">
+                    <img src={pendingSharedTattoo.image} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold text-white">Dövme paylaşımı hazır</p>
+                      <p className="text-[10px] text-[#777] truncate">{pendingSharedTattoo.title}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPendingSharedTattoo(undefined)}
+                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                      aria-label="Paylaşımı kaldır"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 {(replyingTo || editingMessageId) && (
                   <div className="mb-2 rounded-2xl border border-white/10 bg-[#151515] px-3 py-2 flex items-center gap-3">
                     <div className="w-1 self-stretch rounded-full bg-white/50" />
@@ -1141,7 +1235,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
                   <button
                     type="submit"
-                    disabled={!newMessageText.trim() || sending}
+                    disabled={(!newMessageText.trim() && !pendingSharedTattoo) || sending}
                     className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-25 cursor-pointer disabled:cursor-not-allowed hover:bg-[#ededed] transition-colors shrink-0"
                     aria-label="Mesajı gönder"
                   >
