@@ -380,471 +380,21 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     };
 
     resolveUser();
-    return () => { cancelled = true; };
-  }, [initialCreatorHandle, partners, firebaseUid]);
-
-  useEffect(() => {
-    if (!initialMessage) return;
-
-    if (initialMessage.startsWith('__TATTOO_SHARE__')) {
-      try {
-        const payload = JSON.parse(initialMessage.slice('__TATTOO_SHARE__'.length));
-        const tattoo = payload?.tattoo;
-        if (payload?.type === 'tattoo-share' && tattoo?.id && tattoo?.image) {
-          setPendingSharedTattoo({
-            id: String(tattoo.id),
-            title: String(tattoo.title || 'Paylaşılan dövme'),
-            image: String(tattoo.image),
-            creatorName: String(tattoo.creatorName || ''),
-            creatorHandle: String(tattoo.creatorHandle || ''),
-            categoryName: String(tattoo.categoryName || 'Dövme'),
-          });
-          setNewMessageText('Şuna bak! 👀');
-        }
-      } catch {
-        setNewMessageText('');
-      }
-    } else {
-      setNewMessageText(initialMessage);
-    }
-
-    onPrefillConsumed?.();
-  }, [initialMessage, onPrefillConsumed]);
-
-  useEffect(() => {
-    const q = search.trim();
-    if (q.length < 2 || !auth.currentUser) {
-      setUserSearchResults([]);
-      setLoadingUsers(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingUsers(true);
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const snap = await getDocs(collection(db, 'users'));
-        const needle = q.toLowerCase().replace(/^@/, '');
-        const results = snap.docs
-          .map((item) => item.data() as Partial<UserProfile>)
-          .filter((profile) => profile.uid && profile.uid !== currentUser.uid && profile.profilePublic !== false)
-          .filter((profile) =>
-            String(profile.displayName || '').toLowerCase().includes(needle) ||
-            String(profile.handle || '').toLowerCase().replace(/^@/, '').includes(needle)
-          )
-          .slice(0, 12)
-          .map((profile) => ({
-            uid: String(profile.uid),
-            name: String(profile.displayName || profile.handle || 'Kullanıcı'),
-            handle: String(profile.handle || '@kullanici'),
-            photo: String(profile.photoURL || ''),
-            verified: Boolean(profile.verified),
-            role: String(profile.role || (profile.isArtist ? 'Sanatçı' : 'Kullanıcı')),
-            lastMessage: 'Yeni sohbet',
-            lastMessageAt: '',
-            conversationId: buildConversationId(firebaseUid, String(profile.uid)),
-            unreadCount: 0,
-            lastSeenAt: String(profile.lastSeenAt || ''),
-          }));
-
-        if (!cancelled) setUserSearchResults(results);
-      } catch (error) {
-        console.warn('Message user search failed:', error);
-        if (!cancelled) setUserSearchResults([]);
-      } finally {
-        if (!cancelled) setLoadingUsers(false);
-      }
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [search, firebaseUid]);
-
-  const visiblePartners = useMemo(() => {
-    const map = new Map<string, ChatPartner>();
-    partners.forEach((partner) => map.set(partner.uid, partner));
-    userSearchResults.forEach((partner) => map.set(partner.uid, partner));
-    const q = search.trim().toLowerCase();
-
-    return Array.from(map.values()).filter((partner) => {
-      if (!q) return true;
-      return (
-        partner.name.toLowerCase().includes(q) ||
-        partner.handle.toLowerCase().includes(q)
-      );
-    });
-  }, [partners, userSearchResults, search]);
-
-  const activePartner = partners.find((partner) => partner.uid === selectedPartnerUid)
-    || userSearchResults.find((partner) => partner.uid === selectedPartnerUid)
-    || (selectedPartnerUid === selfPartner.uid ? selfPartner : null);
-
-  const activeConversationId = activePartner
-    ? buildConversationId(firebaseUid, activePartner.uid)
-    : '';
-
-  const activeMessages = messages[activeConversationId] || [];
-
-  useEffect(() => {
-    if (!activePartner?.uid || !auth.currentUser || activePartner.uid === firebaseUid) {
-      setPartnerPresence('');
-      return;
-    }
-
-    const partnerRef = doc(db, 'users', activePartner.uid);
-    return onSnapshot(
-      partnerRef,
-      (snap) => {
-        const data = snap.exists() ? snap.data() : {};
-        const lastSeenAt = String(data.lastSeenAt || '');
-        setPartnerPresence(lastSeenAt);
-        if (lastSeenAt) {
-          setPartners((prev) => prev.map((partner) =>
-            partner.uid === activePartner.uid ? { ...partner, lastSeenAt } : partner
-          ));
-        }
-      },
-      () => setPartnerPresence('')
-    );
-  }, [activePartner?.uid, firebaseUid]);
-
-  useEffect(() => {
-    if (!activeConversationId || !auth.currentUser || activeMessages.length === 0) return;
-
-    const unread = activeMessages.filter(
-      (message) => !message.isMine && !message.readBy.includes(auth.currentUser!.uid)
-    );
-
-    unread.forEach((message) => {
-      updateDoc(doc(db, 'messages', message.id), {
-        readBy: arrayUnion(auth.currentUser!.uid),
-      }).catch(() => {});
-    });
-  }, [activeConversationId, activeMessages]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: activeMessages.length > 1 ? 'smooth' : 'auto' });
-  }, [activeConversationId, activeMessages.length]);
-
-  useEffect(() => {
-    if (!activeConversationId || !activePartner?.uid || !auth.currentUser) {
-      setTypingPartnerName('');
-      return;
-    }
-
-    const typingRef = doc(
-      db,
-      'typing',
-      activeConversationId + '__' + activePartner.uid
-    );
-
-    let clearTimer: number | null = null;
-
-    return onSnapshot(typingRef, (snap) => {
-      if (clearTimer) window.clearTimeout(clearTimer);
-
-      if (!snap.exists()) {
-        setTypingPartnerName('');
-        return;
-      }
-
-      const data = snap.data() as {
-        uid?: string;
-        displayName?: string;
-        updatedAt?: number;
-      };
-      const updatedAt = Number(data.updatedAt || 0);
-      const remaining = 4000 - (Date.now() - updatedAt);
-
-      if (
-        data.uid !== auth.currentUser!.uid &&
-        data.displayName &&
-        remaining > 0
-      ) {
-        setTypingPartnerName(data.displayName);
-        clearTimer = window.setTimeout(() => setTypingPartnerName(''), remaining);
-      } else {
-        setTypingPartnerName('');
-      }
-    }, () => setTypingPartnerName(''));
-  }, [activeConversationId, activePartner?.uid]);
-
-  useEffect(() => {
-    if (!activeConversationId || !auth.currentUser) return;
-    const uid = auth.currentUser.uid;
-    const typingId = activeConversationId + '__' + uid;
-
-    return () => {
-      deleteDoc(doc(db, 'typing', typingId)).catch(() => {});
-    };
-  }, [activeConversationId]);
-
-  useEffect(() => {
-    if (!activeConversationId || !auth.currentUser) return;
-
-    const text = newMessageText.trim();
-    const uid = auth.currentUser.uid;
-    const typingId = activeConversationId + '__' + uid;
-    const typingRef = doc(db, 'typing', typingId);
-
-    if (!text) {
-      deleteDoc(typingRef).catch(() => {});
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setDoc(typingRef, {
-        uid,
-        displayName: currentUser.displayName || currentUser.handle,
-        conversationId: activeConversationId,
-        participants: [uid, activePartner?.uid].filter(Boolean),
-        updatedAt: Date.now(),
-      }, { merge: true }).catch(() => {});
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [newMessageText, activeConversationId, activePartner?.uid, currentUser.displayName, currentUser.handle]);
-
-  const handleSelectPartner = (partner: ChatPartner) => {
-    setSendError('');
-    setReactionOpenId('');
-    setComposerEmojiOpen(false);
-    setReplyingTo(null);
-    setEditingMessageId('');
-    setEditingText('');
-    setPendingSharedTattoo(undefined);
-    setSelectedPartnerUid(partner.uid);
-    setUserSearchResults([]);
-    setSearch('');
-  };
-
-  const handleReaction = async (message: ChatMessage, emoji: string) => {
-    if (!auth.currentUser) return;
-    const currentReaction = message.reactions?.[auth.currentUser.uid];
-    setReactionOpenId('');
-    try {
-      await updateDoc(doc(db, 'messages', message.id), {
-        ['reactions.' + auth.currentUser.uid]: currentReaction === emoji ? deleteField() : emoji,
-      });
-    } catch (error) {
-      console.warn('Message reaction failed:', error);
-      setSendError('Mesaj reaksiyonu kaydedilemedi. Firebase Rules bölümünü güncelle.');
-    }
-  };
-
-  const handleDeleteMessage = async (message: ChatMessage) => {
-    if (!message.isMine) return;
-    try {
-      await deleteDoc(doc(db, 'messages', message.id));
-    } catch (error) {
-      console.warn('Message delete failed:', error);
-      setSendError('Mesaj silinemedi. Firebase Rules bölümünü kontrol et.');
-    }
-  };
-
-  const handleReplyMessage = (message: ChatMessage) => {
-    setEditingMessageId('');
-    setEditingText('');
-    setReplyingTo(message);
-  };
-
-  const handleEditMessage = (message: ChatMessage) => {
-    if (!message.isMine) return;
-    setReplyingTo(null);
-    setEditingMessageId(message.id);
-    setEditingText(message.text);
-    setNewMessageText(message.text);
-  };
-
-  const handleCopyMessage = async (message: ChatMessage) => {
-    try {
-      await navigator.clipboard.writeText(message.text);
-      setSendError('');
-    } catch (error) {
-      console.warn('Message copy failed:', error);
-      setSendError('Mesaj kopyalanamadı.');
-    }
-  };
-
-  const handleCancelComposerMode = () => {
-    setReplyingTo(null);
-    setEditingMessageId('');
-    setEditingText('');
-    setNewMessageText('');
-  };
-
-  const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
-  };
-
-  const addComposerEmoji = (emoji: string) => {
-    setNewMessageText((value) => value + emoji);
-    setComposerEmojiOpen(false);
-  };
-
-  const handleSendMessage = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const text = newMessageText.trim();
-    if (!auth.currentUser || !activePartner || !text || sending) return;
-
-    if (editingMessageId) {
-      setSending(true);
-      setSendError('');
-
-      try {
-        await updateDoc(doc(db, 'messages', editingMessageId), {
-          text,
-          editedAt: new Date().toISOString(),
-        });
-        setEditingMessageId('');
-        setEditingText('');
-        setNewMessageText('');
-      } catch (error: any) {
-        console.warn('Message edit failed:', error);
-        setSendError(
-          error?.code === 'permission-denied'
-            ? 'Mesaj düzenleme izni reddedildi. Firebase Rules güncel değil olabilir.'
-            : 'Mesaj düzenlenemedi. Tekrar deneyebilirsin.'
-        );
-      } finally {
-        setSending(false);
-      }
-      return;
-    }
-
-    const createdAt = new Date().toISOString();
-    const senderUid = String(auth.currentUser.uid || firebaseUid || '');
-    const recipientUid = String(activePartner.uid || '');
-    const senderHandle = String(currentUser.handle || '@kullanici');
-    const senderName = String(currentUser.displayName || currentUser.handle || 'Kullanıcı');
-    const senderPhoto = String(currentUser.photoURL || '');
-    const senderRole = currentUser.isArtist ? 'Sanatçı' : String(currentUser.role || 'Kullanıcı');
-    const recipientHandle = String(activePartner.handle || '@kullanici');
-    const recipientName = String(activePartner.name || activePartner.handle || 'Kullanıcı');
-    const recipientPhoto = String(activePartner.photo || '');
-    const recipientRole = String(activePartner.role || 'Kullanıcı');
-    const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const conversationId = buildConversationId(senderUid, recipientUid);
-    const participants = [senderUid, recipientUid].filter(Boolean);
-
-    if (!senderUid || !recipientUid || !conversationId) return;
-
-    setSending(true);
-    setSendError('');
-
-    const outgoing: ChatMessage = {
-      id: messageId,
-      senderId: senderUid,
-      senderHandle,
-      text,
-      createdAt,
-      isMine: true,
-      readBy: [senderUid],
-      reactions: {},
-      replyTo: replyingTo
-        ? {
-            id: replyingTo.id,
-            senderHandle: replyingTo.senderHandle,
-            text: replyingTo.text,
-          }
-        : undefined,
-      sharedTattoo: pendingSharedTattoo,
-    };
-
-    setMessages((prev) => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), outgoing],
-    }));
-
-    try {
-      const messagePayload = {
-        id: messageId,
-        conversationId,
-        senderId: senderUid,
-        senderHandle,
-        senderName,
-        senderPhoto,
-        senderVerified: Boolean(currentUser.verified),
-        senderRole,
-        recipientId: recipientUid,
-        recipientHandle,
-        recipientName,
-        recipientPhoto,
-        recipientVerified: Boolean(activePartner.verified),
-        recipientRole,
-        text,
-        readBy: [senderUid],
-        reactions: {},
-        ...(replyingTo ? {
-          replyTo: {
-            id: replyingTo.id,
-            senderHandle: replyingTo.senderHandle,
-            text: replyingTo.text,
-          }
-        } : {}),
-        ...(pendingSharedTattoo ? { sharedTattoo: pendingSharedTattoo } : {}),
-        participants,
-        createdAt,
-      };
-
-      await setDoc(doc(db, 'messages', messageId), messagePayload);
-      setNewMessageText('');
-      setReplyingTo(null);
-      setPendingSharedTattoo(undefined);
-
-      // Bildirim ayrı çalışır; bildirimdeki bir problem mesajın gönderilmesini bozmaz.
-      if (recipientUid !== senderUid) {
-        try {
-          tattooStore.notifyMessage(
-            recipientUid,
-            senderHandle + ' sana bir mesaj gönderdi.'
-          );
-        } catch (notificationError) {
-          console.warn('Message notification failed:', notificationError);
-        }
-      }
-    } catch (error: any) {
-      console.warn('Message send failed:', error);
-      const errorCode = String(error?.code || '');
-      const errorMessage =
-        errorCode === 'permission-denied'
-          ? 'Mesaj gönderme izni reddedildi. Firebase Rules güncel değil olabilir.'
-          : errorCode === 'unauthenticated'
-            ? 'Oturum doğrulanamadı. Sayfayı yenileyip tekrar giriş yap.'
-            : errorCode === 'invalid-argument'
-              ? 'Firebase mesaj verilerinde geçersiz bir değer aldı. Bu sürümde gönderim verisi güvenli hale getirildi; sayfayı yenileyip tekrar dene.'
-              : 'Mesaj gönderilemedi. Tekrar deneyebilirsin.';
-      setSendError(errorCode ? errorMessage + ' (' + errorCode.replace('firestore/', '') + ')' : errorMessage);
-      setMessages((prev) => ({
-        ...prev,
-        [conversationId]: (prev[conversationId] || []).filter(
-          (item) => item.id !== messageId
-        ),
-      }));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="w-full max-w-5xl mx-auto bg-[#0a0a0a] md:rounded-2xl md:border md:border-white/[0.08] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,.35)] flex flex-col md:flex-row h-full min-h-0 md:h-[76vh] md:min-h-[560px]">
-      <aside className={"w-full md:w-[330px] lg:w-[360px] shrink-0 border-r border-white/[0.08] bg-[#0b0b0b] flex-col " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}>
-        <div className="px-4 pt-5 pb-3 border-b border-white/[0.08]">
-          <div className="flex items-center justify-between mb-4">
+    return (
+    <div className="w-full h-full min-h-0 bg-[#050505] text-white flex overflow-hidden">
+      <aside
+        className={"w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-white/[0.08] bg-[#080808] flex-col " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}
+      >
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-[17px] font-bold text-white">Mesajlar</p>
-              <p className="text-[10px] text-[#666] mt-0.5">Özel sohbetlerin</p>
+              <h1 className="text-[24px] leading-none font-semibold tracking-[-0.02em]">Mesajlar</h1>
+              <p className="text-[11px] text-[#6f6f6f] mt-1.5">Sohbetlerin</p>
             </div>
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="w-8 h-8 rounded-full border border-white/10 text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-full text-[#8a8a8a] hover:text-white hover:bg-white/[0.06] flex items-center justify-center cursor-pointer transition-colors"
               aria-label="Aramayı temizle"
             >
               <Search className="w-4 h-4" />
@@ -852,18 +402,18 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#555]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5f5f5f]" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Kullanıcı ara..."
-              className="w-full h-10 rounded-xl bg-[#151515] border border-white/[0.06] pl-10 pr-9 text-xs text-white placeholder:text-[#555] outline-none focus:border-white/20"
+              placeholder="Ara"
+              className="w-full h-10 rounded-lg bg-[#171717] border border-white/[0.04] pl-9 pr-9 text-[13px] text-white placeholder:text-[#676767] outline-none focus:border-white/10 transition-colors"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#666] hover:text-white cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#666] hover:text-white cursor-pointer"
                 aria-label="Aramayı temizle"
               >
                 <X className="w-4 h-4" />
@@ -872,94 +422,96 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {isGuestAuth && (
-            <div className="mx-4 mt-3 mb-1 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shrink-0 text-xs font-bold">!</div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-white">Misafir hesap</p>
-                  <p className="text-[10px] text-[#777] leading-relaxed mt-0.5">
-                    Telefon ve bilgisayar arasında mesajların aynı hesapta görünmesi için Google ile giriş yap.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onRequestLogin}
-                    className="mt-2 text-[10px] font-semibold text-white underline underline-offset-2 cursor-pointer"
-                  >
-                    Google ile giriş yap
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        {isGuestAuth && (
+          <div className="mx-4 mb-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3">
+            <p className="text-[11px] font-semibold text-white">Misafir hesap</p>
+            <p className="text-[10px] leading-relaxed text-[#707070] mt-1">
+              Cihazlar arasında mesajlarını korumak için Google ile giriş yap.
+            </p>
+            <button
+              type="button"
+              onClick={onRequestLogin}
+              className="mt-2 text-[10px] font-semibold text-white underline underline-offset-2 cursor-pointer"
+            >
+              Google ile giriş yap
+            </button>
+          </div>
+        )}
 
-          {loadingUsers && search.trim().length >= 2 && (
-            <div className="px-4 py-3 text-[10px] text-[#666]">Kullanıcılar aranıyor...</div>
-          )}
+        {loadingUsers && search.trim().length >= 2 && (
+          <div className="px-5 py-2 text-[10px] text-[#676767]">Kullanıcılar aranıyor...</div>
+        )}
 
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
           {visiblePartners.length === 0 ? (
-            <div className="h-full flex items-center justify-center px-8 text-center">
+            <div className="h-full min-h-[260px] flex items-center justify-center px-8 text-center">
               <div>
-                <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mx-auto mb-3">
-                  <Send className="w-5 h-5 text-[#666]" />
+                <div className="w-14 h-14 rounded-full border border-white/[0.08] flex items-center justify-center mx-auto">
+                  <Send className="w-5 h-5 text-[#555]" />
                 </div>
-                <p className="text-sm font-semibold text-white">Henüz sohbet yok</p>
-                <p className="text-[11px] text-[#666] mt-1 leading-relaxed">
-                  Yukarıdaki aramadan bir kullanıcı bulup direkt mesaj gönderebilirsin.
+                <p className="text-sm font-medium mt-4">Henüz mesaj yok</p>
+                <p className="text-[11px] text-[#666] leading-relaxed mt-1.5 max-w-[220px]">
+                  Yukarıdaki aramadan bir kullanıcı bul ve sohbete başla.
                 </p>
               </div>
             </div>
-          ) : visiblePartners.map((partner) => {
-            const active = partner.uid === selectedPartnerUid;
-            const last = messages[partner.conversationId]?.slice(-1)[0];
-            return (
-              <button
-                key={partner.uid}
-                type="button"
-                onClick={() => handleSelectPartner(partner)}
-                className={"w-full px-4 py-3.5 flex items-center gap-3 text-left border-b border-white/[0.035] transition-colors cursor-pointer " + (active ? 'bg-white/[0.07]' : 'hover:bg-white/[0.035]')}
-              >
-                <div className="relative shrink-0">
-                  <img
-                    src={partner.photo || avatarFallback}
-                    alt=""
-                    className="w-12 h-12 rounded-full object-cover border border-white/10"
-                  />
-                  {partner.unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 rounded-full bg-white text-black text-[8px] font-bold flex items-center justify-center px-1">
-                      {partner.unreadCount > 9 ? '9+' : partner.unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
-                      {partner.name}
-                      {partner.verified && <span className="text-[9px] text-sky-300">✓</span>}
-                    </span>
-                    <span className="text-[9px] text-[#555] shrink-0">{formatTime(last?.createdAt || partner.lastMessageAt)}</span>
+          ) : (
+            visiblePartners.map((partner) => {
+              const active = partner.uid === selectedPartnerUid;
+              const last = messages[partner.conversationId]?.slice(-1)[0];
+              const online = isRecentlyOnline(partner.lastSeenAt);
+
+              return (
+                <button
+                  key={partner.uid}
+                  type="button"
+                  onClick={() => handleSelectPartner(partner)}
+                  className={"w-full px-3 py-2.5 rounded-xl flex items-center gap-3 text-left cursor-pointer transition-colors " + (active ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]')}
+                >
+                  <div className="relative shrink-0">
+                    <img
+                      src={partner.photo || avatarFallback}
+                      alt=""
+                      className="w-14 h-14 rounded-full object-cover border border-white/[0.08]"
+                    />
+                    {online && (
+                      <span className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-white border-[3px] border-[#080808]" />
+                    )}
+                    {partner.unreadCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-black text-[9px] font-bold flex items-center justify-center">
+                        {partner.unreadCount > 9 ? '9+' : partner.unreadCount}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[10px] text-[#666] mt-0.5 truncate">{partner.handle}</div>
-                  <div className={"text-[10px] mt-0.5 truncate " + (partner.unreadCount > 0 ? 'text-white font-semibold' : 'text-[#777]')}>
-                    {last?.text || partner.lastMessage}
+
+                  <div className="min-w-0 flex-1 py-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] font-semibold truncate flex items-center gap-1.5">
+                        {partner.name}
+                        {partner.verified && <span className="text-[9px] text-sky-300">✓</span>}
+                      </span>
+                      <span className="text-[9px] text-[#555] shrink-0">{formatTime(last?.createdAt || partner.lastMessageAt)}</span>
+                    </div>
+                    <div className={"text-[11px] mt-1 truncate " + (partner.unreadCount > 0 ? 'text-white font-medium' : 'text-[#777]')}>
+                      {last?.text || partner.lastMessage}
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })
+          )}
         </div>
       </aside>
 
-      <section className={"flex-1 min-w-0 min-h-0 bg-[#0d0d0d] flex-col " + (selectedPartnerUid ? 'flex' : 'hidden md:flex')}>
+      <section className={"flex-1 min-w-0 min-h-0 bg-[#000] flex-col " + (selectedPartnerUid ? 'flex' : 'hidden md:flex')}>
         {activePartner ? (
           <>
-            <header className="h-[68px] shrink-0 px-4 border-b border-white/[0.08] bg-[#0d0d0d] flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
+            <header className="h-[70px] shrink-0 px-3 sm:px-5 border-b border-white/[0.08] bg-black flex items-center justify-between">
+              <div className="min-w-0 flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSelectedPartnerUid('')}
-                  className="md:hidden w-9 h-9 rounded-full text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                  className="md:hidden w-9 h-9 rounded-full text-white hover:bg-white/[0.06] flex items-center justify-center cursor-pointer"
                   aria-label="Mesaj listesine dön"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -970,21 +522,26 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   onClick={() => onSelectCreator(activePartner.handle)}
                   className="flex items-center gap-3 min-w-0 text-left cursor-pointer"
                 >
-                  <img
-                    src={activePartner.photo || avatarFallback}
-                    alt=""
-                    className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
-                  />
+                  <div className="relative shrink-0">
+                    <img
+                      src={activePartner.photo || avatarFallback}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover border border-white/[0.08]"
+                    />
+                    {isRecentlyOnline(partnerPresence || activePartner.lastSeenAt) && activePartner.uid !== firebaseUid && (
+                      <span className="absolute right-0 bottom-0 w-2.5 h-2.5 rounded-full bg-white border-2 border-black" />
+                    )}
+                  </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
+                    <div className="text-[13px] font-semibold truncate flex items-center gap-1.5">
                       {activePartner.name}
                       {activePartner.verified && <span className="text-[9px] text-sky-300">✓</span>}
                     </div>
-                    <div className={"text-[10px] truncate " + (typingPartnerName || isRecentlyOnline(partnerPresence) ? "text-white" : "text-[#666]")}>
+                    <div className={"text-[10px] truncate mt-0.5 " + (typingPartnerName || isRecentlyOnline(partnerPresence || activePartner.lastSeenAt) ? 'text-white' : 'text-[#666]')}>
                       {typingPartnerName
-                        ? typingPartnerName + " yazıyor..."
+                        ? typingPartnerName + ' yazıyor...'
                         : activePartner.uid === firebaseUid
-                          ? "Kendine notlar"
+                          ? 'Notların'
                           : formatLastSeen(partnerPresence || activePartner.lastSeenAt)}
                     </div>
                   </div>
@@ -994,181 +551,195 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectCreator(activePartner.handle)}
-                className="w-9 h-9 rounded-full text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                className="w-9 h-9 rounded-full text-[#777] hover:text-white hover:bg-white/[0.06] flex items-center justify-center cursor-pointer"
                 aria-label="Profili aç"
               >
                 <Info className="w-4 h-4" />
               </button>
             </header>
 
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4">
-              <div className="max-w-2xl mx-auto space-y-2 pb-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-5">
+              <div className="max-w-[680px] mx-auto min-h-full flex flex-col justify-end py-5 sm:py-7">
                 {activeMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-10 sm:py-16 min-h-[260px]">
+                  <div className="flex-1 flex flex-col items-center justify-end pb-10 text-center">
                     <img
                       src={activePartner.photo || avatarFallback}
                       alt=""
-                      className="w-20 h-20 rounded-full object-cover border border-white/10 mb-3"
+                      className="w-[88px] h-[88px] rounded-full object-cover border border-white/[0.08]"
                     />
-                    <p className="text-sm text-white font-medium">{activePartner.name}</p>
-                    <p className="text-[10px] text-[#666] mt-1 max-w-[220px]">
-                      {activePartner.handle} ile sohbeti başlat.
-                    </p>
+                    <p className="text-[16px] font-semibold mt-3">{activePartner.name}</p>
+                    <p className="text-[12px] text-[#6b6b6b] mt-1">{activePartner.handle}</p>
+                    <p className="text-[11px] text-[#555] mt-3">Sohbeti başlat.</p>
                   </div>
                 ) : (
-                  activeMessages.map((message, index) => {
-                    const previous = activeMessages[index - 1];
-                    const sameSender = previous && previous.senderId === message.senderId;
-                    return (
-                      <div key={message.id} className={"flex " + (message.isMine ? 'justify-end' : 'justify-start') + (sameSender ? ' mt-0.5' : 'mt-3')}>
-                        <div className={"max-w-[80%] sm:max-w-[68%] " + (message.isMine ? 'items-end' : 'items-start') + " flex flex-col"}>
-                          <div className="relative group">
-                            {message.replyTo && (
-                              <div className={"mb-1 max-w-full rounded-xl border border-white/10 px-3 py-1.5 text-[9px] " + (message.isMine ? "bg-white/10 text-black/70" : "bg-white/[0.04] text-[#aaa]")}>
-                                <div className="font-semibold truncate">@{message.replyTo.senderHandle.replace(/^@/, '')}</div>
-                                <div className="truncate">{message.replyTo.text}</div>
-                              </div>
-                            )}
-                            {message.sharedTattoo && (
-                              <div className={"mb-2 overflow-hidden rounded-2xl border " + (message.isMine ? 'border-black/10 bg-black/5' : 'border-white/10 bg-[#151515]')}>
-                                {message.sharedTattoo.image && (
-                                  <img
-                                    src={message.sharedTattoo.image}
-                                    alt={message.sharedTattoo.title}
-                                    className="w-full max-h-56 object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
+                  <div className="space-y-1">
+                    <div className="flex justify-center py-3">
+                      <span className="text-[9px] text-[#4f4f4f]">
+                        {activeMessages[0]?.createdAt ? new Date(activeMessages[0].createdAt).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+
+                    {activeMessages.map((message, index) => {
+                      const previous = activeMessages[index - 1];
+                      const sameSender = previous && previous.senderId === message.senderId;
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={"flex " + (message.isMine ? 'justify-end' : 'justify-start') + (sameSender ? ' mt-0.5' : 'mt-2.5')}
+                        >
+                          <div className={"max-w-[78%] sm:max-w-[66%] flex flex-col " + (message.isMine ? 'items-end' : 'items-start')}>
+                            <div className="relative group">
+                              {message.replyTo && (
+                                <div className={"mb-1 max-w-full rounded-xl px-3 py-2 border text-[9px] " + (message.isMine ? 'bg-white/[0.07] border-white/[0.08] text-[#888]' : 'bg-[#111] border-white/[0.06] text-[#777]')}>
+                                  <div className="font-semibold truncate">@{message.replyTo.senderHandle.replace(/^@/, '')}</div>
+                                  <div className="truncate mt-0.5">{message.replyTo.text}</div>
+                                </div>
+                              )}
+
+                              <div className={"relative " + (message.isMine ? 'items-end' : 'items-start')}>
+                                {message.sharedTattoo && (
+                                  <div className={"mb-1.5 overflow-hidden rounded-[18px] border " + (message.isMine ? 'border-white/[0.09] bg-[#111]' : 'border-white/[0.08] bg-[#111]')}>
+                                    {message.sharedTattoo.image && (
+                                      <img
+                                        src={message.sharedTattoo.image}
+                                        alt={message.sharedTattoo.title}
+                                        className="w-full max-h-64 object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    )}
+                                    <div className="px-3 py-2.5">
+                                      <p className="text-[9px] uppercase tracking-[0.16em] text-[#666]">Paylaşılan dövme</p>
+                                      <p className="text-[12px] font-semibold text-white mt-1">{message.sharedTattoo.title}</p>
+                                      <p className="text-[10px] text-[#777] mt-0.5">{message.sharedTattoo.creatorHandle}</p>
+                                    </div>
+                                  </div>
                                 )}
-                                <div className="px-3 py-2.5">
-                                  <p className={"text-[10px] uppercase tracking-[0.16em] " + (message.isMine ? 'text-black/45' : 'text-[#666]')}>
-                                    Paylaşılan dövme
-                                  </p>
-                                  <p className={"text-[13px] font-semibold mt-1 " + (message.isMine ? 'text-black' : 'text-white')}>
-                                    {message.sharedTattoo.title}
-                                  </p>
-                                  <p className={"text-[10px] mt-0.5 " + (message.isMine ? 'text-black/55' : 'text-[#777]')}>
-                                    {message.sharedTattoo.creatorHandle}
-                                  </p>
+
+                                <div className={"px-3.5 py-2.5 text-[13px] leading-[1.35] whitespace-pre-wrap " + (message.isMine
+                                  ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
+                                  : 'bg-[#1a1a1a] text-white border border-white/[0.05] rounded-[20px] rounded-bl-[6px]')}>
+                                  {message.text}
                                 </div>
                               </div>
-                            )}
-                            <div className={"px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap " + (message.isMine
-                              ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
-                              : 'bg-[#1b1b1b] text-[#f0f0f0] border border-white/[0.06] rounded-[20px] rounded-bl-[6px]')}>
-                              {message.text}
-                            </div>
-                            <div className={"absolute -top-8 " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-1 rounded-full bg-[#1a1a1a] border border-white/10 px-1 py-1 shadow-xl opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"}>
-                              <button
-                                type="button"
-                                onClick={() => setReactionOpenId((id) => id === message.id ? '' : message.id)}
-                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
-                                aria-label="Reaksiyon ekle"
-                              >
-                                <Smile className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleReplyMessage(message)}
-                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
-                                aria-label="Yanıtla"
-                              >
-                                <Reply className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyMessage(message)}
-                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
-                                aria-label="Kopyala"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                              {message.isMine && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditMessage(message)}
-                                    className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-[#aaa] hover:text-white cursor-pointer"
-                                    aria-label="Düzenle"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteMessage(message)}
-                                    className="w-7 h-7 rounded-full hover:bg-red-500/15 text-[#888] hover:text-red-300 flex items-center justify-center cursor-pointer"
-                                    aria-label="Mesajı sil"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
+
+                              <div className={"absolute -top-9 " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-0.5 rounded-full bg-[#151515] border border-white/[0.08] px-1 py-1 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"}>
+                                <button
+                                  type="button"
+                                  onClick={() => setReactionOpenId((id) => id === message.id ? '' : message.id)}
+                                  className="w-7 h-7 rounded-full hover:bg-white/[0.08] flex items-center justify-center text-white cursor-pointer"
+                                  aria-label="Reaksiyon ekle"
+                                >
+                                  <Smile className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReplyMessage(message)}
+                                  className="w-7 h-7 rounded-full hover:bg-white/[0.08] flex items-center justify-center text-white cursor-pointer"
+                                  aria-label="Yanıtla"
+                                >
+                                  <Reply className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyMessage(message)}
+                                  className="w-7 h-7 rounded-full hover:bg-white/[0.08] flex items-center justify-center text-white cursor-pointer"
+                                  aria-label="Kopyala"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                                {message.isMine && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditMessage(message)}
+                                      className="w-7 h-7 rounded-full hover:bg-white/[0.08] flex items-center justify-center text-[#aaa] hover:text-white cursor-pointer"
+                                      aria-label="Düzenle"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMessage(message)}
+                                      className="w-7 h-7 rounded-full hover:bg-red-500/10 text-[#777] hover:text-red-300 flex items-center justify-center cursor-pointer"
+                                      aria-label="Mesajı sil"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+
+                              {reactionOpenId === message.id && (
+                                <div className={"absolute -top-[76px] " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-0.5 rounded-full bg-[#131313] border border-white/[0.08] px-2 py-1 shadow-2xl z-30"}>
+                                  {['❤️', '😂', '😍', '🔥', '👏', '😮'].map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={() => handleReaction(message, emoji)}
+                                      className="w-8 h-8 rounded-full hover:bg-white/[0.07] text-sm flex items-center justify-center cursor-pointer"
+                                      aria-label={emoji}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
                               )}
                             </div>
-                            {reactionOpenId === message.id && (
-                              <div className={"absolute -top-14 " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-1 rounded-full bg-[#111] border border-white/10 px-2 py-1 shadow-2xl z-30"}>
-                                {['❤️', '😂', '😍', '🔥', '👏', '😮'].map((emoji) => (
-                                  <button
-                                    key={emoji}
-                                    type="button"
-                                    onClick={() => handleReaction(message, emoji)}
-                                    className="w-8 h-8 rounded-full hover:bg-white/10 text-sm flex items-center justify-center cursor-pointer"
-                                    aria-label={emoji}
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+
+                            <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-[#505050]">
+                              <span>{formatTime(message.createdAt)}</span>
+                              {message.editedAt && <span>· düzenlendi</span>}
+                              {message.isMine && (
+                                message.readBy.length > 1
+                                  ? <CheckCheck className="w-3 h-3 text-sky-300" />
+                                  : <Check className="w-3 h-3" />
+                              )}
+                            </div>
+
                             {message.reactions && Object.keys(message.reactions).length > 0 && (
-                              <div className={"absolute -bottom-3 " + (message.isMine ? 'right-2' : 'left-2') + " flex items-center gap-1 rounded-full bg-[#171717] border border-white/10 px-2 py-0.5 shadow-lg"}>
+                              <div className="self-end -mt-0.5 mr-1 flex items-center gap-1 rounded-full bg-[#151515] border border-white/[0.06] px-2 py-1">
                                 {Array.from(new Set(Object.values(message.reactions))).slice(0, 3).map((emoji) => (
                                   <span key={emoji} className="text-[11px] leading-none">{emoji}</span>
                                 ))}
                                 {Object.keys(message.reactions).length > 3 && (
-                                  <span className="text-[9px] text-[#aaa]">{Object.keys(message.reactions).length}</span>
+                                  <span className="text-[9px] text-[#777]">{Object.keys(message.reactions).length}</span>
                                 )}
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-[#555]">
-                            <span>{formatTime(message.createdAt)}</span>
-                            {message.editedAt && <span>· düzenlendi</span>}
-                            {message.isMine && (
-                              message.readBy.length > 1
-                                ? <CheckCheck className="w-3 h-3 text-sky-300" />
-                                : <Check className="w-3 h-3" />
-                            )}
-                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
 
                 {sendError && (
-                  <div className="mx-auto max-w-lg mt-4 rounded-xl border border-red-400/15 bg-red-400/[0.05] px-3 py-2 text-[10px] text-red-200 text-center">
+                  <div className="mx-auto max-w-md mt-4 rounded-xl border border-red-400/10 bg-red-400/[0.04] px-3 py-2 text-[10px] text-red-200 text-center">
                     {sendError}
                   </div>
                 )}
+
                 <div ref={messagesEndRef} />
               </div>
             </div>
 
             <form
               onSubmit={handleSendMessage}
-              className="shrink-0 sticky bottom-0 z-20 px-3 sm:px-5 py-2.5 sm:py-3 border-t border-white/[0.08] bg-[#0b0b0b]/95 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]"
+              className="shrink-0 px-3 sm:px-5 pt-2.5 pb-[max(0.7rem,env(safe-area-inset-bottom))] bg-black"
             >
-              <div className="max-w-2xl mx-auto relative">
+              <div className="max-w-[680px] mx-auto">
                 {pendingSharedTattoo && (
-                  <div className="mb-2 rounded-2xl border border-white/10 bg-[#151515] px-3 py-2 flex items-center gap-3">
+                  <div className="mb-2.5 rounded-2xl border border-white/[0.08] bg-[#111] px-3 py-2 flex items-center gap-3">
                     <img src={pendingSharedTattoo.image} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-semibold text-white">Dövme paylaşımı hazır</p>
-                      <p className="text-[10px] text-[#777] truncate">{pendingSharedTattoo.title}</p>
+                      <p className="text-[10px] text-[#777] truncate mt-0.5">{pendingSharedTattoo.title}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPendingSharedTattoo(undefined)}
-                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/[0.06] flex items-center justify-center cursor-pointer"
                       aria-label="Paylaşımı kaldır"
                     >
                       <X className="w-4 h-4" />
@@ -1177,20 +748,20 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 )}
 
                 {(replyingTo || editingMessageId) && (
-                  <div className="mb-2 rounded-2xl border border-white/10 bg-[#151515] px-3 py-2 flex items-center gap-3">
+                  <div className="mb-2.5 rounded-2xl border border-white/[0.08] bg-[#111] px-3 py-2 flex items-center gap-3">
                     <div className="w-1 self-stretch rounded-full bg-white/50" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-semibold text-white">
                         {editingMessageId ? 'Mesajı düzenliyorsun' : 'Yanıtlıyorsun'}
                       </p>
-                      <p className="text-[10px] text-[#777] truncate">
+                      <p className="text-[10px] text-[#777] truncate mt-0.5">
                         {editingMessageId ? editingText : replyingTo?.text}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={handleCancelComposerMode}
-                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/[0.06] flex items-center justify-center cursor-pointer"
                       aria-label="İptal"
                     >
                       <X className="w-4 h-4" />
@@ -1199,13 +770,13 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                 )}
 
                 {composerEmojiOpen && (
-                  <div className="absolute bottom-14 left-0 flex items-center gap-1 rounded-2xl bg-[#151515] border border-white/10 px-2 py-2 shadow-2xl z-30">
+                  <div className="mb-2 flex items-center gap-1 rounded-2xl bg-[#111] border border-white/[0.08] px-2 py-2 shadow-2xl w-fit">
                     {['❤️', '😂', '😍', '🔥', '👏', '😮', '🥹', '🖤'].map((emoji) => (
                       <button
                         key={emoji}
                         type="button"
                         onClick={() => addComposerEmoji(emoji)}
-                        className="w-9 h-9 rounded-xl hover:bg-white/10 text-base flex items-center justify-center cursor-pointer"
+                        className="w-8 h-8 rounded-xl hover:bg-white/[0.06] text-sm flex items-center justify-center cursor-pointer"
                         aria-label={emoji}
                       >
                         {emoji}
@@ -1214,32 +785,34 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   </div>
                 )}
 
-                <div className="flex items-end gap-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setComposerEmojiOpen((open) => !open)}
-                    className="w-11 h-11 rounded-full text-[#888] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-9 h-9 shrink-0 rounded-full text-[#8b8b8b] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                     aria-label="Emoji ekle"
                   >
-                    <Smile className="w-4 h-4" />
+                    <Smile className="w-[19px] h-[19px]" />
                   </button>
 
-                  <textarea
-                    rows={1}
-                    value={newMessageText}
-                    onChange={(event) => setNewMessageText(event.target.value)}
-                    onKeyDown={handleComposerKeyDown}
-                    placeholder="Mesaj yaz..."
-                    className="flex-1 min-w-0 max-h-28 min-h-11 resize-none rounded-[22px] bg-[#151515] border border-white/[0.08] px-4 py-2.5 text-[13px] leading-5 text-white placeholder:text-[#666] outline-none focus:border-white/20 transition-colors"
-                  />
+                  <div className="flex-1 min-w-0 rounded-[22px] bg-[#111] border border-white/[0.08] focus-within:border-white/[0.14] transition-colors flex items-center">
+                    <textarea
+                      rows={1}
+                      value={newMessageText}
+                      onChange={(event) => setNewMessageText(event.target.value)}
+                      onKeyDown={handleComposerKeyDown}
+                      placeholder="Mesaj..."
+                      className="flex-1 min-w-0 max-h-28 min-h-10 bg-transparent resize-none px-4 py-2.5 text-[13px] leading-5 text-white placeholder:text-[#5e5e5e] outline-none"
+                    />
+                  </div>
 
                   <button
                     type="submit"
                     disabled={(!newMessageText.trim() && !pendingSharedTattoo) || sending}
-                    className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-25 cursor-pointer disabled:cursor-not-allowed hover:bg-[#ededed] transition-colors shrink-0"
+                    className="w-10 h-10 shrink-0 rounded-full text-white flex items-center justify-center cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed hover:bg-white/[0.06] transition-colors"
                     aria-label="Mesajı gönder"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-[18px] h-[18px]" />
                   </button>
                 </div>
               </div>
@@ -1248,12 +821,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         ) : (
           <div className="h-full flex items-center justify-center px-8 text-center">
             <div>
-              <div className="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center mx-auto">
-                <Send className="w-6 h-6 text-[#666]" />
+              <div className="w-16 h-16 rounded-full border border-white/[0.08] flex items-center justify-center mx-auto">
+                <Send className="w-6 h-6 text-[#555]" />
               </div>
-              <p className="text-base font-semibold text-white mt-4">Mesajların</p>
-              <p className="text-xs text-[#666] mt-1 max-w-sm">
-                Sol taraftan bir sohbet seç veya bir kullanıcı ara.
+              <p className="text-[16px] font-semibold mt-4">Mesajların</p>
+              <p className="text-[12px] text-[#666] mt-1.5 max-w-sm">
+                Bir sohbet seç veya yeni bir kullanıcı ara.
               </p>
             </div>
           </div>
