@@ -23,6 +23,13 @@ export interface SocialLinks {
   website?: string;
 }
 
+export interface SavedCollection {
+  id: string;
+  name: string;
+  tattooIds: string[];
+  createdAt: string;
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;
