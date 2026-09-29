@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  Home, Compass, User, PlusCircle, Heart, MessageSquare, Settings,
-  LogOut, ShieldCheck, Users, Info
+  Home, Compass, User, PlusCircle, MessageSquare, Settings,
+  LogOut, ShieldCheck, Users
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'gallery', label: 'Keşfet', icon: Compass },
     { id: 'community', label: 'Topluluk', icon: Users },
     { id: 'messages', label: 'Mesajlar', icon: MessageSquare },
-    { id: 'favorites', label: 'Kaydedilenler', icon: Heart },
     { id: 'profile', label: 'Profil', icon: User },
   ];
 
@@ -73,19 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <PlusCircle className="w-[22px] h-[22px] stroke-[1.8]" />
           <span>Oluştur</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectTab('about')}
-          className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm transition-all cursor-pointer ${
-            currentTab === 'about'
-              ? 'bg-white/[0.08] text-white font-semibold'
-              : 'text-[#b4b4b4] hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Info className="w-[22px] h-[22px] stroke-[1.8]" />
-          <span>Hakkımızda</span>
         </button>
 
         <button
