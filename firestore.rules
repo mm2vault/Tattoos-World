@@ -116,13 +116,9 @@ service cloud.firestore {
       allow create: if signedIn() &&
         request.resource.data.creatorId == request.auth.uid;
 
-      allow update: if signedIn() && (
-        resource.data.creatorId == request.auth.uid ||
-        (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']) &&
-          request.auth.uid in request.resource.data.viewedBy
-        )
-      );
+      allow update: if signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedBy']) &&
+        request.auth.uid in request.resource.data.viewedBy;
 
       allow delete: if signedIn() && (
         resource.data.creatorId == request.auth.uid ||
