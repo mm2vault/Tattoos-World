@@ -453,7 +453,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-[#0a0a0a] md:rounded-2xl md:border md:border-white/[0.08] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,.35)] flex flex-col md:flex-row h-[calc(100dvh-8rem)] md:h-[76vh] min-h-[560px]">
+    <div className="w-full max-w-5xl mx-auto bg-[#0a0a0a] md:rounded-2xl md:border md:border-white/[0.08] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,.35)] flex flex-col md:flex-row h-full min-h-0 md:h-[76vh] md:min-h-[560px]">
       <aside className={"w-full md:w-[330px] lg:w-[360px] shrink-0 border-r border-white/[0.08] bg-[#0b0b0b] flex-col " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}>
         <div className="px-4 pt-5 pb-3 border-b border-white/[0.08]">
           <div className="flex items-center justify-between mb-4">
@@ -550,7 +550,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         </div>
       </aside>
 
-      <section className={"flex-1 min-w-0 bg-[#0d0d0d] flex-col " + (selectedPartnerUid ? 'flex' : 'hidden md:flex')}>
+      <section className={"flex-1 min-w-0 min-h-0 bg-[#0d0d0d] flex-col " + (selectedPartnerUid ? 'flex' : 'hidden md:flex')}>
         {activePartner ? (
           <>
             <header className="h-[68px] shrink-0 px-4 border-b border-white/[0.08] bg-[#0d0d0d] flex items-center justify-between">
@@ -594,25 +594,18 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4">
               <div className="max-w-2xl mx-auto space-y-2">
-                <div className="flex justify-center pb-4">
-                  <div className="text-center">
+                {activeMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-10 sm:py-16 min-h-[260px]">
                     <img
                       src={activePartner.photo || avatarFallback}
                       alt=""
-                      className="w-16 h-16 rounded-full object-cover border border-white/10 mx-auto"
+                      className="w-20 h-20 rounded-full object-cover border border-white/10 mb-3"
                     />
-                    <p className="text-sm font-semibold text-white mt-2">{activePartner.name}</p>
-                    <p className="text-[10px] text-[#666]">{activePartner.handle}</p>
-                  </div>
-                </div>
-
-                {activeMessages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-sm text-white font-medium">Sohbeti başlat</p>
-                    <p className="text-[10px] text-[#666] mt-1">
-                      {activePartner.name} kullanıcısına ilk mesajını gönder.
+                    <p className="text-sm text-white font-medium">{activePartner.name}</p>
+                    <p className="text-[10px] text-[#666] mt-1 max-w-[220px]">
+                      {activePartner.handle} ile sohbeti başlat.
                     </p>
                   </div>
                 ) : (
@@ -651,7 +644,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
             <form
               onSubmit={handleSendMessage}
-              className="shrink-0 px-3 sm:px-5 py-3 border-t border-white/[0.08] bg-[#0b0b0b] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              className="shrink-0 sticky bottom-0 z-20 px-3 sm:px-5 py-2.5 sm:py-3 border-t border-white/[0.08] bg-[#0b0b0b]/95 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]"
             >
               <div className="max-w-2xl mx-auto flex items-end gap-2">
                 <input
@@ -659,7 +652,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   value={newMessageText}
                   onChange={(event) => setNewMessageText(event.target.value)}
                   placeholder="Mesaj yaz..."
-                  className="flex-1 min-w-0 h-11 rounded-full bg-[#151515] border border-white/[0.06] px-4 text-[13px] text-white placeholder:text-[#555] outline-none focus:border-white/15"
+                  className="flex-1 min-w-0 h-11 rounded-full bg-[#151515] border border-white/[0.08] px-4 text-[13px] text-white placeholder:text-[#666] outline-none focus:border-white/20 transition-colors"
                 />
                 <button
                   type="submit"
