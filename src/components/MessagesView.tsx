@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, CheckCheck, Info, Search, Send, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Check, CheckCheck, Info, Search, Send, X, Smile, Trash2 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
 import {
   arrayUnion,
   collection,
+  deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -31,6 +33,7 @@ interface ChatMessage {
   createdAt: string;
   isMine: boolean;
   readBy: string[];
+  reactions?: Record<string, string>;
 }
 
 interface ChatPartner {
@@ -73,6 +76,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [sendError, setSendError] = useState('');
   const [sending, setSending] = useState(false);
+  const [reactionOpenId, setReactionOpenId] = useState('');
+  const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
+  const [typingPartnerName, setTypingPartnerName] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const tattooPartners = useMemo(() => {
     const map = new Map<string, ChatPartner>();
@@ -139,6 +146,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             createdAt?: string;
             participants?: string[];
             readBy?: string[];
+            reactions?: Record<string, string>;
           };
 
           const uid = auth.currentUser!.uid;
@@ -161,6 +169,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             createdAt: String(data.createdAt || ''),
             isMine: data.senderId === uid,
             readBy: Array.isArray(data.readBy) ? data.readBy : [],
+            reactions: data.reactions && typeof data.reactions === 'object' ? data.reactions : {},
           };
 
           if (!grouped[conversationId]) grouped[conversationId] = [];
@@ -375,11 +384,112 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     });
   }, [activeConversationId, activeMessages]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: activeMessages.length > 1 ? 'smooth' : 'auto' });
+  }, [activeConversationId, activeMessages.length]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) {
+      setTypingPartnerName('');
+      return;
+    }
+
+    const typingQuery = query(
+      collection(db, 'typing'),
+      where('conversationId', '==', activeConversationId)
+    );
+
+    return onSnapshot(typingQuery, (snap) => {
+      const uid = auth.currentUser!.uid;
+      const partner = snap.docs
+        .map((item) => item.data() as { uid?: string; displayName?: string; updatedAt?: number })
+        .find((item) =>
+          item.uid &&
+          item.uid !== uid &&
+          Number(item.updatedAt || 0) > Date.now() - 4000
+        );
+
+      setTypingPartnerName(partner?.displayName || '');
+    }, () => setTypingPartnerName(''));
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const typingId = activeConversationId + '__' + uid;
+
+    return () => {
+      deleteDoc(doc(db, 'typing', typingId)).catch(() => {});
+    };
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) return;
+
+    const text = newMessageText.trim();
+    const uid = auth.currentUser.uid;
+    const typingId = activeConversationId + '__' + uid;
+    const typingRef = doc(db, 'typing', typingId);
+
+    if (!text) {
+      deleteDoc(typingRef).catch(() => {});
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setDoc(typingRef, {
+        uid,
+        displayName: currentUser.displayName || currentUser.handle,
+        conversationId: activeConversationId,
+        participants: [uid, activePartner?.uid].filter(Boolean),
+        updatedAt: Date.now(),
+      }, { merge: true }).catch(() => {});
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [newMessageText, activeConversationId, activePartner?.uid, currentUser.displayName, currentUser.handle]);
+
   const handleSelectPartner = (partner: ChatPartner) => {
     setSendError('');
     setSelectedPartnerUid(partner.uid);
     setUserSearchResults([]);
     setSearch('');
+  };
+
+  const handleReaction = async (message: ChatMessage, emoji: string) => {
+    if (!auth.currentUser) return;
+    const currentReaction = message.reactions?.[auth.currentUser.uid];
+    setReactionOpenId('');
+    try {
+      await updateDoc(doc(db, 'messages', message.id), {
+        ['reactions.' + auth.currentUser.uid]: currentReaction === emoji ? deleteField() : emoji,
+      });
+    } catch (error) {
+      console.warn('Message reaction failed:', error);
+      setSendError('Mesaj reaksiyonu kaydedilemedi. Firebase Rules bölümünü güncelle.');
+    }
+  };
+
+  const handleDeleteMessage = async (message: ChatMessage) => {
+    if (!message.isMine) return;
+    try {
+      await deleteDoc(doc(db, 'messages', message.id));
+    } catch (error) {
+      console.warn('Message delete failed:', error);
+      setSendError('Mesaj silinemedi. Firebase Rules bölümünü kontrol et.');
+    }
+  };
+
+  const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const addComposerEmoji = (emoji: string) => {
+    setNewMessageText((value) => value + emoji);
+    setComposerEmojiOpen(false);
   };
 
   const handleSendMessage = async (event: React.FormEvent) => {
@@ -428,6 +538,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         recipientRole: activePartner.role || 'Kullanıcı',
         text,
         readBy: [auth.currentUser.uid],
+        reactions: {},
         participants,
         createdAt,
       });
@@ -579,7 +690,9 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                       {activePartner.name}
                       {activePartner.verified && <span className="text-[9px] text-sky-300">✓</span>}
                     </div>
-                    <div className="text-[10px] text-[#666] truncate">{activePartner.handle}</div>
+                    <div className={"text-[10px] truncate " + (typingPartnerName ? "text-white" : "text-[#666]")}>
+                      {typingPartnerName ? typingPartnerName + " yazıyor..." : activePartner.handle}
+                    </div>
                   </div>
                 </button>
               </div>
@@ -595,7 +708,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             </header>
 
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4">
-              <div className="max-w-2xl mx-auto space-y-2">
+              <div className="max-w-2xl mx-auto space-y-2 pb-3">
                 {activeMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center py-10 sm:py-16 min-h-[260px]">
                     <img
@@ -615,10 +728,57 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                     return (
                       <div key={message.id} className={"flex " + (message.isMine ? 'justify-end' : 'justify-start') + (sameSender ? ' mt-0.5' : 'mt-3')}>
                         <div className={"max-w-[80%] sm:max-w-[68%] " + (message.isMine ? 'items-end' : 'items-start') + " flex flex-col"}>
-                          <div className={"px-4 py-2.5 text-[13px] leading-relaxed " + (message.isMine
-                            ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
-                            : 'bg-[#1b1b1b] text-[#f0f0f0] border border-white/[0.06] rounded-[20px] rounded-bl-[6px]')}>
-                            {message.text}
+                          <div className="relative group">
+                            <div className={"px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap " + (message.isMine
+                              ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
+                              : 'bg-[#1b1b1b] text-[#f0f0f0] border border-white/[0.06] rounded-[20px] rounded-bl-[6px]')}>
+                              {message.text}
+                            </div>
+                            <div className={"absolute -top-8 " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-1 rounded-full bg-[#1a1a1a] border border-white/10 px-1 py-1 shadow-xl opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"}>
+                              <button
+                                type="button"
+                                onClick={() => setReactionOpenId((id) => id === message.id ? '' : message.id)}
+                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
+                                aria-label="Reaksiyon ekle"
+                              >
+                                <Smile className="w-3.5 h-3.5" />
+                              </button>
+                              {message.isMine && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMessage(message)}
+                                  className="w-7 h-7 rounded-full hover:bg-red-500/15 text-[#888] hover:text-red-300 flex items-center justify-center cursor-pointer"
+                                  aria-label="Mesajı sil"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            {reactionOpenId === message.id && (
+                              <div className={"absolute -top-14 " + (message.isMine ? 'right-0' : 'left-0') + " flex items-center gap-1 rounded-full bg-[#111] border border-white/10 px-2 py-1 shadow-2xl z-30"}>
+                                {['❤️', '😂', '😍', '🔥', '👏', '😮'].map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => handleReaction(message, emoji)}
+                                    className="w-8 h-8 rounded-full hover:bg-white/10 text-sm flex items-center justify-center cursor-pointer"
+                                    aria-label={emoji}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {message.reactions && Object.keys(message.reactions).length > 0 && (
+                              <div className={"absolute -bottom-3 " + (message.isMine ? 'right-2' : 'left-2') + " flex items-center gap-1 rounded-full bg-[#171717] border border-white/10 px-2 py-0.5 shadow-lg"}>
+                                {Array.from(new Set(Object.values(message.reactions))).slice(0, 3).map((emoji) => (
+                                  <span key={emoji} className="text-[11px] leading-none">{emoji}</span>
+                                ))}
+                                {Object.keys(message.reactions).length > 3 && (
+                                  <span className="text-[9px] text-[#aaa]">{Object.keys(message.reactions).length}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-[#555]">
                             <span>{formatTime(message.createdAt)}</span>
@@ -639,6 +799,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                     {sendError}
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </div>
 
@@ -646,22 +807,51 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               onSubmit={handleSendMessage}
               className="shrink-0 sticky bottom-0 z-20 px-3 sm:px-5 py-2.5 sm:py-3 border-t border-white/[0.08] bg-[#0b0b0b]/95 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]"
             >
-              <div className="max-w-2xl mx-auto flex items-end gap-2">
-                <input
-                  type="text"
-                  value={newMessageText}
-                  onChange={(event) => setNewMessageText(event.target.value)}
-                  placeholder="Mesaj yaz..."
-                  className="flex-1 min-w-0 h-11 rounded-full bg-[#151515] border border-white/[0.08] px-4 text-[13px] text-white placeholder:text-[#666] outline-none focus:border-white/20 transition-colors"
-                />
-                <button
-                  type="submit"
-                  disabled={!newMessageText.trim() || sending}
-                  className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-25 cursor-pointer disabled:cursor-not-allowed hover:bg-[#ededed] transition-colors"
-                  aria-label="Mesajı gönder"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+              <div className="max-w-2xl mx-auto relative">
+                {composerEmojiOpen && (
+                  <div className="absolute bottom-14 left-0 flex items-center gap-1 rounded-2xl bg-[#151515] border border-white/10 px-2 py-2 shadow-2xl z-30">
+                    {['❤️', '😂', '😍', '🔥', '👏', '😮', '🥹', '🖤'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => addComposerEmoji(emoji)}
+                        className="w-9 h-9 rounded-xl hover:bg-white/10 text-base flex items-center justify-center cursor-pointer"
+                        aria-label={emoji}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setComposerEmojiOpen((open) => !open)}
+                    className="w-11 h-11 rounded-full text-[#888] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer shrink-0"
+                    aria-label="Emoji ekle"
+                  >
+                    <Smile className="w-4 h-4" />
+                  </button>
+
+                  <textarea
+                    rows={1}
+                    value={newMessageText}
+                    onChange={(event) => setNewMessageText(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
+                    placeholder="Mesaj yaz..."
+                    className="flex-1 min-w-0 max-h-28 min-h-11 resize-none rounded-[22px] bg-[#151515] border border-white/[0.08] px-4 py-2.5 text-[13px] leading-5 text-white placeholder:text-[#666] outline-none focus:border-white/20 transition-colors"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!newMessageText.trim() || sending}
+                    className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-25 cursor-pointer disabled:cursor-not-allowed hover:bg-[#ededed] transition-colors shrink-0"
+                    aria-label="Mesajı gönder"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </form>
           </>
