@@ -469,8 +469,16 @@ export const Gallery: React.FC<GalleryProps> = ({
               <button
                 key={artist.handle}
                 type="button"
-                onClick={() => onSelectCreator(artist.handle)}
-                className="group min-w-[190px] sm:min-w-[215px] rounded-2xl border border-white/10 bg-[#101010] p-3 text-left hover:border-white/25 hover:bg-white/[0.035] transition-all cursor-pointer"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelectCreator(artist.handle);
+                }}
+                onPointerUp={(event) => {
+                  event.stopPropagation();
+                }}
+                className="relative z-20 pointer-events-auto group min-w-[190px] sm:min-w-[215px] rounded-2xl border border-white/10 bg-[#101010] p-3 text-left hover:border-white/25 hover:bg-white/[0.035] transition-all cursor-pointer"
+                aria-label={artist.name + ' profilini aç'}
               >
                 <div className="flex items-center gap-2.5">
                   <img
@@ -596,8 +604,16 @@ export const Gallery: React.FC<GalleryProps> = ({
               <button
                 key={profile.handle}
                 type="button"
-                onClick={() => onSelectCreator(profile.handle)}
-                className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelectCreator(profile.handle);
+                }}
+                onPointerUp={(event) => {
+                  event.stopPropagation();
+                }}
+                className="relative z-20 pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                aria-label={profile.name + ' profilini aç'}
               >
                 <img
                   src={profile.image}
