@@ -47,6 +47,21 @@ export interface UserProfile {
   [key: string]: any;
 }
 
+export interface Story {
+  id: string;
+  creatorId: string;
+  creatorName: string;
+  creatorHandle: string;
+  creatorPhoto: string;
+  mediaUrl: string;
+  mediaType: 'image';
+  text?: string;
+  createdAt: string;
+  expiresAt: string;
+  viewedBy: string[];
+  [key: string]: any;
+}
+
 export interface Notification {
   id: string;
   recipientUid: string;
