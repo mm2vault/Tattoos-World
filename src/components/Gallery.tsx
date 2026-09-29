@@ -7,7 +7,7 @@ interface GalleryProps {
   tattoos: Tattoo[];
   onSelectTattoo: (tattoo: Tattoo) => void;
   onSelectCreator: (handle: string) => void;
-  onSelectProfile?: (profile: { handle: string }) => void;
+  onSelectProfile?: (profile: UserProfile) => void;
   onOpenCreate: () => void;
   searchQuery: string;
   selectedCategory: CategoryId;
@@ -602,15 +602,6 @@ export const Gallery: React.FC<GalleryProps> = ({
               <button
                 key={profile.handle}
                 type="button"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (onSelectProfile) onSelectProfile(profile);
-                  else onSelectCreator(profile.handle);
-                }}
-                onTouchStart={(event) => {
-                  event.stopPropagation();
-                }}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
