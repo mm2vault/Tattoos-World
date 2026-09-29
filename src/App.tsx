@@ -674,11 +674,9 @@ function App() {
                   { id: 'explore', label: 'Ana Sayfa', icon: Home },
                   { id: 'gallery', label: 'Keşfet', icon: Compass },
                   { id: 'community', label: 'Topluluk', icon: Users },
+                  { id: 'messages', label: 'Mesajlar', icon: MessageSquare },
                   { id: 'profile', label: 'Profilim', icon: User },
                   { id: 'create', label: 'Dövme Ekle', icon: PlusCircle, isAction: true },
-                  { id: 'favorites', label: 'Favorilerim', icon: Heart },
-                  { id: 'messages', label: 'Mesajlar', icon: MessageSquare },
-                  { id: 'about', label: 'Hakkımızda', icon: Info },
                   { id: 'settings', label: 'Ayarlar', icon: Settings },
                 ].map((item) => {
                   const Icon = item.icon;
