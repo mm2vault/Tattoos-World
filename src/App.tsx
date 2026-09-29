@@ -155,6 +155,32 @@ function App() {
     };
   }, []);
 
+  // Lightweight presence heartbeat; users.lastSeenAt is already allowed by Firestore rules.
+  useEffect(() => {
+    let stopped = false;
+    const touch = () => {
+      if (stopped || !tattooStore.hasActiveSession()) return;
+      tattooStore.touchLastSeen().catch(() => {});
+    };
+
+    touch();
+    const interval = window.setInterval(touch, 30000);
+    const handleFocus = () => touch();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') touch();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
