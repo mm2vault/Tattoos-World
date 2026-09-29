@@ -74,6 +74,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [collectionPickerTattoo, setCollectionPickerTattoo] = useState<Tattoo | null>(null);
 
   const [socialLoading, setSocialLoading] = useState(false);
+  const [socialSearch, setSocialSearch] = useState('');
 
   React.useEffect(() => {
     setIsFollowing(tattooStore.isFollowing(profileUser.handle));
