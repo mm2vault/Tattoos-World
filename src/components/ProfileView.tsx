@@ -84,6 +84,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const openSocialModal = async (mode: 'followers' | 'following') => {
     setSocialModal(mode);
     setSocialProfiles([]);
+    setSocialSearch('');
     setSocialLoading(true);
     try {
       const profiles = mode === 'followers'
@@ -144,6 +145,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setLinkInputError('');
     setEditModalOpen(true);
   };
+
+  const filteredSocialProfiles = socialProfiles.filter((profile) => {
+    const query = socialSearch.trim().toLowerCase().replace(/^@/, '');
+    if (!query) return true;
+    return String(profile.displayName || '').toLowerCase().includes(query)
+      || String(profile.handle || '').toLowerCase().replace(/^@/, '').includes(query);
+  });
 
   const handleToggleFollow = () => {
     const following = tattooStore.toggleFollow(profileUser.handle);
@@ -1049,7 +1057,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="max-h-[66vh] overflow-y-auto">
+            <div className="px-4 py-3 border-b border-white/5">
+              <input
+                value={socialSearch}
+                onChange={(e) => setSocialSearch(e.target.value)}
+                placeholder={socialModal === 'followers' ? 'Takipçilerde ara...' : 'Takip edilenlerde ara...'}
+                className="w-full h-9 rounded-xl bg-white/5 border border-white/10 px-3 text-xs text-white placeholder:text-[#555] outline-none focus:border-white/20"
+              />
+            </div>
+            <div className="max-h-[58vh] overflow-y-auto">
               {socialLoading ? (
                 <div className="py-12 text-center text-xs text-[#777]">Yükleniyor...</div>
               ) : socialProfiles.length === 0 ? (
@@ -1059,34 +1075,57 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               ) : (
                 <div className="divide-y divide-white/5">
-                  {socialProfiles.map((profile) => (
-                    <button
+                  {filteredSocialProfiles.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-[#666]">Aramana uygun profil bulunamadı.</div>
+                  ) : filteredSocialProfiles.map((profile) => (
+                    <div
                       key={profile.uid}
-                      type="button"
-                      onClick={() => {
-                        setSocialModal(null);
-                        if (profile.handle.toLowerCase() === currentUser.handle.toLowerCase()) {
-                          return;
-                        }
-                        const isPublic = tattooStore.isProfilePublic(profile.handle);
-                        if (!isPublic) {
-                          onToast('Bu profil gizli.');
-                          return;
-                        }
-                        onOpenProfile?.(profile.handle);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/[0.04] cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04]"
                     >
-                      <img src={profile.photoURL || './images/users/avatar_inkedlife.jpg'} alt={profile.displayName} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1">
-                          <span className="text-xs font-semibold text-white truncate">{profile.displayName}</span>
-                          {(profile.verified || profile.isAdmin) && <CheckCircle2 className="w-3 h-3 text-blue-400 shrink-0" />}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSocialModal(null);
+                          if (profile.handle.toLowerCase() === currentUser.handle.toLowerCase()) {
+                            return;
+                          }
+                          const isPublic = tattooStore.isProfilePublic(profile.handle);
+                          if (!isPublic) {
+                            onToast('Bu profil gizli.');
+                            return;
+                          }
+                          onOpenProfile?.(profile.handle);
+                        }}
+                        className="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer"
+                      >
+                        <img src={profile.photoURL || './images/users/avatar_inkedlife.jpg'} alt={profile.displayName} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1">
+                            <span className="text-xs font-semibold text-white truncate">{profile.displayName}</span>
+                            {(profile.verified || profile.isAdmin) && <CheckCircle2 className="w-3 h-3 text-blue-400 shrink-0" />}
+                          </span>
+                          <span className="block text-[10px] text-[#777] truncate">{profile.handle}</span>
+                          {profile.isArtist && <span className="block text-[9px] text-amber-300/70 mt-0.5">Sanatçı</span>}
                         </span>
-                        <span className="block text-[10px] text-[#777] truncate">{profile.handle}</span>
-                      </span>
-                      {profile.isArtist && <span className="text-[10px] text-[#666]">Sanatçı</span>}
-                    </button>
+                      </button>
+                      {profile.uid !== currentUser.uid && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = tattooStore.toggleFollow(profile.handle);
+                            setSocialProfiles((prev) => [...prev]);
+                            onUserUpdated({ ...tattooStore.getCurrentUser() });
+                            onToast(next ? profile.handle + ' takip ediliyor' : profile.handle + ' takipten çıkarıldı');
+                          }}
+                          className={tattooStore.isFollowing(profile.handle)
+                            ? 'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border bg-white/10 border-white/10 text-white cursor-pointer'
+                            : 'shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border bg-white text-black border-white cursor-pointer'}
+                        >
+                          {tattooStore.isFollowing(profile.handle) ? 'Takipte' : 'Takip Et'}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
