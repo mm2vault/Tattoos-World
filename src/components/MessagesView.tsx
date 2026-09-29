@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, CheckCheck, Info, Search, Send, X, Smile, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Info, Search, Send, X, Smile, Trash2, Reply, Pencil, Copy } from 'lucide-react';
 import { UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { db, auth } from '../services/firebase';
@@ -35,6 +35,12 @@ interface ChatMessage {
   isMine: boolean;
   readBy: string[];
   reactions?: Record<string, string>;
+  replyTo?: {
+    id: string;
+    senderHandle: string;
+    text: string;
+  };
+  editedAt?: string;
 }
 
 interface ChatPartner {
@@ -81,6 +87,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [reactionOpenId, setReactionOpenId] = useState('');
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [typingPartnerName, setTypingPartnerName] = useState('');
+  const [reactionOpenId, setReactionOpenId] = useState('');
+  const [actionOpenId, setActionOpenId] = useState('');
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState('');
+  const [editingText, setEditingText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firebaseUid = auth.currentUser?.uid || currentUser.uid;
   const isGuestAuth = Boolean(auth.currentUser?.isAnonymous);
@@ -167,6 +178,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             participants?: string[];
             readBy?: string[];
             reactions?: Record<string, string>;
+            replyTo?: { id?: string; senderHandle?: string; text?: string };
+            editedAt?: string;
           };
 
           const uid = auth.currentUser!.uid;
@@ -190,6 +203,14 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             isMine: data.senderId === uid,
             readBy: Array.isArray(data.readBy) ? data.readBy : [],
             reactions: data.reactions && typeof data.reactions === 'object' ? data.reactions : {},
+            replyTo: data.replyTo?.id
+              ? {
+                  id: String(data.replyTo.id),
+                  senderHandle: String(data.replyTo.senderHandle || ''),
+                  text: String(data.replyTo.text || ''),
+                }
+              : undefined,
+            editedAt: data.editedAt ? String(data.editedAt) : undefined,
           };
 
           if (!grouped[conversationId]) grouped[conversationId] = [];
@@ -496,7 +517,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const handleSelectPartner = (partner: ChatPartner) => {
     setSendError('');
     setReactionOpenId('');
+    setActionOpenId('');
     setComposerEmojiOpen(false);
+    setReplyingTo(null);
+    setEditingMessageId('');
+    setEditingText('');
     setSelectedPartnerUid(partner.uid);
     setUserSearchResults([]);
     setSearch('');
@@ -526,6 +551,40 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     }
   };
 
+  const handleReplyMessage = (message: ChatMessage) => {
+    setEditingMessageId('');
+    setEditingText('');
+    setReplyingTo(message);
+    setActionOpenId('');
+  };
+
+  const handleEditMessage = (message: ChatMessage) => {
+    if (!message.isMine) return;
+    setReplyingTo(null);
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+    setNewMessageText(message.text);
+    setActionOpenId('');
+  };
+
+  const handleCopyMessage = async (message: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setSendError('');
+    } catch (error) {
+      console.warn('Message copy failed:', error);
+      setSendError('Mesaj kopyalanamadı.');
+    }
+    setActionOpenId('');
+  };
+
+  const handleCancelComposerMode = () => {
+    setReplyingTo(null);
+    setEditingMessageId('');
+    setEditingText('');
+    setNewMessageText('');
+  };
+
   const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -542,6 +601,31 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     event.preventDefault();
     const text = newMessageText.trim();
     if (!auth.currentUser || !activePartner || !text || sending) return;
+
+    if (editingMessageId) {
+      setSending(true);
+      setSendError('');
+
+      try {
+        await updateDoc(doc(db, 'messages', editingMessageId), {
+          text,
+          editedAt: new Date().toISOString(),
+        });
+        setEditingMessageId('');
+        setEditingText('');
+        setNewMessageText('');
+      } catch (error: any) {
+        console.warn('Message edit failed:', error);
+        setSendError(
+          error?.code === 'permission-denied'
+            ? 'Mesaj düzenleme izni reddedildi. Firebase Rules güncel değil olabilir.'
+            : 'Mesaj düzenlenemedi. Tekrar deneyebilirsin.'
+        );
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
 
     const createdAt = new Date().toISOString();
     const senderUid = String(auth.currentUser.uid || firebaseUid || '');
@@ -572,6 +656,13 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       isMine: true,
       readBy: [senderUid],
       reactions: {},
+      replyTo: replyingTo
+        ? {
+            id: replyingTo.id,
+            senderHandle: replyingTo.senderHandle,
+            text: replyingTo.text,
+          }
+        : undefined,
     };
 
     setMessages((prev) => ({
@@ -598,12 +689,20 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         text,
         readBy: [senderUid],
         reactions: {},
+        ...(replyingTo ? {
+          replyTo: {
+            id: replyingTo.id,
+            senderHandle: replyingTo.senderHandle,
+            text: replyingTo.text,
+          }
+        } : {}),
         participants,
         createdAt,
       };
 
       await setDoc(doc(db, 'messages', messageId), messagePayload);
       setNewMessageText('');
+      setReplyingTo(null);
 
       // Bildirim ayrı çalışır; bildirimdeki bir problem mesajın gönderilmesini bozmaz.
       if (recipientUid !== senderUid) {
@@ -630,7 +729,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       setSendError(errorCode ? errorMessage + ' (' + errorCode.replace('firestore/', '') + ')' : errorMessage);
       setMessages((prev) => ({
         ...prev,
-        [activeConversationId]: (prev[activeConversationId] || []).filter(
+        [conversationId]: (prev[conversationId] || []).filter(
           (item) => item.id !== messageId
         ),
       }));
@@ -826,6 +925,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                       <div key={message.id} className={"flex " + (message.isMine ? 'justify-end' : 'justify-start') + (sameSender ? ' mt-0.5' : 'mt-3')}>
                         <div className={"max-w-[80%] sm:max-w-[68%] " + (message.isMine ? 'items-end' : 'items-start') + " flex flex-col"}>
                           <div className="relative group">
+                            {message.replyTo && (
+                              <div className={"mb-1 max-w-full rounded-xl border border-white/10 px-3 py-1.5 text-[9px] " + (message.isMine ? "bg-white/10 text-black/70" : "bg-white/[0.04] text-[#aaa]")}>
+                                <div className="font-semibold truncate">@{message.replyTo.senderHandle.replace(/^@/, '')}</div>
+                                <div className="truncate">{message.replyTo.text}</div>
+                              </div>
+                            )}
                             <div className={"px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap " + (message.isMine
                               ? 'bg-white text-black rounded-[20px] rounded-br-[6px]'
                               : 'bg-[#1b1b1b] text-[#f0f0f0] border border-white/[0.06] rounded-[20px] rounded-bl-[6px]')}>
@@ -840,15 +945,41 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                               >
                                 <Smile className="w-3.5 h-3.5" />
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReplyMessage(message)}
+                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
+                                aria-label="Yanıtla"
+                              >
+                                <Reply className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyMessage(message)}
+                                className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
+                                aria-label="Kopyala"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
                               {message.isMine && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteMessage(message)}
-                                  className="w-7 h-7 rounded-full hover:bg-red-500/15 text-[#888] hover:text-red-300 flex items-center justify-center cursor-pointer"
-                                  aria-label="Mesajı sil"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditMessage(message)}
+                                    className="w-7 h-7 rounded-full hover:bg-white/10 flex items-center justify-center text-[#aaa] hover:text-white cursor-pointer"
+                                    aria-label="Düzenle"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMessage(message)}
+                                    className="w-7 h-7 rounded-full hover:bg-red-500/15 text-[#888] hover:text-red-300 flex items-center justify-center cursor-pointer"
+                                    aria-label="Mesajı sil"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
                               )}
                             </div>
                             {reactionOpenId === message.id && (
@@ -879,6 +1010,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                           </div>
                           <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-[#555]">
                             <span>{formatTime(message.createdAt)}</span>
+                            {message.editedAt && <span>· düzenlendi</span>}
                             {message.isMine && (
                               message.readBy.length > 1
                                 ? <CheckCheck className="w-3 h-3 text-sky-300" />
@@ -905,6 +1037,28 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               className="shrink-0 sticky bottom-0 z-20 px-3 sm:px-5 py-2.5 sm:py-3 border-t border-white/[0.08] bg-[#0b0b0b]/95 backdrop-blur-md pb-[max(0.65rem,env(safe-area-inset-bottom))]"
             >
               <div className="max-w-2xl mx-auto relative">
+                {(replyingTo || editingMessageId) && (
+                  <div className="mb-2 rounded-2xl border border-white/10 bg-[#151515] px-3 py-2 flex items-center gap-3">
+                    <div className="w-1 self-stretch rounded-full bg-white/50" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold text-white">
+                        {editingMessageId ? 'Mesajı düzenliyorsun' : 'Yanıtlıyorsun'}
+                      </p>
+                      <p className="text-[10px] text-[#777] truncate">
+                        {editingMessageId ? editingText : replyingTo?.text}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCancelComposerMode}
+                      className="w-7 h-7 rounded-full text-[#777] hover:text-white hover:bg-white/5 flex items-center justify-center cursor-pointer"
+                      aria-label="İptal"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 {composerEmojiOpen && (
                   <div className="absolute bottom-14 left-0 flex items-center gap-1 rounded-2xl bg-[#151515] border border-white/10 px-2 py-2 shadow-2xl z-30">
                     {['❤️', '😂', '😍', '🔥', '👏', '😮', '🥹', '🖤'].map((emoji) => (
