@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, ArrowRight, ChevronLeft, ChevronRight, Grid3X3, LayoutList, Link2, Flag, Trash2 } from 'lucide-react';
-import { Tattoo, CategoryId, UserProfile } from '../types';
+import { Tattoo, CategoryId, UserProfile, Story } from '../types';
 import { tattooStore } from '../services/tattooStore';
 
 interface GalleryProps {
@@ -15,6 +15,9 @@ interface GalleryProps {
   onToast: (msg: string) => void;
   onTattooUpdated: () => void;
   onSearchChange: (query: string) => void;
+  stories: Story[];
+  onOpenCreateStory: () => void;
+  onOpenStory: (storyId: string) => void;
   initialViewMode?: 'feed' | 'grid';
 }
 
@@ -30,6 +33,9 @@ export const Gallery: React.FC<GalleryProps> = ({
   onToast,
   onTattooUpdated,
   onSearchChange,
+  stories,
+  onOpenCreateStory,
+  onOpenStory,
   initialViewMode = 'feed',
 }) => {
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>(initialViewMode);
@@ -314,54 +320,81 @@ export const Gallery: React.FC<GalleryProps> = ({
   }, [currentUser, searchQuery, tattoos, remoteProfiles]);
 
   const storyCreators = React.useMemo(() => {
-    const result: { handle: string; name: string; image: string; isCurrentUser?: boolean }[] = [
-      {
-        handle: currentUser.handle || '@sen',
-        name: 'Sen',
-        image: currentUser.photoURL || './images/users/avatar_inkedlife.jpg',
-        isCurrentUser: true,
-      },
-    ];
-    const seen = new Set<string>([String(currentUser.handle || '@sen').toLowerCase()]);
+    const active = stories
+      .filter((story) => new Date(story.expiresAt).getTime() > Date.now())
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const grouped = new Map<string, { handle: string; name: string; image: string; storyId: string; hasUnseen: boolean }>();
 
-    tattoos.forEach((tattoo) => {
-      const handle = tattoo.creatorHandle || '@tattoo';
-      const key = handle.toLowerCase();
-      if (seen.has(key) || result.length >= 9) return;
-      seen.add(key);
-      result.push({
-        handle,
-        name: tattoo.creatorName || handle,
-        image: tattoo.creatorPhoto || tattoo.image,
+    active.forEach((story) => {
+      const key = story.creatorId;
+      if (grouped.has(key)) {
+        const current = grouped.get(key)!;
+        current.hasUnseen = current.hasUnseen || !story.viewedBy.includes(currentUser.uid);
+        return;
+      }
+      grouped.set(key, {
+        handle: story.creatorHandle,
+        name: story.creatorName || story.creatorHandle,
+        image: story.creatorPhoto || story.mediaUrl,
+        storyId: story.id,
+        hasUnseen: !story.viewedBy.includes(currentUser.uid),
       });
     });
 
-    return result;
-  }, [currentUser.handle, currentUser.photoURL, tattoos]);
+    const mine = grouped.get(currentUser.uid);
+    const others = Array.from(grouped.values())
+      .filter((creator) => creator.handle.toLowerCase() !== String(currentUser.handle || '').toLowerCase())
+      .slice(0, 9);
+
+    return [
+      {
+        handle: currentUser.handle || '@sen',
+        name: 'Hikâyen',
+        image: currentUser.photoURL || './images/users/avatar_inkedlife.jpg',
+        storyId: mine?.storyId || '',
+        hasStory: Boolean(mine),
+        hasUnseen: mine?.hasUnseen || false,
+        isCurrentUser: true,
+      },
+      ...others.map((creator) => ({
+        ...creator,
+        hasStory: true,
+        isCurrentUser: false,
+      })),
+    ];
+  }, [stories, currentUser.uid, currentUser.handle, currentUser.photoURL]);
 
   return (
     <div className="space-y-6 pb-8">
       <section className="border-b border-white/[0.08] pb-5">
         <div className="mx-auto w-full max-w-2xl overflow-x-auto scrollbar-none">
-
           <div className="flex gap-4 px-3 sm:px-0">
             {storyCreators.map((creator) => (
               <button
                 key={creator.handle}
                 type="button"
-                onClick={() => creator.isCurrentUser ? onOpenCreate() : onSelectCreator(creator.handle)}
+                onClick={() => {
+                  if (creator.hasStory && creator.storyId) onOpenStory(creator.storyId);
+                  else onOpenCreateStory();
+                }}
                 className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
               >
-                <div className="relative rounded-full p-[2px] bg-gradient-to-tr from-white via-white/50 to-white/10">
+                <div className={"relative rounded-full p-[2px] " + (creator.hasUnseen ? 'bg-gradient-to-tr from-white via-white/70 to-white/20' : 'bg-white/20')}>
                   <div className="w-[58px] h-[58px] rounded-full bg-black p-[2px]">
                     <img
                       src={creator.image}
                       alt={creator.name}
-                      className="w-full h-full rounded-full object-cover border border-black transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full rounded-full object-cover border border-black"
                     />
                   </div>
                   {creator.isCurrentUser && (
-                    <span className="absolute -right-0.5 bottom-0.5 w-5 h-5 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-[12px] font-bold leading-none">
+                    <span
+                      className="absolute -right-0.5 bottom-0.5 w-5 h-5 rounded-full bg-white text-black border-2 border-black flex items-center justify-center text-[12px] font-bold leading-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenCreateStory();
+                      }}
+                    >
                       +
                     </span>
                   )}
@@ -369,10 +402,21 @@ export const Gallery: React.FC<GalleryProps> = ({
                 <span className="w-full truncate text-[11px] text-[#c7c7c7]">{creator.name}</span>
               </button>
             ))}
+            {storyCreators.length === 1 && (
+              <button
+                type="button"
+                onClick={onOpenCreateStory}
+                className="w-[68px] shrink-0 flex flex-col items-center gap-1.5 cursor-pointer text-[#777] hover:text-white"
+              >
+                <div className="w-[62px] h-[62px] rounded-full border border-dashed border-white/20 bg-white/[0.03] flex items-center justify-center">
+                  <span className="text-xl">+</span>
+                </div>
+                <span className="text-[11px]">Hikâye ekle</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
-
       {viewMode === 'grid' && (
       <section className="px-3 sm:px-0">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
