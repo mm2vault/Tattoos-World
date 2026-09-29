@@ -247,9 +247,13 @@ function App() {
       if (profileMatch) {
         const rawHandle = decodeURIComponent(profileMatch[1]).trim();
         const handle = rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle;
-        const profile = tattooStore.getArtistProfile(handle);
 
-        if (!disposed && profile && tattooStore.isProfilePublic(handle)) {
+        // Resolve both tattoo creators and real users who have never posted.
+        const profile =
+          tattooStore.getArtistProfile(handle) ||
+          await tattooStore.resolvePublicProfile(handle);
+
+        if (!disposed && profile && profile.profilePublic !== false && tattooStore.isProfilePublic(profile.handle)) {
           setSelectedTattoo(null);
           setSelectedCreatorHandle(profile.handle);
           setCurrentTab('profile');
