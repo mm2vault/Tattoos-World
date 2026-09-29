@@ -7,6 +7,7 @@ interface GalleryProps {
   tattoos: Tattoo[];
   onSelectTattoo: (tattoo: Tattoo) => void;
   onSelectCreator: (handle: string) => void;
+  onSelectProfile?: (profile: UserProfile) => void;
   onOpenCreate: () => void;
   searchQuery: string;
   selectedCategory: CategoryId;
@@ -25,6 +26,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   tattoos,
   onSelectTattoo,
   onSelectCreator,
+  onSelectProfile,
   onOpenCreate,
   searchQuery,
   selectedCategory,
@@ -597,14 +599,25 @@ export const Gallery: React.FC<GalleryProps> = ({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {profileResults.map((profile) => (
-              <a
+              <button
                 key={profile.handle}
-                href={'#profile=' + encodeURIComponent(profile.handle.replace(/^@/, ''))}
-                onClick={(event) => {
+                type="button"
+                onPointerDown={(event) => {
+                  event.preventDefault();
                   event.stopPropagation();
-                  onSelectCreator(profile.handle);
+                  if (onSelectProfile) onSelectProfile(profile);
+                  else onSelectCreator(profile.handle);
                 }}
-                className="relative z-20 pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer no-underline"
+                onTouchStart={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (onSelectProfile) onSelectProfile(profile);
+                  else onSelectCreator(profile.handle);
+                }}
+                className="relative z-30 pointer-events-auto touch-manipulation flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
                 aria-label={profile.name + ' profilini aç'}
               >
                 <img
@@ -620,7 +633,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                   <span className="block text-[10px] text-[#777] truncate">@{profile.handle.replace(/^@/, '')}</span>
                   <span className="block text-[10px] text-[#555] mt-0.5">{profile.role}</span>
                 </span>
-              </a>
+              </button>
             ))}
           </div>
         </section>
