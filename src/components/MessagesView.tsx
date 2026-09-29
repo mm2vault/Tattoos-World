@@ -9,6 +9,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -54,6 +55,7 @@ interface ChatPartner {
   lastMessageAt: string;
   conversationId: string;
   unreadCount: number;
+  lastSeenAt?: string;
 }
 
 const buildConversationId = (a: string, b: string) => [a, b].sort().join('__');
@@ -63,6 +65,25 @@ const formatTime = (value?: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const isRecentlyOnline = (value?: string) => {
+  if (!value) return false;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) && Date.now() - timestamp < 90000;
+};
+
+const formatLastSeen = (value?: string) => {
+  if (!value) return 'son görülme bilgisi yok';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'son görülme bilgisi yok';
+  if (isRecentlyOnline(value)) return 'çevrimiçi';
+
+  const now = new Date();
+  const sameDay = now.toDateString() === date.toDateString();
+  return sameDay
+    ? 'son görülme ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'son görülme ' + date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const avatarFallback = './images/users/avatar_inkedlife.jpg';
@@ -90,6 +111,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessageId, setEditingMessageId] = useState('');
   const [editingText, setEditingText] = useState('');
+  const [partnerPresence, setPartnerPresence] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firebaseUid = auth.currentUser?.uid || currentUser.uid;
   const isGuestAuth = Boolean(auth.currentUser?.isAnonymous);
@@ -320,6 +342,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           lastMessageAt: '',
           conversationId: buildConversationId(firebaseUid, uid),
           unreadCount: 0,
+          lastSeenAt: String(profile.lastSeenAt || ''),
         };
 
         setPartners((prev) => [partner, ...prev.filter((item) => item.uid !== uid)]);
@@ -373,6 +396,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             lastMessageAt: '',
             conversationId: buildConversationId(firebaseUid, String(profile.uid)),
             unreadCount: 0,
+            lastSeenAt: String(profile.lastSeenAt || ''),
           }));
 
         if (!cancelled) setUserSearchResults(results);
@@ -414,6 +438,29 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     : '';
 
   const activeMessages = messages[activeConversationId] || [];
+
+  useEffect(() => {
+    if (!activePartner?.uid || !auth.currentUser || activePartner.uid === firebaseUid) {
+      setPartnerPresence('');
+      return;
+    }
+
+    const partnerRef = doc(db, 'users', activePartner.uid);
+    return onSnapshot(
+      partnerRef,
+      (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        const lastSeenAt = String(data.lastSeenAt || '');
+        setPartnerPresence(lastSeenAt);
+        if (lastSeenAt) {
+          setPartners((prev) => prev.map((partner) =>
+            partner.uid === activePartner.uid ? { ...partner, lastSeenAt } : partner
+          ));
+        }
+      },
+      () => setPartnerPresence('')
+    );
+  }, [activePartner?.uid, firebaseUid]);
 
   useEffect(() => {
     if (!activeConversationId || !auth.currentUser || activeMessages.length === 0) return;
@@ -560,7 +607,6 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     setEditingMessageId(message.id);
     setEditingText(message.text);
     setNewMessageText(message.text);
-    setActionOpenId('');
   };
 
   const handleCopyMessage = async (message: ChatMessage) => {
@@ -571,7 +617,6 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       console.warn('Message copy failed:', error);
       setSendError('Mesaj kopyalanamadı.');
     }
-    setActionOpenId('');
   };
 
   const handleCancelComposerMode = () => {
@@ -882,8 +927,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                       {activePartner.name}
                       {activePartner.verified && <span className="text-[9px] text-sky-300">✓</span>}
                     </div>
-                    <div className={"text-[10px] truncate " + (typingPartnerName ? "text-white" : "text-[#666]")}>
-                      {typingPartnerName ? typingPartnerName + " yazıyor..." : activePartner.handle}
+                    <div className={"text-[10px] truncate " + (typingPartnerName || isRecentlyOnline(partnerPresence) ? "text-white" : "text-[#666]")}>
+                      {typingPartnerName
+                        ? typingPartnerName + " yazıyor..."
+                        : activePartner.uid === firebaseUid
+                          ? "Kendine notlar"
+                          : formatLastSeen(partnerPresence || activePartner.lastSeenAt)}
                     </div>
                   </div>
                 </button>
