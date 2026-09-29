@@ -1250,15 +1250,15 @@ class TattooStoreService {
       id: 'notification_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       recipientUid,
       senderUid: auth.currentUser.uid,
-      senderName: this.currentUser.displayName,
-      senderHandle: this.currentUser.handle,
-      senderAvatar: this.currentUser.photoURL,
+      senderName: String(this.currentUser.displayName || 'Kullanıcı'),
+      senderHandle: String(this.currentUser.handle || '@kullanici'),
+      senderAvatar: String(this.currentUser.photoURL || ''),
       type,
-      tattooId: tattoo?.id,
-      tattooTitle: tattoo?.title,
       text,
       createdAt: new Date().toISOString(),
       read: false,
+      ...(tattoo?.id ? { tattooId: tattoo.id } : {}),
+      ...(tattoo?.title ? { tattooTitle: tattoo.title } : {}),
     };
     this.notifications.unshift(notification);
     this.notifications = this.notifications.slice(0, 100);
