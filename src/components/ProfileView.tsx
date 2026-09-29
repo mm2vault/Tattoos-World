@@ -9,7 +9,7 @@ import {
   ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2,
   Grid3X3, Bookmark, Info as InfoIcon, Users
 } from 'lucide-react';
-import { Tattoo, UserProfile, SupportedLanguage } from '../types';
+import { Tattoo, UserProfile, SupportedLanguage, SavedCollection } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { 
   detectPlatform, 
@@ -69,6 +69,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [followingCount, setFollowingCount] = useState(() => tattooStore.getProfileFollowingCount(profileUser.handle));
   const [socialModal, setSocialModal] = useState<'followers' | 'following' | null>(null);
   const [socialProfiles, setSocialProfiles] = useState<UserProfile[]>([]);
+  const [savedCollections, setSavedCollections] = useState<SavedCollection[]>(() => tattooStore.getSavedCollections());
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [collectionPickerTattoo, setCollectionPickerTattoo] = useState<Tattoo | null>(null);
+
   const [socialLoading, setSocialLoading] = useState(false);
 
   React.useEffect(() => {
@@ -374,6 +378,48 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const favoriteTattoos = tattoos.filter((item) =>
     (profileUser.savedTattooIds || []).includes(item.id)
   );
+
+  const activeCollection = savedCollections.find((collection) => collection.id === activeCollectionId);
+  const displayedFavoriteTattoos = activeCollection
+    ? favoriteTattoos.filter((item) => activeCollection.tattooIds.includes(item.id))
+    : favoriteTattoos;
+
+  const refreshSavedCollections = () => {
+    setSavedCollections(tattooStore.getSavedCollections());
+  };
+
+  const handleCreateSavedCollection = () => {
+    const name = window.prompt('Yeni koleksiyonun adı:', 'Favorilerim');
+    if (!name?.trim()) return;
+    const created = tattooStore.createSavedCollection(name);
+    if (!created) {
+      onToast('Bu isimde bir koleksiyon zaten var veya isim geçersiz.');
+      return;
+    }
+    setSavedCollections(tattooStore.getSavedCollections());
+    setActiveCollectionId(created.id);
+    onToast('Koleksiyon oluşturuldu.');
+  };
+
+  const handleDeleteSavedCollection = (collectionId: string) => {
+    const collection = savedCollections.find((item) => item.id === collectionId);
+    if (!collection) return;
+    if (!window.confirm('"' + collection.name + '" koleksiyonunu silmek istiyor musun? Dövmeler silinmez.')) return;
+    tattooStore.deleteSavedCollection(collectionId);
+    setSavedCollections(tattooStore.getSavedCollections());
+    setActiveCollectionId(null);
+    onToast('Koleksiyon silindi.');
+  };
+
+  const handleAddToSavedCollection = (collectionId: string) => {
+    if (!collectionPickerTattoo) return;
+    const ok = tattooStore.addTattooToSavedCollection(collectionId, collectionPickerTattoo.id);
+    refreshSavedCollections();
+    setCollectionPickerTattoo(null);
+    onUserUpdated({ ...tattooStore.getCurrentUser() });
+    onToast(ok ? 'Koleksiyona eklendi.' : 'Koleksiyona eklenemedi.');
+  };
+
 
   const displayBanner = profileUser.bannerURL || './images/tattoos/hero_sleeve.jpg';
 
@@ -865,28 +911,127 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Tab 3: Favorilerim (Saved/Favorites) */}
       {activeTab === 'favorites' && (
-        <div className="grid grid-cols-3 gap-0 border border-white/10">
-          {favoriteTattoos.length > 0 ? (
-            favoriteTattoos.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => onSelectTattoo(item)}
-                className="group relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Kaydedilenler</h3>
+              <p className="text-[10px] text-[#666] mt-0.5">{favoriteTattoos.length} kayıt · {savedCollections.length} koleksiyon</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCreateSavedCollection}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-black text-[10px] font-bold hover:bg-[#e8e8e8] cursor-pointer"
+            >
+              <Plus className="w-3 h-3" />
+              Koleksiyon
+            </button>
+          </div>
+
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1">
+            <button
+              type="button"
+              onClick={() => setActiveCollectionId(null)}
+              className={`shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-semibold cursor-pointer ${
+                !activeCollectionId ? 'bg-white text-black border-white' : 'bg-white/5 text-[#999] border-white/10 hover:text-white'
+              }`}
+            >
+              Tümü
+            </button>
+            {savedCollections.map((collection) => (
+              <button
+                key={collection.id}
+                type="button"
+                onClick={() => setActiveCollectionId(collection.id)}
+                onContextMenu={(e) => { e.preventDefault(); handleDeleteSavedCollection(collection.id); }}
+                className={`shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-semibold cursor-pointer ${
+                  activeCollectionId === collection.id ? 'bg-white text-black border-white' : 'bg-white/5 text-[#999] border-white/10 hover:text-white'
+                }`}
+                title="Sağ tık: koleksiyonu sil"
               >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute bottom-0 inset-x-0 p-3 bg-black/60">
-                  <p className="text-xs font-bold text-white truncate">{item.title}</p>
+                {collection.name}
+              </button>
+            ))}
+          </div>
+
+          {displayedFavoriteTattoos.length > 0 ? (
+            <div className="grid grid-cols-3 gap-0 border border-white/10">
+              {displayedFavoriteTattoos.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onSelectTattoo(item)}
+                  className="group relative overflow-hidden bg-[#141414] aspect-square cursor-pointer border-r border-b border-white/10"
+                >
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute bottom-0 inset-x-0 p-3 bg-black/60">
+                    <p className="text-xs font-bold text-white truncate">{item.title}</p>
+                  </div>
+                  {savedCollections.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setCollectionPickerTattoo(item); }}
+                      className="absolute right-2 bottom-2 p-2 rounded-full bg-black/70 border border-white/20 text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Koleksiyona ekle"
+                      aria-label="Koleksiyona ekle"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center rounded-3xl bg-[#111111] border border-white/10 text-xs text-[#777777]">
+              {activeCollection ? 'Bu koleksiyonda henüz dövme yok.' : 'Henüz kaydedilen favori dövme yok. Keşfet sekmesinden bir dövmeyi kaydet.'}
+            </div>
+          )}
+
+          {collectionPickerTattoo && (
+            <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Koleksiyona ekle</h3>
+                    <p className="text-[10px] text-[#666] mt-0.5 truncate max-w-[240px]">{collectionPickerTattoo.title}</p>
+                  </div>
+                  <button type="button" onClick={() => setCollectionPickerTattoo(null)} className="p-2 text-[#777] hover:text-white cursor-pointer" aria-label="Kapat">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-3 space-y-1.5 max-h-[45vh] overflow-y-auto">
+                  {savedCollections.length === 0 ? (
+                    <button type="button" onClick={() => { setCollectionPickerTattoo(null); handleCreateSavedCollection(); }} className="w-full px-3 py-3 rounded-xl bg-white text-black text-xs font-bold cursor-pointer">
+                      + İlk koleksiyonu oluştur
+                    </button>
+                  ) : (
+                    savedCollections.map((collection) => {
+                      const alreadyAdded = collection.tattooIds.includes(collectionPickerTattoo.id);
+                      return (
+                        <button
+                          key={collection.id}
+                          type="button"
+                          onClick={() => alreadyAdded
+                            ? (tattooStore.removeTattooFromSavedCollection(collection.id, collectionPickerTattoo.id), refreshSavedCollections(), setCollectionPickerTattoo(null), onToast('Koleksiyondan çıkarıldı.'))
+                            : handleAddToSavedCollection(collection.id)}
+                          className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-left hover:bg-white/10 cursor-pointer"
+                        >
+                          <span className="text-xs font-semibold text-white">{collection.name}</span>
+                          <span className="text-[10px] text-[#666]">{collection.tattooIds.length} dövme{alreadyAdded ? ' · ekli' : ''}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="px-3 py-3 border-t border-white/10">
+                  <button type="button" onClick={() => { setCollectionPickerTattoo(null); handleCreateSavedCollection(); }} className="w-full py-2 rounded-xl border border-white/10 text-xs text-[#aaa] hover:text-white hover:bg-white/5 cursor-pointer">
+                    + Yeni koleksiyon
+                  </button>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full p-12 text-center rounded-3xl bg-[#111111] border border-white/10 text-xs text-[#777777]">
-              Henüz kaydedilen favori dövme yok. Keşfet sekmesinden beğendiğiniz dövmeleri kaydedebilirsiniz.
             </div>
           )}
         </div>
