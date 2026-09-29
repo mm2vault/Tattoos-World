@@ -350,17 +350,24 @@ function App() {
     setStories(tattooStore.getStories());
   };
 
-  const handleSelectCreator = (handle: string) => {
-    const profile = tattooStore.getArtistProfile(handle);
+  const handleSelectCreator = async (handle: string) => {
+    const normalizedHandle = String(handle || '').trim();
+    if (!normalizedHandle) return;
+
+    // Search results can include real public users who have never posted a tattoo.
+    // Resolve them from Firestore before switching tabs so the profile page never
+    // silently falls back to the currently logged-in user's profile.
+    const profile = await tattooStore.resolvePublicProfile(normalizedHandle);
     if (!profile) {
       setToastMessage('Bu profil bulunamadı veya gizli.');
       return;
     }
-    if (!tattooStore.isProfilePublic(handle)) {
+    if (profile.profilePublic === false || !tattooStore.isProfilePublic(profile.handle)) {
       setToastMessage('Bu profil gizli.');
       return;
     }
-    setSelectedCreatorHandle(handle);
+
+    setSelectedCreatorHandle(profile.handle);
     setCurrentTab('profile');
   };
 
