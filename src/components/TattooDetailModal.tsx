@@ -366,7 +366,7 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
                         'tattos_world_message_prefill',
                         '__TATTOO_SHARE__' + JSON.stringify(payload)
                       );
-                      onOpenMessages(tattoo.creatorHandle);
+                      onOpenMessages('');
                     }}
                     className="hover:text-white cursor-pointer"
                     title="DM ile paylaş"
