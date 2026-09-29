@@ -503,7 +503,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                     ))}
                   </div>
                 )}
-              </button>
+              </a>
             ))}
           </div>
         </section>
