@@ -389,29 +389,47 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   }, [activeConversationId, activeMessages.length]);
 
   useEffect(() => {
-    if (!activeConversationId || !auth.currentUser) {
+    if (!activeConversationId || !activePartner?.uid || !auth.currentUser) {
       setTypingPartnerName('');
       return;
     }
 
-    const typingQuery = query(
-      collection(db, 'typing'),
-      where('conversationId', '==', activeConversationId)
+    const typingRef = doc(
+      db,
+      'typing',
+      activeConversationId + '__' + activePartner.uid
     );
 
-    return onSnapshot(typingQuery, (snap) => {
-      const uid = auth.currentUser!.uid;
-      const partner = snap.docs
-        .map((item) => item.data() as { uid?: string; displayName?: string; updatedAt?: number })
-        .find((item) =>
-          item.uid &&
-          item.uid !== uid &&
-          Number(item.updatedAt || 0) > Date.now() - 4000
-        );
+    let clearTimer: number | null = null;
 
-      setTypingPartnerName(partner?.displayName || '');
+    return onSnapshot(typingRef, (snap) => {
+      if (clearTimer) window.clearTimeout(clearTimer);
+
+      if (!snap.exists()) {
+        setTypingPartnerName('');
+        return;
+      }
+
+      const data = snap.data() as {
+        uid?: string;
+        displayName?: string;
+        updatedAt?: number;
+      };
+      const updatedAt = Number(data.updatedAt || 0);
+      const remaining = 4000 - (Date.now() - updatedAt);
+
+      if (
+        data.uid !== auth.currentUser!.uid &&
+        data.displayName &&
+        remaining > 0
+      ) {
+        setTypingPartnerName(data.displayName);
+        clearTimer = window.setTimeout(() => setTypingPartnerName(''), remaining);
+      } else {
+        setTypingPartnerName('');
+      }
     }, () => setTypingPartnerName(''));
-  }, [activeConversationId]);
+  }, [activeConversationId, activePartner?.uid]);
 
   useEffect(() => {
     if (!activeConversationId || !auth.currentUser) return;
@@ -451,6 +469,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   const handleSelectPartner = (partner: ChatPartner) => {
     setSendError('');
+    setReactionOpenId('');
+    setComposerEmojiOpen(false);
     setSelectedPartnerUid(partner.uid);
     setUserSearchResults([]);
     setSearch('');
@@ -512,6 +532,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       createdAt,
       isMine: true,
       readBy: [auth.currentUser.uid],
+      reactions: {},
     };
 
     setMessages((prev) => ({
