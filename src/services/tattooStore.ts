@@ -1451,6 +1451,106 @@ class TattooStoreService {
     return isSavedNow;
   }
 
+  public getSavedCollections(): import('../types').SavedCollection[] {
+    const raw = this.currentUser.settings?.savedCollections;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((item: any) => item && item.id && item.name)
+      .map((item: any) => ({
+        id: String(item.id),
+        name: String(item.name),
+        tattooIds: Array.isArray(item.tattooIds) ? item.tattooIds.map(String) : [],
+        createdAt: String(item.createdAt || ''),
+      }));
+  }
+
+  private persistSavedCollections(collections: import('../types').SavedCollection[]): void {
+    this.currentUser.settings = {
+      ...(this.currentUser.settings || {}),
+      savedCollections: collections,
+    };
+    this.saveUser();
+
+    if (auth.currentUser) {
+      setDoc(
+        doc(db, 'users', auth.currentUser.uid),
+        { settings: this.currentUser.settings },
+        { merge: true }
+      ).catch(() => {});
+    }
+
+    window.dispatchEvent(new Event('tattoos-world-user-updated'));
+  }
+
+  public createSavedCollection(name: string): import('../types').SavedCollection | null {
+    const cleanName = String(name || '').trim().slice(0, 40);
+    if (!cleanName) return null;
+
+    const collections = this.getSavedCollections();
+    if (collections.some((item) => item.name.toLowerCase() === cleanName.toLowerCase())) {
+      return null;
+    }
+
+    const collection: import('../types').SavedCollection = {
+      id: 'saved_collection_' + Date.now(),
+      name: cleanName,
+      tattooIds: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    this.persistSavedCollections([...collections, collection]);
+    return collection;
+  }
+
+  public deleteSavedCollection(collectionId: string): boolean {
+    const collections = this.getSavedCollections();
+    const next = collections.filter((item) => item.id !== collectionId);
+    if (next.length === collections.length) return false;
+    this.persistSavedCollections(next);
+    return true;
+  }
+
+  public addTattooToSavedCollection(collectionId: string, tattooId: string): boolean {
+    if (!collectionId || !tattooId) return false;
+    const collections = this.getSavedCollections();
+    let changed = false;
+    const next = collections.map((collection) => {
+      if (collection.id !== collectionId) return collection;
+      if (collection.tattooIds.includes(tattooId)) return collection;
+      changed = true;
+      return { ...collection, tattooIds: [...collection.tattooIds, tattooId] };
+    });
+    if (!changed) return true;
+
+    // Being inside a collection also means the tattoo is saved globally.
+    if (!this.isSaved(tattooId)) {
+      this.currentUser.savedTattooIds = Array.from(new Set([...(this.currentUser.savedTattooIds || []), tattooId]));
+      this.saveUser();
+      if (auth.currentUser) {
+        setDoc(doc(db, 'users', auth.currentUser.uid), {
+          savedTattooIds: this.currentUser.savedTattooIds,
+        }, { merge: true }).catch(() => {});
+      }
+    }
+
+    this.persistSavedCollections(next);
+    return true;
+  }
+
+  public removeTattooFromSavedCollection(collectionId: string, tattooId: string): boolean {
+    const collections = this.getSavedCollections();
+    let changed = false;
+    const next = collections.map((collection) => {
+      if (collection.id !== collectionId) return collection;
+      if (!collection.tattooIds.includes(tattooId)) return collection;
+      changed = true;
+      return { ...collection, tattooIds: collection.tattooIds.filter((id) => id !== tattooId) };
+    });
+    if (!changed) return false;
+    this.persistSavedCollections(next);
+    return true;
+  }
+
   public isSaved(tattooId: string): boolean {
     return this.currentUser.savedTattooIds?.includes(tattooId) || false;
   }
