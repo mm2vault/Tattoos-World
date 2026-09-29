@@ -554,7 +554,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     }));
 
     try {
-      await setDoc(doc(db, 'messages', messageId), {
+      const messagePayload = {
         id: messageId,
         conversationId,
         senderId: senderUid,
@@ -574,15 +574,21 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         reactions: {},
         participants,
         createdAt,
-      });
+      };
 
+      await setDoc(doc(db, 'messages', messageId), messagePayload);
       setNewMessageText('');
 
+      // Bildirim ayrı çalışır; bildirimdeki bir problem mesajın gönderilmesini bozmaz.
       if (recipientUid !== senderUid) {
-        tattooStore.notifyMessage(
-          recipientUid,
-          senderHandle + ' sana bir mesaj gönderdi.'
-        );
+        try {
+          tattooStore.notifyMessage(
+            recipientUid,
+            senderHandle + ' sana bir mesaj gönderdi.'
+          );
+        } catch (notificationError) {
+          console.warn('Message notification failed:', notificationError);
+        }
       }
     } catch (error: any) {
       console.warn('Message send failed:', error);
@@ -592,7 +598,9 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           ? 'Mesaj gönderme izni reddedildi. Firebase Rules güncel değil olabilir.'
           : errorCode === 'unauthenticated'
             ? 'Oturum doğrulanamadı. Sayfayı yenileyip tekrar giriş yap.'
-            : 'Mesaj gönderilemedi. Tekrar deneyebilirsin.';
+            : errorCode === 'invalid-argument'
+              ? 'Firebase mesaj verilerinde geçersiz bir değer aldı. Bu sürümde gönderim verisi güvenli hale getirildi; sayfayı yenileyip tekrar dene.'
+              : 'Mesaj gönderilemedi. Tekrar deneyebilirsin.';
       setSendError(errorCode ? errorMessage + ' (' + errorCode.replace('firestore/', '') + ')' : errorMessage);
       setMessages((prev) => ({
         ...prev,
