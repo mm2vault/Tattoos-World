@@ -372,6 +372,27 @@ class TattooStoreService {
   }
 
 
+  /** Update the current user's lightweight online/last-seen heartbeat. */
+  public async touchLastSeen(): Promise<void> {
+    const fbUser = auth.currentUser;
+    if (!fbUser) return;
+
+    const lastSeenAt = new Date().toISOString();
+    this.currentUser = { ...this.currentUser, uid: fbUser.uid, lastSeenAt };
+    this.saveUser();
+
+    try {
+      await setDoc(doc(db, 'users', fbUser.uid), {
+        uid: fbUser.uid,
+        lastSeenAt,
+      }, { merge: true });
+      window.dispatchEvent(new Event('tattoos-world-user-updated'));
+    } catch (err) {
+      console.warn('Last-seen heartbeat skipped:', err);
+    }
+  }
+
+
   public getStories(): Story[] {
     const now = Date.now();
     this.stories = this.stories.filter((story) => new Date(story.expiresAt).getTime() > now);
