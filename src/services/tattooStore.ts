@@ -1741,10 +1741,37 @@ class TattooStoreService {
   }
 
   public getProfileFollowingCount(handle: string): number {
-    const profile = this.getArtistProfile(handle);
-    if (!profile) return 0;
-    if (profile.uid === this.currentUser.uid) return this.follows.size;
-    return this.followingCountsByUid[profile.uid] || 0;
+    const key = String(handle || '').trim().toLowerCase();
+    if (!key) return 0;
+
+    // Do not call getArtistProfile() here: getArtistProfile() itself uses this
+    // method to build cached/public profiles. Doing so creates an infinite loop
+    // and produces "Maximum call stack size exceeded" on public user profiles.
+    if (key === String(this.currentUser.handle || '').trim().toLowerCase()) {
+      return this.follows.size;
+    }
+
+    const cachedPublic = this.publicUserProfiles[key];
+    if (cachedPublic?.uid) {
+      return this.followingCountsByUid[cachedPublic.uid] || 0;
+    }
+
+    const starterProfile = INITIAL_ARTISTS.find(
+      (artist) => String(artist.handle || '').trim().toLowerCase() === key
+    );
+    if (starterProfile?.uid) {
+      return this.followingCountsByUid[starterProfile.uid] || 0;
+    }
+
+    const userTattoo = this.tattoos.find(
+      (tattoo) => String(tattoo.creatorHandle || '').trim().toLowerCase() === key
+    );
+    if (userTattoo?.creatorId) {
+      if (userTattoo.creatorId === this.currentUser.uid) return this.follows.size;
+      return this.followingCountsByUid[userTattoo.creatorId] || 0;
+    }
+
+    return 0;
   }
 
   /**
