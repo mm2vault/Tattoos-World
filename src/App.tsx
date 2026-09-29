@@ -365,9 +365,14 @@ function App() {
   };
 
   const handleOpenMessagesWithCreator = (handle: string, prefill?: string) => {
+    // Close any open tattoo/profile modal first, otherwise the modal stays above
+    // the messages screen and makes navigation look broken.
+    setSelectedTattoo(null);
     setSelectedCreatorHandle(handle);
     setCurrentTab('messages');
-    if (prefill) sessionStorage.setItem('tattos_world_message_prefill', prefill);
+    if (prefill) {
+      sessionStorage.setItem('tattos_world_message_prefill', prefill);
+    }
   };
 
   const handleTattooUpdated = () => {
