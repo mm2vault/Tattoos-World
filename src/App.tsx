@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode, useState, useEffect } from 'react';
-import { Tattoo, CategoryId, SupportedLanguage, UserProfile } from './types';
+import { Tattoo, CategoryId, SupportedLanguage, UserProfile, Story } from './types';
 import { tattooStore } from './services/tattooStore';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { Sidebar } from './components/Sidebar';
@@ -9,6 +9,8 @@ import { Gallery } from './components/Gallery';
 import { TattooDetailModal } from './components/TattooDetailModal';
 import { ProfileView } from './components/ProfileView';
 import { CreateTattooModal } from './components/CreateTattooModal';
+import { CreateStoryModal } from './components/CreateStoryModal';
+import { StoryViewerModal } from './components/StoryViewerModal';
 import { MessagesView } from './components/MessagesView';
 import { SettingsView } from './components/SettingsView';
 import { AdminPanelModal } from './components/AdminPanelModal';
@@ -90,6 +92,9 @@ function App() {
   const [selectedTattoo, setSelectedTattoo] = useState<Tattoo | null>(null);
   const [selectedCreatorHandle, setSelectedCreatorHandle] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createStoryOpen, setCreateStoryOpen] = useState(false);
+  const [storyViewerId, setStoryViewerId] = useState<string | null>(null);
+  const [stories, setStories] = useState<Story[]>(() => tattooStore.getStories());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // App Data
@@ -139,6 +144,9 @@ function App() {
     tattooStore.syncCommunityFromFirestore()
       .then(() => refreshCommunity())
       .catch(() => {});
+    tattooStore.syncStoriesFromFirestore()
+      .then(() => setStories(tattooStore.getStories()))
+      .catch(() => {});
 
     return () => {
       window.removeEventListener('tattoos-world-user-updated', refreshUser);
@@ -163,6 +171,14 @@ function App() {
         setSelectedTattoo(null);
         return;
       }
+      if (storyViewerId) {
+        setStoryViewerId(null);
+        return;
+      }
+      if (createStoryOpen) {
+        setCreateStoryOpen(false);
+        return;
+      }
       if (mobileMenuOpen) {
         setMobileMenuOpen(false);
       }
@@ -170,7 +186,7 @@ function App() {
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [adminPanelOpen, createModalOpen, selectedTattoo, mobileMenuOpen]);
+  }, [adminPanelOpen, createModalOpen, createStoryOpen, storyViewerId, selectedTattoo, mobileMenuOpen]);
 
   // Shared post links use the hash so the exact tattoo opens when the link is visited.
   useEffect(() => {
@@ -295,6 +311,17 @@ function App() {
     setTattoos(tattooStore.getTattoos());
     setToastMessage('Dövme başarıyla paylaşıldı.');
     setSelectedTattoo(newTattoo);
+  };
+
+
+  const handleCreateStory = async (image: string, text?: string) => {
+    await tattooStore.createStory(image, text);
+    setStories(tattooStore.getStories());
+    setToastMessage('Hikâye paylaşıldı. 24 saat boyunca görünür.');
+  };
+
+  const handleStoryChanged = () => {
+    setStories(tattooStore.getStories());
   };
 
   const handleSelectCreator = (handle: string) => {
@@ -455,6 +482,9 @@ function App() {
                         onToast={(msg) => setToastMessage(msg)}
                         onTattooUpdated={handleTattooUpdated}
                         onSearchChange={setSearchQuery}
+                        stories={stories}
+                        onOpenCreateStory={() => setCreateStoryOpen(true)}
+                        onOpenStory={(storyId) => setStoryViewerId(storyId)}
                         initialViewMode="feed"
                       />
                   </div>
@@ -474,6 +504,9 @@ function App() {
                     onToast={(msg) => setToastMessage(msg)}
                     onTattooUpdated={handleTattooUpdated}
                     onSearchChange={setSearchQuery}
+                    stories={stories}
+                    onOpenCreateStory={() => setCreateStoryOpen(true)}
+                    onOpenStory={(storyId) => setStoryViewerId(storyId)}
                     initialViewMode="grid"
                   />
                 )}
@@ -595,6 +628,24 @@ function App() {
       )}
 
 
+
+      {createStoryOpen && (
+        <CreateStoryModal
+          onClose={() => setCreateStoryOpen(false)}
+          onSubmit={handleCreateStory}
+        />
+      )}
+
+      {storyViewerId && (
+        <StoryViewerModal
+          stories={stories}
+          initialStoryId={storyViewerId}
+          currentUser={currentUser}
+          onClose={() => setStoryViewerId(null)}
+          onChanged={handleStoryChanged}
+          onToast={(msg) => setToastMessage(msg)}
+        />
+      )}
 
       {/* Mobile Drawer Navigation when hamburger clicked */}
       {mobileMenuOpen && (
