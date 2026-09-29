@@ -615,7 +615,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     setReplyingTo(null);
     setEditingMessageId('');
     setEditingText('');
-    setPendingSharedTattoo(undefined);
+    // Keep a pending tattoo share while the sender chooses a recipient.
     setSelectedPartnerUid(partner.uid);
     setUserSearchResults([]);
     setSearch('');
@@ -1185,7 +1185,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   <div className="mb-2.5 rounded-2xl border border-white/[0.08] bg-[#111] px-3 py-2 flex items-center gap-3">
                     <img src={pendingSharedTattoo.image} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold text-white">Dövme paylaşımı hazır</p>
+                      <p className="text-[10px] font-semibold text-white">Dövme paylaşımı hazır · kişiyi seç</p>
                       <p className="text-[10px] text-[#777] truncate mt-0.5">{pendingSharedTattoo.title}</p>
                     </div>
                     <button
