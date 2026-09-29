@@ -466,18 +466,14 @@ export const Gallery: React.FC<GalleryProps> = ({
 
           <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
             {artistProfiles.map((artist) => (
-              <button
+              <a
                 key={artist.handle}
-                type="button"
+                href={'#profile=' + encodeURIComponent(artist.handle.replace(/^@/, ''))}
                 onClick={(event) => {
-                  event.preventDefault();
                   event.stopPropagation();
                   onSelectCreator(artist.handle);
                 }}
-                onPointerUp={(event) => {
-                  event.stopPropagation();
-                }}
-                className="relative z-20 pointer-events-auto group min-w-[190px] sm:min-w-[215px] rounded-2xl border border-white/10 bg-[#101010] p-3 text-left hover:border-white/25 hover:bg-white/[0.035] transition-all cursor-pointer"
+                className="relative z-20 pointer-events-auto group min-w-[190px] sm:min-w-[215px] rounded-2xl border border-white/10 bg-[#101010] p-3 text-left hover:border-white/25 hover:bg-white/[0.035] transition-all cursor-pointer no-underline"
                 aria-label={artist.name + ' profilini aç'}
               >
                 <div className="flex items-center gap-2.5">
@@ -601,18 +597,14 @@ export const Gallery: React.FC<GalleryProps> = ({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {profileResults.map((profile) => (
-              <button
+              <a
                 key={profile.handle}
-                type="button"
+                href={'#profile=' + encodeURIComponent(profile.handle.replace(/^@/, ''))}
                 onClick={(event) => {
-                  event.preventDefault();
                   event.stopPropagation();
                   onSelectCreator(profile.handle);
                 }}
-                onPointerUp={(event) => {
-                  event.stopPropagation();
-                }}
-                className="relative z-20 pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                className="relative z-20 pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#111111] px-3 py-2.5 text-left hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer no-underline"
                 aria-label={profile.name + ' profilini aç'}
               >
                 <img
@@ -628,7 +620,7 @@ export const Gallery: React.FC<GalleryProps> = ({
                   <span className="block text-[10px] text-[#777] truncate">@{profile.handle.replace(/^@/, '')}</span>
                   <span className="block text-[10px] text-[#555] mt-0.5">{profile.role}</span>
                 </span>
-              </button>
+              </a>
             ))}
           </div>
         </section>
