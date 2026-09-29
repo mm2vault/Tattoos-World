@@ -7,7 +7,7 @@ interface GalleryProps {
   tattoos: Tattoo[];
   onSelectTattoo: (tattoo: Tattoo) => void;
   onSelectCreator: (handle: string) => void;
-  onSelectProfile?: (profile: UserProfile) => void;
+  onSelectProfile?: (profile: { handle: string }) => void;
   onOpenCreate: () => void;
   searchQuery: string;
   selectedCategory: CategoryId;
