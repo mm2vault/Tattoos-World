@@ -98,12 +98,12 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         role: tattoo.creatorRole || 'Topluluk üyesi',
         lastMessage: 'Yeni sohbet',
         lastMessageAt: '',
-        conversationId: buildConversationId(currentUser.uid, tattoo.creatorId),
+        conversationId: buildConversationId(firebaseUid, tattoo.creatorId),
         unreadCount: 0,
       });
     });
     return map;
-  }, [currentUser.uid]);
+  }, [currentUser.uid, firebaseUid]);
 
   const selfPartner: ChatPartner = useMemo(() => ({
     uid: firebaseUid,
@@ -299,7 +299,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           role: String(profile.role || (profile.isArtist ? 'Sanatçı' : 'Kullanıcı')),
           lastMessage: 'Yeni sohbet',
           lastMessageAt: '',
-          conversationId: buildConversationId(currentUser.uid, uid),
+          conversationId: buildConversationId(firebaseUid, uid),
           unreadCount: 0,
         };
 
@@ -312,7 +312,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
     resolveUser();
     return () => { cancelled = true; };
-  }, [initialCreatorHandle, partners, currentUser.uid]);
+  }, [initialCreatorHandle, partners, firebaseUid]);
 
   useEffect(() => {
     if (!initialMessage) return;
@@ -352,7 +352,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             role: String(profile.role || (profile.isArtist ? 'Sanatçı' : 'Kullanıcı')),
             lastMessage: 'Yeni sohbet',
             lastMessageAt: '',
-            conversationId: buildConversationId(currentUser.uid, String(profile.uid)),
+            conversationId: buildConversationId(firebaseUid, String(profile.uid)),
             unreadCount: 0,
           }));
 
@@ -369,7 +369,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [search, currentUser.uid]);
+  }, [search, firebaseUid]);
 
   const visiblePartners = useMemo(() => {
     const map = new Map<string, ChatPartner>();
@@ -680,6 +680,27 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {isGuestAuth && (
+            <div className="mx-4 mt-3 mb-1 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shrink-0 text-xs font-bold">!</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-white">Misafir hesap</p>
+                  <p className="text-[10px] text-[#777] leading-relaxed mt-0.5">
+                    Telefon ve bilgisayar arasında mesajların aynı hesapta görünmesi için Google ile giriş yap.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onRequestLogin}
+                    className="mt-2 text-[10px] font-semibold text-white underline underline-offset-2 cursor-pointer"
+                  >
+                    Google ile giriş yap
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loadingUsers && search.trim().length >= 2 && (
             <div className="px-4 py-3 text-[10px] text-[#666]">Kullanıcılar aranıyor...</div>
           )}
