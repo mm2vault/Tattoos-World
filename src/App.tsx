@@ -464,7 +464,7 @@ function App() {
           />
 
           {/* Main Body */}
-          <main className="flex-1 w-full px-0 sm:px-2 lg:px-6 pb-24 lg:pb-8">
+          <main className={"w-full min-h-0 " + (currentTab === 'messages' ? 'h-[calc(100dvh-130px)] lg:h-[calc(100dvh-58px)] overflow-hidden pb-0' : 'flex-1 px-0 sm:px-2 lg:px-6 pb-24 lg:pb-8')}>
             
             <>
                 {/* Explore Tab: Instagram-style social feed */}
