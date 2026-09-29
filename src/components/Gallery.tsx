@@ -15,9 +15,9 @@ interface GalleryProps {
   onToast: (msg: string) => void;
   onTattooUpdated: () => void;
   onSearchChange: (query: string) => void;
-  stories: Story[];
-  onOpenCreateStory: () => void;
-  onOpenStory: (storyId: string) => void;
+  stories?: Story[];
+  onOpenCreateStory?: () => void;
+  onOpenStory?: (storyId: string) => void;
   initialViewMode?: 'feed' | 'grid';
 }
 
@@ -33,9 +33,9 @@ export const Gallery: React.FC<GalleryProps> = ({
   onToast,
   onTattooUpdated,
   onSearchChange,
-  stories,
-  onOpenCreateStory,
-  onOpenStory,
+  stories = [],
+  onOpenCreateStory = () => {},
+  onOpenStory = () => {},
   initialViewMode = 'feed',
 }) => {
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>(initialViewMode);
