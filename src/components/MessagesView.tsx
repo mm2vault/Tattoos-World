@@ -380,7 +380,459 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     };
 
     resolveUser();
-    return (
+    return () => { cancelled = true; };
+  }, [initialCreatorHandle, partners, firebaseUid]);
+
+  useEffect(() => {
+    if (!initialMessage) return;
+
+    if (initialMessage.startsWith('__TATTOO_SHARE__')) {
+      try {
+        const payload = JSON.parse(initialMessage.slice('__TATTOO_SHARE__'.length));
+        const tattoo = payload?.tattoo;
+        if (payload?.type === 'tattoo-share' && tattoo?.id && tattoo?.image) {
+          setPendingSharedTattoo({
+            id: String(tattoo.id),
+            title: String(tattoo.title || 'Paylaşılan dövme'),
+            image: String(tattoo.image),
+            creatorName: String(tattoo.creatorName || ''),
+            creatorHandle: String(tattoo.creatorHandle || ''),
+            categoryName: String(tattoo.categoryName || 'Dövme'),
+          });
+          setNewMessageText('Şuna bak! 👀');
+        }
+      } catch {
+        setNewMessageText('');
+      }
+    } else {
+      setNewMessageText(initialMessage);
+    }
+
+    onPrefillConsumed?.();
+  }, [initialMessage, onPrefillConsumed]);
+
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 2 || !auth.currentUser) {
+      setUserSearchResults([]);
+      setLoadingUsers(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingUsers(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const snap = await getDocs(collection(db, 'users'));
+        const needle = q.toLowerCase().replace(/^@/, '');
+        const results = snap.docs
+          .map((item) => item.data() as Partial<UserProfile>)
+          .filter((profile) => profile.uid && profile.uid !== currentUser.uid && profile.profilePublic !== false)
+          .filter((profile) =>
+            String(profile.displayName || '').toLowerCase().includes(needle) ||
+            String(profile.handle || '').toLowerCase().replace(/^@/, '').includes(needle)
+          )
+          .slice(0, 12)
+          .map((profile) => ({
+            uid: String(profile.uid),
+            name: String(profile.displayName || profile.handle || 'Kullanıcı'),
+            handle: String(profile.handle || '@kullanici'),
+            photo: String(profile.photoURL || ''),
+            verified: Boolean(profile.verified),
+            role: String(profile.role || (profile.isArtist ? 'Sanatçı' : 'Kullanıcı')),
+            lastMessage: 'Yeni sohbet',
+            lastMessageAt: '',
+            conversationId: buildConversationId(firebaseUid, String(profile.uid)),
+            unreadCount: 0,
+            lastSeenAt: String(profile.lastSeenAt || ''),
+          }));
+
+        if (!cancelled) setUserSearchResults(results);
+      } catch (error) {
+        console.warn('Message user search failed:', error);
+        if (!cancelled) setUserSearchResults([]);
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [search, firebaseUid]);
+
+  const visiblePartners = useMemo(() => {
+    const map = new Map<string, ChatPartner>();
+    partners.forEach((partner) => map.set(partner.uid, partner));
+    userSearchResults.forEach((partner) => map.set(partner.uid, partner));
+    const q = search.trim().toLowerCase();
+
+    return Array.from(map.values()).filter((partner) => {
+      if (!q) return true;
+      return (
+        partner.name.toLowerCase().includes(q) ||
+        partner.handle.toLowerCase().includes(q)
+      );
+    });
+  }, [partners, userSearchResults, search]);
+
+  const activePartner = partners.find((partner) => partner.uid === selectedPartnerUid)
+    || userSearchResults.find((partner) => partner.uid === selectedPartnerUid)
+    || (selectedPartnerUid === selfPartner.uid ? selfPartner : null);
+
+  const activeConversationId = activePartner
+    ? buildConversationId(firebaseUid, activePartner.uid)
+    : '';
+
+  const activeMessages = messages[activeConversationId] || [];
+
+  useEffect(() => {
+    if (!activePartner?.uid || !auth.currentUser || activePartner.uid === firebaseUid) {
+      setPartnerPresence('');
+      return;
+    }
+
+    const partnerRef = doc(db, 'users', activePartner.uid);
+    return onSnapshot(
+      partnerRef,
+      (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        const lastSeenAt = String(data.lastSeenAt || '');
+        setPartnerPresence(lastSeenAt);
+        if (lastSeenAt) {
+          setPartners((prev) => prev.map((partner) =>
+            partner.uid === activePartner.uid ? { ...partner, lastSeenAt } : partner
+          ));
+        }
+      },
+      () => setPartnerPresence('')
+    );
+  }, [activePartner?.uid, firebaseUid]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser || activeMessages.length === 0) return;
+
+    const unread = activeMessages.filter(
+      (message) => !message.isMine && !message.readBy.includes(auth.currentUser!.uid)
+    );
+
+    unread.forEach((message) => {
+      updateDoc(doc(db, 'messages', message.id), {
+        readBy: arrayUnion(auth.currentUser!.uid),
+      }).catch(() => {});
+    });
+  }, [activeConversationId, activeMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: activeMessages.length > 1 ? 'smooth' : 'auto' });
+  }, [activeConversationId, activeMessages.length]);
+
+  useEffect(() => {
+    if (!activeConversationId || !activePartner?.uid || !auth.currentUser) {
+      setTypingPartnerName('');
+      return;
+    }
+
+    const typingRef = doc(
+      db,
+      'typing',
+      activeConversationId + '__' + activePartner.uid
+    );
+
+    let clearTimer: number | null = null;
+
+    return onSnapshot(typingRef, (snap) => {
+      if (clearTimer) window.clearTimeout(clearTimer);
+
+      if (!snap.exists()) {
+        setTypingPartnerName('');
+        return;
+      }
+
+      const data = snap.data() as {
+        uid?: string;
+        displayName?: string;
+        updatedAt?: number;
+      };
+      const updatedAt = Number(data.updatedAt || 0);
+      const remaining = 4000 - (Date.now() - updatedAt);
+
+      if (
+        data.uid !== auth.currentUser!.uid &&
+        data.displayName &&
+        remaining > 0
+      ) {
+        setTypingPartnerName(data.displayName);
+        clearTimer = window.setTimeout(() => setTypingPartnerName(''), remaining);
+      } else {
+        setTypingPartnerName('');
+      }
+    }, () => setTypingPartnerName(''));
+  }, [activeConversationId, activePartner?.uid]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const typingId = activeConversationId + '__' + uid;
+
+    return () => {
+      deleteDoc(doc(db, 'typing', typingId)).catch(() => {});
+    };
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    if (!activeConversationId || !auth.currentUser) return;
+
+    const text = newMessageText.trim();
+    const uid = auth.currentUser.uid;
+    const typingId = activeConversationId + '__' + uid;
+    const typingRef = doc(db, 'typing', typingId);
+
+    if (!text) {
+      deleteDoc(typingRef).catch(() => {});
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setDoc(typingRef, {
+        uid,
+        displayName: currentUser.displayName || currentUser.handle,
+        conversationId: activeConversationId,
+        participants: [uid, activePartner?.uid].filter(Boolean),
+        updatedAt: Date.now(),
+      }, { merge: true }).catch(() => {});
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [newMessageText, activeConversationId, activePartner?.uid, currentUser.displayName, currentUser.handle]);
+
+  const handleSelectPartner = (partner: ChatPartner) => {
+    setSendError('');
+    setReactionOpenId('');
+    setComposerEmojiOpen(false);
+    setReplyingTo(null);
+    setEditingMessageId('');
+    setEditingText('');
+    setPendingSharedTattoo(undefined);
+    setSelectedPartnerUid(partner.uid);
+    setUserSearchResults([]);
+    setSearch('');
+  };
+
+  const handleReaction = async (message: ChatMessage, emoji: string) => {
+    if (!auth.currentUser) return;
+    const currentReaction = message.reactions?.[auth.currentUser.uid];
+    setReactionOpenId('');
+    try {
+      await updateDoc(doc(db, 'messages', message.id), {
+        ['reactions.' + auth.currentUser.uid]: currentReaction === emoji ? deleteField() : emoji,
+      });
+    } catch (error) {
+      console.warn('Message reaction failed:', error);
+      setSendError('Mesaj reaksiyonu kaydedilemedi. Firebase Rules bölümünü güncelle.');
+    }
+  };
+
+  const handleDeleteMessage = async (message: ChatMessage) => {
+    if (!message.isMine) return;
+    try {
+      await deleteDoc(doc(db, 'messages', message.id));
+    } catch (error) {
+      console.warn('Message delete failed:', error);
+      setSendError('Mesaj silinemedi. Firebase Rules bölümünü kontrol et.');
+    }
+  };
+
+  const handleReplyMessage = (message: ChatMessage) => {
+    setEditingMessageId('');
+    setEditingText('');
+    setReplyingTo(message);
+  };
+
+  const handleEditMessage = (message: ChatMessage) => {
+    if (!message.isMine) return;
+    setReplyingTo(null);
+    setEditingMessageId(message.id);
+    setEditingText(message.text);
+    setNewMessageText(message.text);
+  };
+
+  const handleCopyMessage = async (message: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setSendError('');
+    } catch (error) {
+      console.warn('Message copy failed:', error);
+      setSendError('Mesaj kopyalanamadı.');
+    }
+  };
+
+  const handleCancelComposerMode = () => {
+    setReplyingTo(null);
+    setEditingMessageId('');
+    setEditingText('');
+    setNewMessageText('');
+  };
+
+  const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const addComposerEmoji = (emoji: string) => {
+    setNewMessageText((value) => value + emoji);
+    setComposerEmojiOpen(false);
+  };
+
+  const handleSendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = newMessageText.trim();
+    if (!auth.currentUser || !activePartner || !text || sending) return;
+
+    if (editingMessageId) {
+      setSending(true);
+      setSendError('');
+
+      try {
+        await updateDoc(doc(db, 'messages', editingMessageId), {
+          text,
+          editedAt: new Date().toISOString(),
+        });
+        setEditingMessageId('');
+        setEditingText('');
+        setNewMessageText('');
+      } catch (error: any) {
+        console.warn('Message edit failed:', error);
+        setSendError(
+          error?.code === 'permission-denied'
+            ? 'Mesaj düzenleme izni reddedildi. Firebase Rules güncel değil olabilir.'
+            : 'Mesaj düzenlenemedi. Tekrar deneyebilirsin.'
+        );
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    const senderUid = String(auth.currentUser.uid || firebaseUid || '');
+    const recipientUid = String(activePartner.uid || '');
+    const senderHandle = String(currentUser.handle || '@kullanici');
+    const senderName = String(currentUser.displayName || currentUser.handle || 'Kullanıcı');
+    const senderPhoto = String(currentUser.photoURL || '');
+    const senderRole = currentUser.isArtist ? 'Sanatçı' : String(currentUser.role || 'Kullanıcı');
+    const recipientHandle = String(activePartner.handle || '@kullanici');
+    const recipientName = String(activePartner.name || activePartner.handle || 'Kullanıcı');
+    const recipientPhoto = String(activePartner.photo || '');
+    const recipientRole = String(activePartner.role || 'Kullanıcı');
+    const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const conversationId = buildConversationId(senderUid, recipientUid);
+    const participants = [senderUid, recipientUid].filter(Boolean);
+
+    if (!senderUid || !recipientUid || !conversationId) return;
+
+    setSending(true);
+    setSendError('');
+
+    const outgoing: ChatMessage = {
+      id: messageId,
+      senderId: senderUid,
+      senderHandle,
+      text,
+      createdAt,
+      isMine: true,
+      readBy: [senderUid],
+      reactions: {},
+      replyTo: replyingTo
+        ? {
+            id: replyingTo.id,
+            senderHandle: replyingTo.senderHandle,
+            text: replyingTo.text,
+          }
+        : undefined,
+      sharedTattoo: pendingSharedTattoo,
+    };
+
+    setMessages((prev) => ({
+      ...prev,
+      [conversationId]: [...(prev[conversationId] || []), outgoing],
+    }));
+
+    try {
+      const messagePayload = {
+        id: messageId,
+        conversationId,
+        senderId: senderUid,
+        senderHandle,
+        senderName,
+        senderPhoto,
+        senderVerified: Boolean(currentUser.verified),
+        senderRole,
+        recipientId: recipientUid,
+        recipientHandle,
+        recipientName,
+        recipientPhoto,
+        recipientVerified: Boolean(activePartner.verified),
+        recipientRole,
+        text,
+        readBy: [senderUid],
+        reactions: {},
+        ...(replyingTo ? {
+          replyTo: {
+            id: replyingTo.id,
+            senderHandle: replyingTo.senderHandle,
+            text: replyingTo.text,
+          }
+        } : {}),
+        ...(pendingSharedTattoo ? { sharedTattoo: pendingSharedTattoo } : {}),
+        participants,
+        createdAt,
+      };
+
+      await setDoc(doc(db, 'messages', messageId), messagePayload);
+      setNewMessageText('');
+      setReplyingTo(null);
+      setPendingSharedTattoo(undefined);
+
+      // Bildirim ayrı çalışır; bildirimdeki bir problem mesajın gönderilmesini bozmaz.
+      if (recipientUid !== senderUid) {
+        try {
+          tattooStore.notifyMessage(
+            recipientUid,
+            senderHandle + ' sana bir mesaj gönderdi.'
+          );
+        } catch (notificationError) {
+          console.warn('Message notification failed:', notificationError);
+        }
+      }
+    } catch (error: any) {
+      console.warn('Message send failed:', error);
+      const errorCode = String(error?.code || '');
+      const errorMessage =
+        errorCode === 'permission-denied'
+          ? 'Mesaj gönderme izni reddedildi. Firebase Rules güncel değil olabilir.'
+          : errorCode === 'unauthenticated'
+            ? 'Oturum doğrulanamadı. Sayfayı yenileyip tekrar giriş yap.'
+            : errorCode === 'invalid-argument'
+              ? 'Firebase mesaj verilerinde geçersiz bir değer aldı. Bu sürümde gönderim verisi güvenli hale getirildi; sayfayı yenileyip tekrar dene.'
+              : 'Mesaj gönderilemedi. Tekrar deneyebilirsin.';
+      setSendError(errorCode ? errorMessage + ' (' + errorCode.replace('firestore/', '') + ')' : errorMessage);
+      setMessages((prev) => ({
+        ...prev,
+        [conversationId]: (prev[conversationId] || []).filter(
+          (item) => item.id !== messageId
+        ),
+      }));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
     <div className="w-full h-full min-h-0 bg-[#050505] text-white flex overflow-hidden">
       <aside
         className={"w-full md:w-[340px] lg:w-[380px] shrink-0 border-r border-white/[0.08] bg-[#080808] flex-col " + (selectedPartnerUid ? 'hidden md:flex' : 'flex')}
