@@ -45,6 +45,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [doubleTapId, setDoubleTapId] = useState<string | null>(null);
   const [artistOnly, setArtistOnly] = useState(false);
   const [remoteProfiles, setRemoteProfiles] = useState<UserProfile[]>([]);
+  const [searchFilter, setSearchFilter] = useState<'all' | 'people' | 'tattoos'>('all');
 
   useEffect(() => {
     if (initialViewMode === 'feed') {
@@ -53,6 +54,10 @@ export const Gallery: React.FC<GalleryProps> = ({
       setArtistOnly(false);
     }
   }, [initialViewMode]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) setSearchFilter('all');
+  }, [searchQuery]);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -552,8 +557,32 @@ export const Gallery: React.FC<GalleryProps> = ({
         </section>
       )}
 
-      {viewMode === 'grid' && searchQuery.trim() && profileResults.length > 0 && (
+      {viewMode === 'grid' && searchQuery.trim() && (
         <section className="px-3 sm:px-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-2">
+            {[
+              { id: 'all' as const, label: 'Tümü', count: profileResults.length + filteredTattoos.length },
+              { id: 'people' as const, label: 'Kişiler', count: profileResults.length },
+              { id: 'tattoos' as const, label: 'Dövmeler', count: filteredTattoos.length },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSearchFilter(tab.id)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-colors cursor-pointer ${
+                  searchFilter === tab.id
+                    ? 'bg-white text-black border-white'
+                    : 'bg-[#111] text-[#888] border-white/10 hover:text-white'
+                }`}
+              >
+                {tab.label}
+                <span className={searchFilter === tab.id ? 'ml-1 opacity-60' : 'ml-1 text-[#555]'}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {(searchFilter === 'all' || searchFilter === 'people') && profileResults.length > 0 && (
+        <section className="px-0">
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-sm font-semibold text-white">Kişiler ve sanatçılar</h2>
@@ -587,9 +616,15 @@ export const Gallery: React.FC<GalleryProps> = ({
             ))}
           </div>
         </section>
+          )}
+
+          {searchFilter === 'people' && profileResults.length === 0 && (
+            <div className="py-10 text-center text-xs text-[#666]">Bu arama için kullanıcı bulunamadı.</div>
+          )}
+        </section>
       )}
 
-      <section className="space-y-3 pt-1">
+      <section className={`space-y-3 pt-1 ${searchQuery.trim() && searchFilter === 'people' ? 'hidden' : ''}`}>
         {viewMode === 'grid' && (
           <div className="flex items-center justify-between px-3 sm:px-0">
             <div>
@@ -633,7 +668,7 @@ export const Gallery: React.FC<GalleryProps> = ({
           </div>
         </div>
 
-        {filteredTattoos.length === 0 ? (
+        {searchQuery.trim() && searchFilter === 'people' ? null : filteredTattoos.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-[#111111] p-10 text-center">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl">✦</div>
             <h3 className="text-sm font-bold text-white mt-4">Henüz gönderi yok</h3>
