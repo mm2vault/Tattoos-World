@@ -523,6 +523,10 @@ function App() {
                         tattoos={tattoos}
                         onSelectTattoo={(t) => setSelectedTattoo(t)}
                         onSelectCreator={handleSelectCreator}
+                        onSelectProfile={(profile) => {
+                          setSelectedCreatorHandle(profile.handle);
+                          setCurrentTab('profile');
+                        }}
                         onOpenCreate={() => setCreateModalOpen(true)}
                         searchQuery={searchQuery}
                         selectedCategory={selectedCategory}
@@ -545,6 +549,10 @@ function App() {
                     tattoos={tattoos}
                     onSelectTattoo={(t) => setSelectedTattoo(t)}
                     onSelectCreator={handleSelectCreator}
+                    onSelectProfile={(profile) => {
+                      setSelectedCreatorHandle(profile.handle);
+                      setCurrentTab('profile');
+                    }}
                     onOpenCreate={() => setCreateModalOpen(true)}
                     searchQuery={searchQuery}
                     selectedCategory={selectedCategory}
