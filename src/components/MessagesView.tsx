@@ -539,7 +539,6 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       ...prev,
       [activeConversationId]: [...(prev[activeConversationId] || []), outgoing],
     }));
-    setNewMessageText('');
 
     try {
       await setDoc(doc(db, 'messages', messageId), {
@@ -564,15 +563,24 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         createdAt,
       });
 
+      setNewMessageText('');
+
       if (activePartner.uid !== auth.currentUser.uid) {
         tattooStore.notifyMessage(
           activePartner.uid,
           currentUser.handle + ' sana bir mesaj gönderdi.'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Message send failed:', error);
-      setSendError('Mesaj gönderilemedi. Firebase Rules bölümünü ve giriş durumunu kontrol et.');
+      const errorCode = String(error?.code || '');
+      const errorMessage =
+        errorCode === 'permission-denied'
+          ? 'Mesaj gönderme izni reddedildi. Firebase Rules güncel değil olabilir.'
+          : errorCode === 'unauthenticated'
+            ? 'Oturum doğrulanamadı. Sayfayı yenileyip tekrar giriş yap.'
+            : 'Mesaj gönderilemedi. Tekrar deneyebilirsin.';
+      setSendError(errorCode ? errorMessage + ' (' + errorCode.replace('firestore/', '') + ')' : errorMessage);
       setMessages((prev) => ({
         ...prev,
         [activeConversationId]: (prev[activeConversationId] || []).filter(
