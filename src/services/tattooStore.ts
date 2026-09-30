@@ -1352,6 +1352,83 @@ class TattooStoreService {
     this.emitNotificationUpdate();
   }
 
+  // ================= BOOKING / APPOINTMENTS =================
+  public async createBookingRequest(
+    artist: UserProfile,
+    preferredDate: string,
+    preferredTime: string,
+    message: string
+  ): Promise<BookingRequest | null> {
+    if (!auth.currentUser || !artist?.uid || artist.uid === this.currentUser.uid) return null;
+    if (!preferredDate || !preferredTime) return null;
+
+    const cleanMessage = String(message || '').trim().slice(0, 1000);
+    const id = 'booking_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const now = new Date().toISOString();
+    const booking: BookingRequest = {
+      id,
+      requesterUid: this.currentUser.uid,
+      requesterName: this.currentUser.displayName,
+      requesterHandle: this.currentUser.handle,
+      requesterPhoto: this.currentUser.photoURL,
+      artistUid: artist.uid,
+      artistName: artist.displayName,
+      artistHandle: artist.handle,
+      preferredDate,
+      preferredTime,
+      message: cleanMessage,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    try {
+      await setDoc(doc(db, 'bookings', id), booking);
+      this.createNotification(
+        artist.uid,
+        'booking',
+        `${this.currentUser.handle} sana randevu talebi gönderdi.`
+      );
+      return booking;
+    } catch (err) {
+      console.warn('Booking request creation failed:', err);
+      return null;
+    }
+  }
+
+  public async getBookingRequestsForUser(mode: 'incoming' | 'outgoing'): Promise<BookingRequest[]> {
+    if (!auth.currentUser) return [];
+    try {
+      const field = mode === 'incoming' ? 'artistUid' : 'requesterUid';
+      const snap = await getDocs(query(collection(db, 'bookings'), where(field, '==', auth.currentUser.uid)));
+      return snap.docs
+        .map((item) => item.data() as BookingRequest)
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    } catch (err) {
+      console.warn('Booking requests could not be loaded:', err);
+      return [];
+    }
+  }
+
+  public async updateBookingStatus(
+    bookingId: string,
+    status: BookingRequest['status']
+  ): Promise<boolean> {
+    if (!auth.currentUser || !bookingId) return false;
+    if (!['accepted', 'declined', 'cancelled'].includes(status)) return false;
+
+    try {
+      await updateDoc(doc(db, 'bookings', bookingId), {
+        status,
+        updatedAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (err) {
+      console.warn('Booking status update failed:', err);
+      return false;
+    }
+  }
+
   // ================= COMMUNITY & INTERACTION =================
   public async reportTattoo(tattooId: string, reason: string): Promise<boolean> {
     if (!auth.currentUser || !reason.trim()) return false;
