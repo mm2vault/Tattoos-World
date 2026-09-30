@@ -323,7 +323,7 @@ function App() {
     setToastMessage('Oturum kapatıldı.');
   };
 
-  const handleCreateTattoo = (data: {
+  const handleCreateTattoo = async (data: {
     title: string;
     category: CategoryId;
     categoryName: string;
@@ -338,10 +338,17 @@ function App() {
       website?: string;
     };
   }) => {
-    const newTattoo = tattooStore.createTattoo(data);
-    setTattoos(tattooStore.getTattoos());
-    setToastMessage('Dövme başarıyla paylaşıldı.');
-    setSelectedTattoo(newTattoo);
+    try {
+      const mediaReady = await tattooStore.prepareTattooMedia(data);
+      const newTattoo = tattooStore.createTattoo(mediaReady);
+      setTattoos(tattooStore.getTattoos());
+      setToastMessage('Dövme başarıyla paylaşıldı.');
+      setSelectedTattoo(newTattoo);
+    } catch (error) {
+      console.warn('Tattoo media upload failed:', error);
+      setToastMessage('Görseller yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.');
+      throw error;
+    }
   };
 
 
