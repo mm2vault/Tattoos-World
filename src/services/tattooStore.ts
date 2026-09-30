@@ -444,18 +444,26 @@ class TattooStoreService {
     if (!auth.currentUser) {
       throw new Error('Hikâye paylaşmak için giriş yapmalısın.');
     }
-    if (!mediaUrl || mediaUrl.length > 820000) {
-      throw new Error('Hikâye görseli çok büyük.');
+    if (!mediaUrl) {
+      throw new Error('Hikâye görseli gerekli.');
     }
 
     const now = new Date();
+    const storyId = 'story_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const uploadedMediaUrl = await uploadDataUrl(
+      'stories',
+      auth.currentUser.uid,
+      mediaUrl,
+      `${storyId}.jpg`,
+    );
+
     const story: Story = {
-      id: 'story_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      id: storyId,
       creatorId: auth.currentUser.uid,
       creatorName: this.currentUser.displayName,
       creatorHandle: this.currentUser.handle,
       creatorPhoto: this.currentUser.photoURL,
-      mediaUrl,
+      mediaUrl: uploadedMediaUrl,
       mediaType: 'image',
       text: text?.trim().slice(0, 140) || '',
       createdAt: now.toISOString(),
@@ -1734,6 +1742,46 @@ class TattooStoreService {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Upload new post media to Firebase Storage before the Firestore post is created.
+   * Legacy/external URLs pass through unchanged.
+   */
+  public async prepareTattooMedia(data: {
+    title: string;
+    category: CategoryId;
+    categoryName: string;
+    description: string;
+    image: string;
+    additionalImages?: string[];
+    tags?: string[];
+    socialLinks?: {
+      instagram?: string;
+      tiktok?: string;
+      discord?: string;
+      website?: string;
+    };
+  }): Promise<typeof data> {
+    if (!auth.currentUser) {
+      throw new Error('Dövme paylaşmak için giriş yapmalısın.');
+    }
+
+    const media = [data.image, ...(data.additionalImages || [])].filter(Boolean);
+    if (!media.length) throw new Error('En az bir görsel gerekli.');
+
+    const uploaded = await uploadMediaBatch(
+      'tattoos',
+      auth.currentUser.uid,
+      media,
+      `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    );
+
+    return {
+      ...data,
+      image: uploaded[0] || data.image,
+      additionalImages: uploaded.slice(1),
+    };
   }
 
   public createTattoo(data: {
