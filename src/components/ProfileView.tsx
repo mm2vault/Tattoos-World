@@ -6,7 +6,7 @@ import {
   CheckCircle2, Globe, Sparkles, 
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
-  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2,
+  ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2, Flag,
   Grid3X3, Bookmark, Info as InfoIcon, Users, CalendarDays, Clock
 } from 'lucide-react';
 import { Tattoo, UserProfile, SupportedLanguage, SavedCollection, BookingRequest } from '../types';
@@ -525,6 +525,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       : value >= 1000 ? (value / 1000).toFixed(1).replace('.0', '') + 'K'
       : String(value);
 
+  const handleReportProfile = async () => {
+    if (isOwnProfile) return;
+    const reason = window.prompt('Bu kullanıcıyı neden bildirmek istiyorsun?');
+    if (!reason?.trim()) return;
+    const ok = await tattooStore.reportUser(profileUser.uid, profileUser.handle, reason);
+    onToast(ok ? 'Kullanıcı bildirildi. Moderasyon ekibine iletildi.' : 'Kullanıcı bildirilemedi.');
+  };
+
   const handleShareProfile = async () => {
     const shareUrl = window.location.href.split('#')[0] + '#profile=' + encodeURIComponent(profileUser.handle.replace(/^@/, ''));
     try {
@@ -800,9 +808,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span>Paylaş</span>
             </button>
 
+            {!isOwnProfile && (
+              <button
+                type="button"
+                onClick={handleReportProfile}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1d1d1d] border border-white/10 text-white text-xs font-semibold hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-300 transition-all cursor-pointer"
+                title="Bu profili bildir"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                <span>Bildir</span>
+              </button>
+            )}
+
             {isOwnProfile && (
               <button
-                onClick={onOpenCreate}
+                onClick={onOpenCreate
                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-white text-black text-xs font-bold hover:bg-[#EAEAEA] transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
