@@ -169,6 +169,43 @@ service cloud.firestore {
         request.auth.uid == resource.data.senderId;
     }
 
+    match /bookings/{bookingId} {
+      allow read: if signedIn() && (
+        resource.data.requesterUid == request.auth.uid ||
+        resource.data.artistUid == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if signedIn() &&
+        request.resource.data.requesterUid == request.auth.uid &&
+        request.resource.data.artistUid != request.auth.uid &&
+        request.resource.data.status == 'pending';
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        (
+          resource.data.artistUid == request.auth.uid &&
+          resource.data.status == 'pending' &&
+          request.resource.data.status in ['accepted', 'declined'] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'updatedAt'
+          ])
+        ) ||
+        (
+          resource.data.requesterUid == request.auth.uid &&
+          resource.data.status == 'pending' &&
+          request.resource.data.status == 'cancelled' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status',
+            'updatedAt'
+          ])
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
     match /typing/{typingId} {
       allow read: if signedIn() &&
         request.auth.uid in resource.data.participants;
