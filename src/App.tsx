@@ -702,6 +702,10 @@ function App() {
             setAdminPanelOpen(false);
             setSelectedTattoo(tattoo);
           }}
+          onOpenProfile={(handle) => {
+            setAdminPanelOpen(false);
+            handleSelectCreator(handle);
+          }}
           onToast={(msg) => setToastMessage(msg)}
         />
       )}
