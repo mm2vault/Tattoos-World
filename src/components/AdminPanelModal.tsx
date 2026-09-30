@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   ShieldCheck, Trash2, Edit3, Star, X, CheckCircle, 
-  Layers, Users, MessageSquare, AlertTriangle, Save, Plus 
+  Layers, Users, MessageSquare, AlertTriangle, Save, Plus, Ban 
 } from 'lucide-react';
 import { Tattoo, UserProfile, CategoryId } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -373,6 +373,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             {user.verified && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
                           </h4>
                           <p className="text-[11px] text-[#777777] font-mono truncate">{user.handle} · {user.email || 'e-posta yok'}</p>
+                          {Boolean((user as any).banned) && (
+                            <span className="inline-flex mt-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[9px] font-bold text-red-300">
+                              Engelli{String((user as any).banReason || '').trim() ? ' · ' + String((user as any).banReason).slice(0, 60) : ''}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -401,6 +406,39 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           className={`px-3 py-2 rounded-lg text-[11px] font-semibold border cursor-pointer ${user.isArtist ? 'bg-amber-500/15 border-amber-500/30 text-amber-300' : 'bg-white/5 border-white/10 text-white'}`}
                         >
                           {user.isArtist ? 'Sanatçı' : 'Kullanıcı'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={user.uid === currentUser.uid}
+                          onClick={() => {
+                            if (user.uid === currentUser.uid) return;
+                            const nextBanned = !Boolean((user as any).banned);
+                            let reason = '';
+                            if (nextBanned) {
+                              reason = window.prompt('Engelleme nedeni (isteğe bağlı):', '') || '';
+                            }
+                            const ok = tattooStore.adminToggleUserBan(user.uid, nextBanned, reason);
+                            if (ok) {
+                              setUsers((prev) => prev.map((item) => item.uid === user.uid
+                                ? { ...item, banned: nextBanned, banReason: nextBanned ? reason : '' } as UserProfile
+                                : item
+                              ));
+                              onToast(nextBanned ? 'Kullanıcı engellendi.' : 'Kullanıcının engeli kaldırıldı.');
+                            } else {
+                              onToast('Bu işlem yapılamadı.');
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-lg text-[11px] font-semibold border cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                            Boolean((user as any).banned)
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                              : 'bg-red-500/10 border-red-500/20 text-red-300'
+                          }`}
+                          title={user.uid === currentUser.uid ? 'Kendi hesabını engelleyemezsin' : (Boolean((user as any).banned) ? 'Engeli kaldır' : 'Kullanıcıyı engelle')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <Ban className="w-3 h-3" />
+                            {Boolean((user as any).banned) ? 'Engeli Kaldır' : 'Engelle'}
+                          </span>
                         </button>
                       </div>
                     </div>
