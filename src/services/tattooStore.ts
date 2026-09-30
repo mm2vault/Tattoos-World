@@ -1,4 +1,5 @@
 import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story, BookingRequest } from '../types';
+import { uploadDataUrl, uploadMediaBatch, estimateDataUrlBytes } from './mediaStorage';
 import { 
   auth, 
   googleProvider, 
