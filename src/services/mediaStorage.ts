@@ -11,6 +11,13 @@ const safeSegment = (value: string): string =>
 export const isDataUrl = (value: string): boolean =>
   typeof value === 'string' && DATA_URL_PATTERN.test(value);
 
+export const estimateDataUrlBytes = (value: string): number => {
+  const comma = String(value || '').indexOf(',');
+  if (comma < 0) return String(value || '').length;
+  const base64 = String(value).slice(comma + 1).replace(/\s/g, '');
+  return Math.ceil(base64.length * 0.75);
+};
+
 export async function uploadDataUrl(
   folder: string,
   uid: string,
