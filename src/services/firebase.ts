@@ -23,6 +23,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import { getStorage } from 'firebase/storage';
 
 // User's exact Firebase configuration
 export const firebaseConfig = {
@@ -45,6 +46,9 @@ export const db = (() => {
     return getFirestore(app);
   }
 })();
+
+// Firebase Storage is used for new media so large images never consume Firestore document space.
+export const storage = getStorage(app);
 
 // Enable permanent local auth persistence so login stays saved across reloads
 if (typeof window !== 'undefined') {
