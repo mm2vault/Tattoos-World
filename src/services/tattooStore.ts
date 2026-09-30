@@ -1448,11 +1448,9 @@ class TattooStoreService {
       ...(tattoo?.id ? { tattooId: tattoo.id } : {}),
       ...(tattoo?.title ? { tattooTitle: tattoo.title } : {}),
     };
-    this.notifications.unshift(notification);
-    this.notifications = this.notifications.slice(0, 100);
-    this.saveNotifications();
+    // Notifications belong to the recipient. Keep outgoing events out of the sender's inbox.
+    // The recipient receives the document through syncNotificationsFromFirestore().
     setDoc(doc(db, 'notifications', notification.id), notification).catch(() => {});
-    this.emitNotificationUpdate();
   }
 
   // ================= BOOKING / APPOINTMENTS =================
