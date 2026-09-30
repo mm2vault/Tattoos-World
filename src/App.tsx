@@ -435,6 +435,31 @@ function App() {
   // Profile navigation keeps a sanitized public profile selected for mobile search results.
 
   const isUserAdminActive = tattooStore.isCurrentUserAdmin();
+  const isUserBanned = tattooStore.isCurrentUserBanned();
+
+  if (isAuthenticated && isUserBanned && !isUserAdminActive) {
+    return (
+      <div className="min-h-screen bg-[#070707] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-3xl border border-red-500/20 bg-[#101010] p-6 text-center shadow-2xl">
+          <div className="w-14 h-14 mx-auto rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl">⛔</div>
+          <h1 className="text-lg font-bold mt-4">Hesabın geçici olarak engellendi</h1>
+          <p className="text-sm text-[#888] mt-2 leading-relaxed">
+            Bu hesap moderasyon nedeniyle Tattoos World üzerinde işlem yapamıyor.
+            {String((currentUser as any).banReason || '').trim() && (
+              <><br /><span className="text-[#aaa]">Sebep: {(currentUser as any).banReason}</span></>
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-5 px-5 py-2.5 rounded-xl bg-white text-black text-xs font-bold cursor-pointer"
+          >
+            Çıkış Yap
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 1. WELCOME SCREEN (When not logged in and never entered before)
   if (!isAuthenticated) {
