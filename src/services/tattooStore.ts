@@ -450,12 +450,22 @@ class TattooStoreService {
 
     const now = new Date();
     const storyId = 'story_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const uploadedMediaUrl = await uploadDataUrl(
-      'stories',
-      auth.currentUser.uid,
-      mediaUrl,
-      `${storyId}.jpg`,
-    );
+    let uploadedMediaUrl = mediaUrl;
+
+    try {
+      uploadedMediaUrl = await uploadDataUrl(
+        'stories',
+        auth.currentUser.uid,
+        mediaUrl,
+        `${storyId}.jpg`,
+      );
+    } catch (error) {
+      // Small legacy-compatible stories can still fall back to Firestore while
+      // Storage is being enabled; oversized stories are blocked instead.
+      if (estimateDataUrlBytes(mediaUrl) > 700 * 1024) {
+        throw error;
+      }
+    }
 
     const story: Story = {
       id: storyId,
@@ -1770,18 +1780,28 @@ class TattooStoreService {
     const media = [data.image, ...(data.additionalImages || [])].filter(Boolean);
     if (!media.length) throw new Error('En az bir görsel gerekli.');
 
-    const uploaded = await uploadMediaBatch(
-      'tattoos',
-      auth.currentUser.uid,
-      media,
-      `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    );
+    try {
+      const uploaded = await uploadMediaBatch(
+        'tattoos',
+        auth.currentUser.uid,
+        media,
+        `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      );
 
-    return {
-      ...data,
-      image: uploaded[0] || data.image,
-      additionalImages: uploaded.slice(1),
-    };
+      return {
+        ...data,
+        image: uploaded[0] || data.image,
+        additionalImages: uploaded.slice(1),
+      };
+    } catch (error) {
+      // Keep small posts working as a compatibility fallback if the Firebase
+      // Storage bucket is not enabled yet. Large media still requires Storage.
+      const fallbackBytes = media.reduce((total, src) => total + estimateDataUrlBytes(src), 0);
+      if (fallbackBytes <= 700 * 1024) {
+        return data;
+      }
+      throw error;
+    }
   }
 
   public createTattoo(data: {
