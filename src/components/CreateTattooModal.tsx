@@ -121,7 +121,7 @@ export const CreateTattooModal: React.FC<CreateTattooModalProps> = ({
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (imagePreviews.length === 0) {
       setErrorMsg('Lütfen bir dövme görseli yükleyin.');
