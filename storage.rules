@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.email == 'mm2ultimatehub@gmail.com' ||
+        request.auth.token.email == 'huseyinoveleddin87@gmail.com'
+      );
+    }
+
+    function activeUser() {
+      return signedIn() && (
+        isAdmin() ||
+        !exists(/databases/(default)/documents/users/$(request.auth.uid)) ||
+        get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('banned', false) != true
+      );
+    }
+
+    match /tattoos/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if activeUser()
+        && (request.auth.uid == uid || isAdmin())
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if activeUser() && (request.auth.uid == uid || isAdmin());
+    }
+
+    match /stories/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if activeUser()
+        && (request.auth.uid == uid || isAdmin())
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if activeUser() && (request.auth.uid == uid || isAdmin());
+    }
+
+    match /profiles/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if activeUser()
+        && (request.auth.uid == uid || isAdmin())
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if activeUser() && (request.auth.uid == uid || isAdmin());
+    }
+  }
+}
