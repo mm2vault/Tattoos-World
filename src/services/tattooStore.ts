@@ -978,6 +978,55 @@ class TattooStoreService {
    * Checks if current active user is verified Master Admin.
    * STRICT SECURITY: Only true if Firebase Auth actively confirms the admin's email.
    */
+  public isCurrentUserBanned(): boolean {
+    return !this.isCurrentUserAdmin() && Boolean((this.currentUser as any).banned);
+  }
+
+  public adminToggleUserBan(uid: string, banned: boolean, reason = ''): boolean {
+    if (!this.isCurrentUserAdmin() || !uid || uid === this.currentUser.uid) return false;
+
+    const updates: Record<string, any> = {
+      banned,
+      banReason: banned ? String(reason || '').trim().slice(0, 300) : '',
+      bannedAt: banned ? new Date().toISOString() : '',
+      bannedBy: banned ? this.currentUser.uid : '',
+    };
+
+    const target = this.publicUserProfiles[String(uid).toLowerCase()];
+    if (target) {
+      (target as any).banned = banned;
+      (target as any).banReason = updates.banReason;
+    }
+
+    setDoc(doc(db, 'users', uid), updates, { merge: true }).catch((err) => {
+      console.warn('Admin ban update failed:', err);
+    });
+    return true;
+  }
+
+  public async reportUser(targetUid: string, targetHandle: string, reason: string): Promise<boolean> {
+    if (!auth.currentUser || !targetUid || targetUid === auth.currentUser.uid || !reason.trim()) return false;
+    try {
+      const reportId = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      await setDoc(doc(db, 'reports', reportId), {
+        id: reportId,
+        type: 'user',
+        targetId: targetUid,
+        targetHandle: targetHandle,
+        reporterUid: auth.currentUser.uid,
+        reporterName: this.currentUser.displayName,
+        reporterHandle: this.currentUser.handle,
+        reason: reason.trim().slice(0, 500),
+        createdAt: new Date().toISOString(),
+        status: 'open',
+      });
+      return true;
+    } catch (err) {
+      console.warn('User report submission failed:', err);
+      return false;
+    }
+  }
+
   public isCurrentUserAdmin(): boolean {
     const authEmail = auth.currentUser?.email;
     if (authEmail && isUserAdmin(authEmail)) {
