@@ -759,10 +759,26 @@ class TattooStoreService {
         };
         this.currentUser = merged;
         this.saveUser();
-        await setDoc(userRef, {
-          ...merged,
+        // Firestore rules intentionally restrict normal users to profile fields.
+        // Never write protected fields such as role, verified, isAdmin, or counters
+        // back from the client during a normal profile sync.
+        const profilePatch = {
+          displayName: merged.displayName,
+          handle: merged.handle,
+          bio: merged.bio,
+          photoURL: merged.photoURL,
+          bannerURL: merged.bannerURL || '',
+          instagram: merged.instagram,
+          tiktok: merged.tiktok,
+          discord: merged.discord,
+          website: merged.website,
+          customLinks: Array.isArray(merged.customLinks) ? merged.customLinks : [],
+          profilePublic: merged.profilePublic !== false,
+          savedTattooIds: Array.isArray(merged.savedTattooIds) ? merged.savedTattooIds : [],
+          settings: merged.settings || {},
           lastLoginAt: new Date().toISOString(),
-        }, { merge: true });
+        };
+        await setDoc(userRef, profilePatch, { merge: true });
         return merged;
       } else {
         await setDoc(userRef, {
@@ -1168,11 +1184,30 @@ class TattooStoreService {
         .catch(() => {});
     }
 
-    // Sync in Firestore
-    try {
-      const userRef = doc(db, 'users', this.currentUser.uid);
-      setDoc(userRef, this.currentUser, { merge: true }).catch(() => {});
-    } catch (e) {}
+    // Sync only fields that normal users are allowed to edit.
+    // Writing the entire UserProfile here would make Firestore reject the update
+    // because role/verified/counters are protected fields.
+    if (auth.currentUser) {
+      const profilePatch = {
+        displayName: this.currentUser.displayName,
+        handle: this.currentUser.handle,
+        handleChangedAt: handleChanged ? new Date().toISOString() : undefined,
+        bio: this.currentUser.bio,
+        photoURL: this.currentUser.photoURL,
+        bannerURL: this.currentUser.bannerURL || '',
+        instagram: this.currentUser.instagram,
+        tiktok: this.currentUser.tiktok,
+        discord: this.currentUser.discord,
+        website: this.currentUser.website,
+        customLinks: Array.isArray(this.currentUser.customLinks) ? this.currentUser.customLinks : [],
+        profilePublic: this.currentUser.profilePublic !== false,
+        savedTattooIds: Array.isArray(this.currentUser.savedTattooIds) ? this.currentUser.savedTattooIds : [],
+        settings: this.currentUser.settings || {},
+      };
+      setDoc(doc(db, 'users', auth.currentUser.uid), profilePatch, { merge: true }).catch((err) => {
+        console.warn('Profile sync skipped:', err);
+      });
+    }
 
     window.dispatchEvent(new Event('tattoos-world-user-updated'));
     window.dispatchEvent(new Event('tattoos-world-community-updated'));
