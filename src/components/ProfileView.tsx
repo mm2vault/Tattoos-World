@@ -7,9 +7,9 @@ import {
   Edit3, Heart, Image as ImageIcon, X, Save, 
   Camera, Trash2, Plus, Upload, ShieldCheck,
   ExternalLink, Link as LinkIcon, Check, AlertCircle, MessageCircle, Share2,
-  Grid3X3, Bookmark, Info as InfoIcon, Users
+  Grid3X3, Bookmark, Info as InfoIcon, Users, CalendarDays, Clock
 } from 'lucide-react';
-import { Tattoo, UserProfile, SupportedLanguage, SavedCollection } from '../types';
+import { Tattoo, UserProfile, SupportedLanguage, SavedCollection, BookingRequest } from '../types';
 import { tattooStore } from '../services/tattooStore';
 import { 
   detectPlatform, 
@@ -75,12 +75,91 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const [socialLoading, setSocialLoading] = useState(false);
   const [socialSearch, setSocialSearch] = useState('');
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingSending, setBookingSending] = useState(false);
+  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   React.useEffect(() => {
     setIsFollowing(tattooStore.isFollowing(profileUser.handle));
     setFollowerCount(tattooStore.getFollowerCount(profileUser.handle));
     setFollowingCount(tattooStore.getProfileFollowingCount(profileUser.handle));
   }, [profileUser.handle]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadBookings = async () => {
+      if (!isOwnProfile) {
+        setBookingRequests([]);
+        return;
+      }
+      setBookingLoading(true);
+      try {
+        const mode = profileUser.isArtist ? 'incoming' : 'outgoing';
+        const list = await tattooStore.getBookingRequestsForUser(mode);
+        if (!cancelled) setBookingRequests(list);
+      } finally {
+        if (!cancelled) setBookingLoading(false);
+      }
+    };
+    loadBookings();
+    return () => { cancelled = true; };
+  }, [isOwnProfile, profileUser.isArtist, profileUser.uid]);
+
+  const openBookingModal = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setBookingDate(today);
+    setBookingTime('12:00');
+    setBookingMessage('');
+    setBookingModalOpen(true);
+  };
+
+  const refreshBookings = async () => {
+    if (!isOwnProfile) return;
+    const mode = profileUser.isArtist ? 'incoming' : 'outgoing';
+    setBookingRequests(await tattooStore.getBookingRequestsForUser(mode));
+  };
+
+  const handleSendBooking = async () => {
+    if (!bookingDate || !bookingTime) {
+      onToast('Lütfen tarih ve saat seç.');
+      return;
+    }
+    setBookingSending(true);
+    try {
+      const created = await tattooStore.createBookingRequest(
+        profileUser,
+        bookingDate,
+        bookingTime,
+        bookingMessage
+      );
+      if (!created) {
+        onToast('Randevu talebi gönderilemedi.');
+        return;
+      }
+      setBookingModalOpen(false);
+      onToast('Randevu talebi gönderildi.');
+    } finally {
+      setBookingSending(false);
+    }
+  };
+
+  const handleBookingStatus = async (
+    booking: BookingRequest,
+    status: 'accepted' | 'declined' | 'cancelled'
+  ) => {
+    const ok = await tattooStore.updateBookingStatus(booking.id, status);
+    if (!ok) {
+      onToast('Randevu durumu güncellenemedi.');
+      return;
+    }
+    await refreshBookings();
+    const label = status === 'accepted' ? 'kabul edildi' : status === 'declined' ? 'reddedildi' : 'iptal edildi';
+    onToast('Randevu talebi ' + label + '.');
+  };
 
   const openSocialModal = async (mode: 'followers' | 'following') => {
     setSocialModal(mode);
@@ -650,10 +729,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <span key={style} className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] text-[#aaa]">{style}</span>
                   ))}
                 </div>
-                {!isOwnProfile && onOpenMessages && (
-                  <button type="button" onClick={() => onOpenMessages(profileUser.handle)} className="mt-3 w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-black text-[10px] font-bold cursor-pointer">
-                    Randevu / İletişim
-                  </button>
+                {!isOwnProfile && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={openBookingModal} className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-black text-[10px] font-bold cursor-pointer">
+                      Randevu İste
+                    </button>
+                    {onOpenMessages && (
+                      <button type="button" onClick={() => onOpenMessages(profileUser.handle)} className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#1d1d1d] border border-white/10 text-white text-[10px] font-bold cursor-pointer">
+                        Mesaj Gönder
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -778,6 +864,72 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
       </div>
+
+      {isOwnProfile && (
+        <section className="mt-5 rounded-2xl border border-white/10 bg-[#101010] overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-white">{profileUser.isArtist ? 'Gelen Randevu Talepleri' : 'Randevu Taleplerim'}</h3>
+              <p className="text-[10px] text-[#666] mt-0.5">{bookingRequests.length} talep</p>
+            </div>
+            <CalendarDays className="w-4 h-4 text-[#777]" />
+          </div>
+          {bookingLoading ? (
+            <div className="px-4 py-8 text-center text-xs text-[#666]">Talepler yükleniyor...</div>
+          ) : bookingRequests.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-[#666]">
+              {profileUser.isArtist ? 'Henüz randevu talebi yok.' : 'Henüz bir randevu talebi göndermedin.'}
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {bookingRequests.slice(0, 20).map((booking) => (
+                <div key={booking.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={profileUser.isArtist ? booking.requesterPhoto : (booking.artistUid === profileUser.uid ? profileUser.photoURL : './images/users/avatar_inkedlife.jpg')}
+                      alt=""
+                      className="w-9 h-9 rounded-full object-cover border border-white/10 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-bold text-white">{profileUser.isArtist ? booking.requesterName : booking.artistName}</p>
+                          <p className="text-[10px] text-[#666]">{profileUser.isArtist ? booking.requesterHandle : booking.artistHandle}</p>
+                        </div>
+                        <span className={`shrink-0 text-[9px] font-bold px-2 py-1 rounded-full border ${
+                          booking.status === 'accepted'
+                            ? 'text-emerald-300 border-emerald-400/20 bg-emerald-400/5'
+                            : booking.status === 'declined'
+                              ? 'text-red-300 border-red-400/20 bg-red-400/5'
+                              : booking.status === 'cancelled'
+                                ? 'text-[#777] border-white/10 bg-white/5'
+                                : 'text-amber-300 border-amber-400/20 bg-amber-400/5'
+                        }`}>
+                          {booking.status === 'accepted' ? 'Kabul edildi' : booking.status === 'declined' ? 'Reddedildi' : booking.status === 'cancelled' ? 'İptal edildi' : 'Bekliyor'}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[#aaa]">
+                        <span className="inline-flex items-center gap-1"><CalendarDays className="w-3 h-3" />{booking.preferredDate}</span>
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{booking.preferredTime}</span>
+                      </div>
+                      {booking.message && <p className="mt-2 text-[11px] text-[#888] leading-relaxed">{booking.message}</p>}
+                      {profileUser.isArtist && booking.status === 'pending' && (
+                        <div className="mt-3 flex gap-2">
+                          <button type="button" onClick={() => handleBookingStatus(booking, 'accepted')} className="px-3 py-1.5 rounded-lg bg-white text-black text-[10px] font-bold cursor-pointer">Kabul Et</button>
+                          <button type="button" onClick={() => handleBookingStatus(booking, 'declined')} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-[10px] font-bold cursor-pointer">Reddet</button>
+                        </div>
+                      )}
+                      {!profileUser.isArtist && booking.status === 'pending' && (
+                        <button type="button" onClick={() => handleBookingStatus(booking, 'cancelled')} className="mt-3 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[#aaa] text-[10px] font-bold cursor-pointer">Talebi İptal Et</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Tabs: Instagram-style on mobile */}
       <div className="flex items-center justify-around border-b border-white/10 text-xs font-semibold">
@@ -1043,6 +1195,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {bookingModalOpen && (
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#121212] shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Randevu İste</h3>
+                <p className="text-[10px] text-[#666] mt-0.5">{profileUser.displayName} · {profileUser.handle}</p>
+              </div>
+              <button type="button" onClick={() => setBookingModalOpen(false)} className="p-2 text-[#777] hover:text-white cursor-pointer" aria-label="Kapat"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <label className="block">
+                <span className="block text-[10px] font-semibold text-[#777] mb-1">Tercih edilen tarih</span>
+                <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} min={new Date().toISOString().slice(0, 10)} className="w-full h-10 rounded-xl bg-white/5 border border-white/10 px-3 text-xs text-white outline-none" />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-semibold text-[#777] mb-1">Tercih edilen saat</span>
+                <input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} className="w-full h-10 rounded-xl bg-white/5 border border-white/10 px-3 text-xs text-white outline-none" />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-semibold text-[#777] mb-1">Not</span>
+                <textarea value={bookingMessage} onChange={(e) => setBookingMessage(e.target.value)} maxLength={1000} rows={4} placeholder="Dövmenin fikrini, boyutunu veya özel isteğini yaz..." className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-xs text-white placeholder:text-[#555] outline-none resize-none" />
+              </label>
+            </div>
+            <div className="px-4 py-3 border-t border-white/10 flex gap-2">
+              <button type="button" onClick={() => setBookingModalOpen(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-[#aaa] cursor-pointer">Vazgeç</button>
+              <button type="button" onClick={handleSendBooking} disabled={bookingSending} className="flex-1 py-2.5 rounded-xl bg-white text-black text-xs font-bold cursor-pointer disabled:opacity-50">
+                {bookingSending ? 'Gönderiliyor...' : 'Talebi Gönder'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
