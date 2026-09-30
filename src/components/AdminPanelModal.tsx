@@ -12,6 +12,7 @@ interface AdminPanelModalProps {
   currentUser: UserProfile;
   onTattooUpdated: () => void;
   onSelectTattoo?: (tattoo: Tattoo) => void;
+  onOpenProfile?: (handle: string) => void;
   onToast: (msg: string) => void;
 }
 
@@ -21,6 +22,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   currentUser,
   onTattooUpdated,
   onSelectTattoo,
+  onOpenProfile,
   onToast,
 }) => {
   const [activeTab, setActiveTab] = useState<'tattoos' | 'users' | 'comments' | 'reports'>('tattoos');
@@ -483,11 +485,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             <span className="font-bold">{report.reporterName || 'Kullanıcı'}</span> tarafından bildirildi
                           </p>
                           <p className="text-[11px] text-[#AAAAAA] mt-1 break-words">{report.reason}</p>
-                          {targetTattoo && (
+                          {targetTattoo ? (
                             <p className="text-[10px] text-[#666] mt-1 truncate">
                               Hedef: {targetTattoo.title} · {targetTattoo.creatorHandle}
                             </p>
-                          )}
+                          ) : report.type === 'user' ? (
+                            <p className="text-[10px] text-amber-300/70 mt-1 truncate">
+                              Hedef kullanıcı: {String((report as any).targetHandle || report.targetId)}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -501,6 +507,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white hover:bg-white/10 cursor-pointer"
                             >
                               Gönderiyi Bul
+                            </button>
+                          )}
+                          {report.type === 'user' && onOpenProfile && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onOpenProfile(String((report as any).targetHandle || ''));
+                                onClose();
+                              }}
+                              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white hover:bg-white/10 cursor-pointer"
+                            >
+                              Kullanıcıyı Aç
                             </button>
                           )}
                           {report.status !== 'reviewed' && (
