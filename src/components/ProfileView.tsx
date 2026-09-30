@@ -822,7 +822,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             {isOwnProfile && (
               <button
-                onClick={onOpenCreate
+                onClick={onOpenCreate}
                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-white text-black text-xs font-bold hover:bg-[#EAEAEA] transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
