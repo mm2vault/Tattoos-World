@@ -1,4 +1,4 @@
-import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story } from '../types';
+import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story, BookingRequest } from '../types';
 import { 
   auth, 
   googleProvider, 
