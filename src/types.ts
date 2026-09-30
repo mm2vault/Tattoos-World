@@ -69,6 +69,24 @@ export interface Story {
   [key: string]: any;
 }
 
+export interface BookingRequest {
+  id: string;
+  requesterUid: string;
+  requesterName: string;
+  requesterHandle: string;
+  requesterPhoto: string;
+  artistUid: string;
+  artistName: string;
+  artistHandle: string;
+  preferredDate: string;
+  preferredTime: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+  [key: string]: any;
+}
+
 export interface Notification {
   id: string;
   recipientUid: string;
@@ -76,7 +94,7 @@ export interface Notification {
   senderName: string;
   senderHandle: string;
   senderAvatar: string;
-  type: 'like' | 'comment' | 'follow' | 'new_post' | 'message';
+  type: 'like' | 'comment' | 'follow' | 'new_post' | 'message' | 'booking';
   tattooId?: string;
   tattooTitle?: string;
   text: string;
