@@ -28,7 +28,17 @@ service cloud.firestore {
         isAdmin() ||
         resource.data.get('profilePublic', true) == true
       );
-      allow create: if signedIn() && request.auth.uid == uid;
+      allow create: if activeUser() && request.auth.uid == uid && (
+        isAdmin() ||
+        (
+          request.resource.data.get('role', 'user') == 'user' &&
+          request.resource.data.get('verified', false) == false &&
+          request.resource.data.get('isAdmin', false) == false &&
+          request.resource.data.get('banned', false) == false &&
+          request.resource.data.get('followersCount', 0) == 0 &&
+          request.resource.data.get('followingCount', 0) == 0
+        )
+      );
       allow update: if activeUser() && (
         isAdmin() ||
         (
