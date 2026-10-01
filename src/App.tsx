@@ -340,7 +340,7 @@ function App() {
   }) => {
     try {
       const mediaReady = await tattooStore.prepareTattooMedia(data);
-      const newTattoo = tattooStore.createTattoo(mediaReady);
+      const newTattoo = await tattooStore.createTattoo(mediaReady);
       setTattoos(tattooStore.getTattoos());
       setToastMessage('Dövme başarıyla paylaşıldı.');
       setSelectedTattoo(newTattoo);
