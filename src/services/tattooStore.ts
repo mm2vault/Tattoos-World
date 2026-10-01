@@ -1915,6 +1915,16 @@ class TattooStoreService {
 
   public toggleFollow(handle: string): boolean {
     const key = handle.trim().toLowerCase();
+    if (!key) return false;
+
+    // A user cannot follow their own profile. Keep this guard here so every
+    // follow entry point gets the same Instagram-style behavior.
+    const ownHandle = String(this.currentUser.handle || '').trim().toLowerCase();
+    if (ownHandle && key === ownHandle) return false;
+
+    const profile = this.getArtistProfile(handle);
+    if (profile?.uid === this.currentUser.uid) return false;
+
     let nowFollowing = false;
     if (this.follows.has(key)) {
       this.follows.delete(key);
