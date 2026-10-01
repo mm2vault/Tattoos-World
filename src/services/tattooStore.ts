@@ -1864,7 +1864,7 @@ class TattooStoreService {
     }
   }
 
-  public createTattoo(data: {
+  public async createTattoo(data: {
     title: string;
     category: CategoryId;
     categoryName: string;
@@ -1906,31 +1906,38 @@ class TattooStoreService {
       }
     };
 
+    // Firestore is the source of truth for community posts. Do not report
+    // success until the post is actually persisted.
+    try {
+      await setDoc(doc(db, 'tattoos', newTattoo.id), newTattoo);
+    } catch (error) {
+      console.warn('Tattoo publish failed:', error);
+      throw new Error('Dövme gönderisi sunucuya kaydedilemedi. Lütfen tekrar dene.');
+    }
+
     this.tattoos.unshift(newTattoo);
     this.saveTattoos();
 
-    // Firestore sync
+    // Notify followers when the creator publishes a new tattoo, respecting their
+    // "Takip Edilen Sanatçılar" notification preference.
     try {
-      setDoc(doc(db, 'tattoos', newTattoo.id), newTattoo).catch(() => {});
-
-      // Notify followers when the creator publishes a new tattoo, respecting their
-      // "Takip Edilen Sanatçılar" notification preference.
-      getDocs(query(collection(db, 'follows'), where('handle', '==', this.currentUser.handle)))
-        .then((snap) => {
-          snap.docs.forEach((item) => {
-            const followerUid = String(item.data().uid || '');
-            if (followerUid && followerUid !== this.currentUser.uid) {
-              this.createNotification(
-                followerUid,
-                'new_post',
-                `${this.currentUser.handle} yeni bir dövme paylaştı.`,
-                newTattoo
-              );
-            }
-          });
-        })
-        .catch(() => {});
-    } catch (e) {}
+      const snap = await getDocs(
+        query(collection(db, 'follows'), where('handle', '==', this.currentUser.handle))
+      );
+      snap.docs.forEach((item) => {
+        const followerUid = String(item.data().uid || '');
+        if (followerUid && followerUid !== this.currentUser.uid) {
+          this.createNotification(
+            followerUid,
+            'new_post',
+            `${this.currentUser.handle} yeni bir dövme paylaştı.`,
+            newTattoo
+          );
+        }
+      });
+    } catch {
+      // Publishing already succeeded; follower notifications are best-effort.
+    }
 
     return newTattoo;
   }
