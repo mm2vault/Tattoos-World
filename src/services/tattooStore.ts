@@ -781,12 +781,38 @@ class TattooStoreService {
         await setDoc(userRef, profilePatch, { merge: true });
         return merged;
       } else {
-        await setDoc(userRef, {
-          ...user,
+        // New accounts may only self-create a safe profile document. Privileged
+        // fields such as role/verified/isAdmin are assigned from Firebase Auth/admin rules.
+        const safeProfile = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName,
+          handle: user.handle,
+          bio: user.bio,
+          photoURL: user.photoURL,
+          bannerURL: user.bannerURL || '',
+          instagram: user.instagram,
+          tiktok: user.tiktok,
+          discord: user.discord,
+          website: user.website,
+          customLinks: Array.isArray(user.customLinks) ? user.customLinks : [],
+          profilePublic: user.profilePublic !== false,
+          savedTattooIds: Array.isArray(user.savedTattooIds) ? user.savedTattooIds : [],
+          settings: user.settings || {},
+          isArtist: Boolean(user.isArtist),
+          verified: false,
+          role: 'user',
+          isAdmin: false,
+          followersCount: 0,
+          followingCount: 0,
           createdAt: user.createdAt || new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
-        }, { merge: true });
-        return user;
+        };
+        await setDoc(userRef, safeProfile, { merge: true });
+        return {
+          ...user,
+          ...safeProfile,
+        };
       }
     } catch (err) {
       console.warn('Firestore sync note:', err);
@@ -1337,7 +1363,7 @@ class TattooStoreService {
   public async getAllUsers(): Promise<UserProfile[]> {
     if (!this.isCurrentUserAdmin()) return [];
     try {
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await getDocs(query(collection(db, 'users'), where('profilePublic', '==', true)));
       return snap.docs
         .map((item) => item.data() as UserProfile)
         .filter((user) => Boolean(user?.uid))
@@ -2179,7 +2205,7 @@ class TattooStoreService {
           // dropping them from the list.
           try {
             const userSnap = await getDocs(
-              query(collection(db, 'users'), where('handle', '==', handle))
+              query(collection(db, 'users'), where('handle', '==', handle), where('profilePublic', '==', true))
             );
             const userDoc = userSnap.docs[0];
             if (!userDoc) return null;
@@ -2230,7 +2256,7 @@ class TattooStoreService {
 
     try {
       const normalized = cleanHandle.replace(/^@/, '').toLowerCase();
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await getDocs(query(collection(db, 'users'), where('profilePublic', '==', true)));
       const docSnap = snap.docs.find((item) => {
         const data = item.data() as Partial<UserProfile>;
         const value = String(data.handle || '').replace(/^@/, '').toLowerCase();
