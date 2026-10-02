@@ -1363,7 +1363,7 @@ class TattooStoreService {
   public async getAllUsers(): Promise<UserProfile[]> {
     if (!this.isCurrentUserAdmin()) return [];
     try {
-      const snap = await getDocs(query(collection(db, 'users'), where('profilePublic', '==', true)));
+      const snap = await getDocs(collection(db, 'users'));
       return snap.docs
         .map((item) => item.data() as UserProfile)
         .filter((user) => Boolean(user?.uid))
@@ -1899,7 +1899,7 @@ class TattooStoreService {
       creatorId: this.currentUser.uid,
       creatorName: this.currentUser.displayName,
       creatorHandle: this.currentUser.handle,
-      creatorPhoto: this.currentUser.photoURL,
+      creatorPhoto: compactCreatorPhoto,
       creatorRole: this.isCurrentUserAdmin() ? 'Master Admin' : (this.currentUser.isArtist ? 'Sanatçı' : 'Koleksiyoner'),
       creatorVerified: this.currentUser.verified || this.isCurrentUserAdmin(),
       creatorProfilePublic: this.currentUser.profilePublic !== false,
