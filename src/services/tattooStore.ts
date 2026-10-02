@@ -1,5 +1,5 @@
 import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story, BookingRequest } from '../types';
-import { uploadDataUrl, uploadMediaBatch, estimateDataUrlBytes } from './mediaStorage';
+import { uploadDataUrl, uploadMediaBatch, estimateDataUrlBytes, optimizeDataUrlForFirestore } from './mediaStorage';
 import { 
   auth, 
   googleProvider, 
@@ -473,7 +473,7 @@ class TattooStoreService {
       creatorId: auth.currentUser.uid,
       creatorName: this.currentUser.displayName,
       creatorHandle: this.currentUser.handle,
-      creatorPhoto: this.currentUser.photoURL,
+      creatorPhoto: compactCreatorPhoto,
       mediaUrl: uploadedMediaUrl,
       mediaType: 'image',
       text: text?.trim().slice(0, 140) || '',
@@ -1878,7 +1878,16 @@ class TattooStoreService {
       discord?: string;
       website?: string;
     };
-  }): Tattoo {
+  }): Promise<Tattoo> {
+    let compactCreatorPhoto = this.currentUser.photoURL || './images/users/avatar_inkedlife.jpg';
+    if (isDataUrl(compactCreatorPhoto)) {
+      try {
+        compactCreatorPhoto = await optimizeDataUrlForFirestore(compactCreatorPhoto, 96 * 1024, 320);
+      } catch {
+        compactCreatorPhoto = './images/users/avatar_inkedlife.jpg';
+      }
+    }
+
     const newTattoo: Tattoo = {
       id: 'tattoo_' + Date.now(),
       title: data.title,
