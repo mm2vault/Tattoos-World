@@ -203,6 +203,7 @@ class TattooStoreService {
                 };
                 this.saveUser();
                 this.syncCommunityFromFirestore(true).catch(() => {});
+                this.syncCurrentUserLikes(true).catch(() => {});
                 window.dispatchEvent(new Event('tattoos-world-user-updated'));
               } else {
                 this.currentUser = {
