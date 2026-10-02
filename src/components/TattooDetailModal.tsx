@@ -36,6 +36,22 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
   const [showLikeBurst, setShowLikeBurst] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    tattooStore.syncCommentsForTattoo(tattoo.id).then((remoteComments) => {
+      if (!cancelled) setComments(remoteComments);
+    });
+
+    setIsLiked(tattooStore.isLiked(tattoo.id, currentUser.uid));
+    setIsSaved(tattooStore.isSaved(tattoo.id));
+    setIsFollowing(tattooStore.isFollowing(tattoo.creatorHandle));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tattoo.id, tattoo.creatorHandle, currentUser.uid]);
+
   // Show the cover plus the extra photos uploaded with this tattoo (max 10 total).
   const thumbnails = React.useMemo(() => {
     const list = [tattoo.image, ...(tattoo.additionalImages || [])];
