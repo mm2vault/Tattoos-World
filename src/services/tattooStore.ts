@@ -478,7 +478,7 @@ class TattooStoreService {
       creatorId: auth.currentUser.uid,
       creatorName: this.currentUser.displayName,
       creatorHandle: this.currentUser.handle,
-      creatorPhoto: compactCreatorPhoto,
+      creatorPhoto: this.currentUser.photoURL,
       mediaUrl: uploadedMediaUrl,
       mediaType: 'image',
       text: text?.trim().slice(0, 140) || '',
