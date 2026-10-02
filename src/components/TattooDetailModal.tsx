@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   X, Heart, MessageSquare, Share2, Bookmark, Flag, 
   ChevronLeft, ChevronRight, Sparkles, Trash2, ShieldCheck, Pencil 
