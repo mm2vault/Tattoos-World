@@ -76,7 +76,7 @@ const optimizeDataUrl = async (
           }
         }
 
-        side = Math.max(360, Math.round(side * 0.78));
+        side = Math.max(180, Math.round(side * 0.78));
       }
 
       if (estimateDataUrlBytes(best) <= maxBytes) {
