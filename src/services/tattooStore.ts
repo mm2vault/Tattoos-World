@@ -59,6 +59,9 @@ class TattooStoreService {
   private notifications: Notification[] = [];
   private publicUserProfiles: Record<string, UserProfile> = {};
   private stories: Story[] = [];
+  private communitySyncPromise: Promise<void> | null = null;
+  private lastCommunitySyncAt = 0;
+  private static readonly COMMUNITY_SYNC_COOLDOWN_MS = 45_000;
 
   private static readonly INTERACTION_RESET_KEY = 'tattos_world_interactions_reset_v2';
   private static readonly SEED_CLEANUP_KEY = 'tattos_world_seed_cleanup_v3';
@@ -617,8 +620,18 @@ class TattooStoreService {
     }
   }
 
-  public async syncCommunityFromFirestore(): Promise<void> {
-    try {
+  public async syncCommunityFromFirestore(force = false): Promise<void> {
+    const now = Date.now();
+    if (!force && now - this.lastCommunitySyncAt < TattooStoreService.COMMUNITY_SYNC_COOLDOWN_MS) {
+      return;
+    }
+
+    if (this.communitySyncPromise) {
+      return this.communitySyncPromise;
+    }
+
+    this.communitySyncPromise = (async () => {
+      try {
       const [tattooSnap, commentSnap, likeSnap] = await Promise.all([
         getDocs(collection(db, 'tattoos')),
         getDocs(collection(db, 'comments')),
@@ -736,9 +749,15 @@ class TattooStoreService {
       }
 
       window.dispatchEvent(new Event('tattoos-world-community-updated'));
-    } catch (err) {
-      console.warn('Community Firestore sync skipped:', err);
-    }
+      this.lastCommunitySyncAt = Date.now();
+      } catch (err) {
+        console.warn('Community Firestore sync skipped:', err);
+      } finally {
+        this.communitySyncPromise = null;
+      }
+    })();
+
+    return this.communitySyncPromise;
   }
 
   /**
