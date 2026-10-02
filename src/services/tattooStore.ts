@@ -633,11 +633,7 @@ class TattooStoreService {
 
     this.communitySyncPromise = (async () => {
       try {
-      const [tattooSnap, commentSnap, likeSnap] = await Promise.all([
-        getDocs(collection(db, 'tattoos')),
-        getDocs(collection(db, 'comments')),
-        getDocs(collection(db, 'likes')),
-      ]);
+      const tattooSnap = await getDocs(collection(db, 'tattoos'));
       const followSnap = await getDocs(collection(db, 'follows')).catch(() => null);
 
       const legacyIds = new Set(['tattoo_1','tattoo_2','tattoo_3','tattoo_4','tattoo_5','tattoo_6','tattoo_7']);
@@ -684,50 +680,9 @@ class TattooStoreService {
       });
       this.saveTattoos();
 
-      // Remote Firestore is the source of truth for interaction counts.
-      this.comments = {};
-      this.userLikes = {};
-      this.tattoos.forEach((t) => {
-        t.likesCount = 0;
-        t.commentsCount = 0;
-      });
-
-      const remoteComments: Record<string, Comment[]> = {};
-      commentSnap.docs.forEach((d) => {
-        const value = d.data() as Comment;
-        if (!remoteComments[value.tattooId]) remoteComments[value.tattooId] = [];
-        remoteComments[value.tattooId].push(value);
-      });
-      Object.entries(remoteComments).forEach(([tattooId, values]) => {
-        const local = this.comments[tattooId] || [];
-        const byId = new Map<string, Comment>();
-        local.forEach((x) => byId.set(x.id, x));
-        values.forEach((x) => byId.set(x.id, x));
-        this.comments[tattooId] = Array.from(byId.values()).sort((a, b) =>
-          String(b.createdAt).localeCompare(String(a.createdAt))
-        );
-        const tattoo = this.tattoos.find((t) => t.id === tattooId);
-        if (tattoo) tattoo.commentsCount = this.comments[tattooId].length;
-      });
-      this.saveComments();
-      this.saveTattoos();
-
-      const remoteLikes: Record<string, Set<string>> = {};
-      likeSnap.docs.forEach((d) => {
-        const value = d.data() as { tattooId?: string; uid?: string };
-        if (!value.tattooId || !value.uid) return;
-        if (!remoteLikes[value.tattooId]) remoteLikes[value.tattooId] = new Set();
-        remoteLikes[value.tattooId].add(value.uid);
-      });
-      Object.entries(remoteLikes).forEach(([tattooId, users]) => {
-        this.userLikes[tattooId] = new Set([
-          ...(this.userLikes[tattooId] ? Array.from(this.userLikes[tattooId]) : []),
-          ...Array.from(users),
-        ]);
-        const tattoo = this.tattoos.find((t) => t.id === tattooId);
-        if (tattoo) tattoo.likesCount = this.userLikes[tattooId].size;
-      });
-      this.saveLikes();
+      // Interaction counts are stored on the tattoo document itself.
+      // Full comments are loaded only when a post is opened, and the current
+      // user's likes are synced separately to keep Firestore reads small.
 
       if (followSnap) {
         this.followerCounts = {};
@@ -759,6 +714,33 @@ class TattooStoreService {
     })();
 
     return this.communitySyncPromise;
+  }
+
+  public async syncCurrentUserLikes(force = false): Promise<void> {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'likes'), where('uid', '==', uid))
+      );
+
+      // Remove stale local likes for this account, then merge the server truth.
+      Object.values(this.userLikes).forEach((users) => users.delete(uid));
+
+      snap.docs.forEach((item) => {
+        const value = item.data() as { tattooId?: string; uid?: string };
+        if (!value.tattooId || value.uid !== uid) return;
+        if (!this.userLikes[value.tattooId]) this.userLikes[value.tattooId] = new Set();
+        this.userLikes[value.tattooId].add(uid);
+      });
+
+      this.saveLikes();
+      void force;
+      window.dispatchEvent(new Event('tattoos-world-community-updated'));
+    } catch (err) {
+      console.warn('Current-user likes sync skipped:', err);
+    }
   }
 
   /**
@@ -1843,6 +1825,11 @@ class TattooStoreService {
     this.saveComments();
 
     setDoc(doc(db, 'comments', newComment.id), newComment).catch(() => {});
+    if (tattoo) {
+      updateDoc(doc(db, 'tattoos', tattoo.id), {
+        commentsCount: tattoo.commentsCount,
+      }).catch(() => {});
+    }
     if (tattoo && tattoo.creatorId !== this.currentUser.uid) {
       this.createNotification(tattoo.creatorId, 'comment', `${this.currentUser.handle} gönderine yorum yaptı.`, tattoo);
     }
@@ -1862,6 +1849,11 @@ class TattooStoreService {
       }
       this.saveComments();
       deleteDoc(doc(db, 'comments', commentId)).catch(() => {});
+      if (tattoo) {
+        updateDoc(doc(db, 'tattoos', tattoo.id), {
+          commentsCount: tattoo.commentsCount,
+        }).catch(() => {});
+      }
       return true;
     }
     return false;
