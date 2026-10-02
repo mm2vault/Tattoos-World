@@ -1,5 +1,5 @@
 import { Tattoo, Comment, UserProfile, CategoryId, Notification, Story, BookingRequest } from '../types';
-import { uploadDataUrl, uploadMediaBatch, estimateDataUrlBytes, optimizeDataUrlForFirestore } from './mediaStorage';
+import { uploadDataUrl, uploadMediaBatch, estimateDataUrlBytes, optimizeDataUrlForFirestore, isDataUrl } from './mediaStorage';
 import { 
   auth, 
   googleProvider, 
