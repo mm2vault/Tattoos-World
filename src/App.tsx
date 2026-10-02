@@ -345,8 +345,11 @@ function App() {
       setToastMessage('Dövme başarıyla paylaşıldı.');
       setSelectedTattoo(newTattoo);
     } catch (error) {
-      console.warn('Tattoo media upload failed:', error);
-      setToastMessage('Görseller yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.');
+      console.warn('Tattoo publish failed:', error);
+      const message = error instanceof Error && error.message
+        ? error.message
+        : 'Dövme paylaşılırken bir hata oluştu. Lütfen tekrar dene.';
+      setToastMessage(message);
       throw error;
     }
   };
