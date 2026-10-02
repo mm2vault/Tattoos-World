@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   X, Heart, MessageSquare, Share2, Bookmark, Flag, 
-  ChevronLeft, ChevronRight, Sparkles, Trash2, ShieldCheck 
+  ChevronLeft, ChevronRight, Sparkles, Trash2, ShieldCheck, Pencil 
 } from 'lucide-react';
 import { Tattoo, Comment, SupportedLanguage, UserProfile } from '../types';
 import { tattooStore } from '../services/tattooStore';
@@ -126,6 +126,46 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
       }
     } catch {
       // Share sheet was closed.
+    }
+  };
+
+  const handleEdit = async () => {
+    const title = window.prompt('Gönderi başlığı:', tattoo.title);
+    if (title === null) return;
+
+    const description = window.prompt('Açıklama:', tattoo.description);
+    if (description === null) return;
+
+    const tagInput = window.prompt(
+      'Etiketler (virgülle ayır):',
+      (tattoo.tags || []).join(', ')
+    );
+    if (tagInput === null) return;
+
+    const isOwner =
+      tattoo.creatorId === currentUser.uid ||
+      String(tattoo.creatorHandle || '').toLowerCase() === String(currentUser.handle || '').toLowerCase();
+    if (!isOwner && !currentUser.isAdmin) {
+      onToast('Bu gönderiyi düzenleme yetkin yok.');
+      return;
+    }
+
+    const tags = tagInput
+      .split(',')
+      .map((tag) => tag.trim().replace(/^#/, ''))
+      .filter(Boolean);
+
+    const ok = await tattooStore.updateTattoo(
+      tattoo.id,
+      { title, description, tags },
+      currentUser
+    );
+
+    if (ok) {
+      onTattooUpdated();
+      onToast('Gönderi güncellendi.');
+    } else {
+      onToast('Gönderi güncellenemedi.');
     }
   };
 
@@ -257,21 +297,31 @@ export const TattooDetailModal: React.FC<TattooDetailModalProps> = ({
 
               <div className="flex items-center gap-2">
                 {(currentUser.isAdmin || currentUser.uid === tattoo.creatorId || String(currentUser.handle || '').toLowerCase() === String(tattoo.creatorHandle || '').toLowerCase()) && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`"${tattoo.title}" dövmesini silmek istediğinizden emin misiniz?`)) {
-                        tattooStore.deleteTattoo(tattoo.id, currentUser);
-                        onTattooUpdated();
-                        onToast('Dövme başarıyla silindi');
-                        onClose();
-                      }
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[10px] font-bold border border-red-500/30 cursor-pointer"
-                    title="Dövmeyi Sil"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Sil</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={handleEdit}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white hover:bg-white/15 text-[10px] font-bold border border-white/10 cursor-pointer"
+                      title="Gönderiyi Düzenle"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Düzenle</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`"${tattoo.title}" dövmesini silmek istediğinizden emin misiniz?`)) {
+                          tattooStore.deleteTattoo(tattoo.id, currentUser);
+                          onTattooUpdated();
+                          onToast('Dövme başarıyla silindi');
+                          onClose();
+                        }
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-[10px] font-bold border border-red-500/30 cursor-pointer"
+                      title="Dövmeyi Sil"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Sil</span>
+                    </button>
+                  </>
                 )}
                 <Sparkles className="w-4 h-4 text-[#888888]" />
               </div>
