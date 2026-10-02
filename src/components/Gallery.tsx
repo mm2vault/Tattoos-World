@@ -48,6 +48,7 @@ export const Gallery: React.FC<GalleryProps> = ({
   const [artistOnly, setArtistOnly] = useState(false);
   const [remoteProfiles, setRemoteProfiles] = useState<UserProfile[]>([]);
   const [searchFilter, setSearchFilter] = useState<'all' | 'people' | 'tattoos'>('all');
+  const [feedMode, setFeedMode] = useState<'forYou' | 'following'>('forYou');
 
   useEffect(() => {
     if (initialViewMode === 'feed') {
@@ -177,6 +178,14 @@ export const Gallery: React.FC<GalleryProps> = ({
     const bd = new Date(b.createdAt).getTime() || 0;
     return bd - ad;
   });
+
+  const feedTattoos = React.useMemo(() => {
+    if (feedMode === 'forYou') return filteredTattoos;
+    return filteredTattoos.filter((tattoo) =>
+      tattoo.creatorId === currentUser.uid ||
+      tattooStore.isFollowing(tattoo.creatorHandle)
+    );
+  }, [filteredTattoos, feedMode, currentUser.uid]);
 
   const toggleLike = (id: string) => {
     const res = tattooStore.toggleLike(id);
@@ -680,7 +689,20 @@ export const Gallery: React.FC<GalleryProps> = ({
           </div>
         </div>
 
-        {searchQuery.trim() && searchFilter === 'people' ? null : filteredTattoos.length === 0 ? (
+        {searchQuery.trim() && searchFilter === 'people' ? null : (viewMode === 'feed' && feedMode === 'following' && feedTattoos.length === 0) ? (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-[#111111] p-10 text-center">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl">♡</div>
+            <h3 className="text-sm font-bold text-white mt-4">Takip akışında henüz gönderi yok</h3>
+            <p className="text-xs text-[#666666] mt-1">Takip ettiğin sanatçıların ve üyelerin yeni dövmeleri burada görünecek.</p>
+            <button
+              type="button"
+              onClick={() => setFeedMode('forYou')}
+              className="mt-4 px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-[#eaeaea] transition-colors"
+            >
+              Tüm akışa geç
+            </button>
+          </div>
+        ) : searchQuery.trim() && searchFilter === 'people' ? null : filteredTattoos.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-[#111111] p-10 text-center">
             <div className="w-12 h-12 mx-auto rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl">✦</div>
             <h3 className="text-sm font-bold text-white mt-4">Henüz gönderi yok</h3>
@@ -694,7 +716,25 @@ export const Gallery: React.FC<GalleryProps> = ({
           </div>
         ) : viewMode === 'feed' ? (
           <div className="mx-auto w-full max-w-[620px]">
-            {filteredTattoos.map((tattoo) => {
+            <div className="sticky top-0 z-20 mx-auto mb-3 w-full max-w-[620px] rounded-2xl border border-white/10 bg-[#0b0b0b]/95 p-1 backdrop-blur-xl">
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setFeedMode('forYou')}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-semibold transition-colors ${feedMode === 'forYou' ? 'bg-white text-black' : 'text-[#888] hover:text-white'}`}
+                >
+                  Sana Özel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFeedMode('following')}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-semibold transition-colors ${feedMode === 'following' ? 'bg-white text-black' : 'text-[#888] hover:text-white'}`}
+                >
+                  Takip Edilenler
+                </button>
+              </div>
+            </div>
+            {feedTattoos.map((tattoo) => {
               const liked = tattooStore.isLiked(tattoo.id, currentUser.uid);
               const saved = tattooStore.isSaved(tattoo.id);
               const slides = getSlides(tattoo);
