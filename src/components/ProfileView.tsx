@@ -244,7 +244,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // Convert uploaded images to compact JPEG data so they survive reloads without
   // filling localStorage/Firestore with huge original camera files.
-  const compressProfileImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> =>
+  const compressProfileImage = (
+    file: File,
+    maxWidth: number,
+    maxHeight: number,
+    maxBytes = 220 * 1024,
+  ): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('image-read-failed'));
@@ -260,14 +265,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           if (!ctx) return reject(new Error('canvas-failed'));
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const maxBytes = 650 * 1024;
+          const targetMaxBytes = maxBytes;
           let best = '';
           for (const quality of [0.75, 0.65, 0.55, 0.45]) {
             const candidate = canvas.toDataURL('image/jpeg', quality);
             const comma = candidate.indexOf(',');
             const base64 = comma >= 0 ? candidate.slice(comma + 1) : candidate;
             const bytes = Math.ceil(base64.length * 0.75);
-            if (bytes <= maxBytes) {
+            if (bytes <= targetMaxBytes) {
               best = candidate;
               break;
             }
@@ -277,7 +282,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           const comma = best.indexOf(',');
           const base64 = comma >= 0 ? best.slice(comma + 1) : best;
           const bytes = Math.ceil(base64.length * 0.75);
-          if (bytes > maxBytes) return reject(new Error('image-too-large'));
+          if (bytes > targetMaxBytes) return reject(new Error('image-too-large'));
 
           resolve(best);
         };
@@ -291,7 +296,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const result = await compressProfileImage(file, 1400, 600);
+      const result = await compressProfileImage(file, 1400, 600, 280 * 1024);
       const updated = tattooStore.updateProfile({ bannerURL: result });
       onUserUpdated(updated);
       setEditBannerURL(result);
@@ -308,7 +313,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const result = await compressProfileImage(file, 700, 700);
+      const result = await compressProfileImage(file, 700, 700, 180 * 1024);
       const updated = tattooStore.updateProfile({ photoURL: result });
       onUserUpdated(updated);
       setEditPhotoURL(result);
