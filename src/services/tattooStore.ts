@@ -1103,6 +1103,55 @@ class TattooStoreService {
     return false;
   }
 
+  public async updateTattoo(
+    tattooId: string,
+    updates: {
+      title?: string;
+      description?: string;
+      category?: CategoryId;
+      categoryName?: string;
+      tags?: string[];
+    },
+    requester: UserProfile = this.currentUser,
+  ): Promise<boolean> {
+    const tattoo = this.tattoos.find((item) => item.id === tattooId);
+    if (!tattoo) return false;
+
+    const isAdmin = Boolean(
+      requester.isAdmin || requester.role === 'admin' || isUserAdmin(requester.email)
+    );
+    const isOwner =
+      tattoo.creatorId === requester.uid ||
+      tattoo.creatorHandle.toLowerCase() === requester.handle.toLowerCase();
+
+    if (!isAdmin && !isOwner) return false;
+
+    const next = {
+      title: String(updates.title ?? tattoo.title).trim().slice(0, 120) || tattoo.title,
+      description: String(updates.description ?? tattoo.description).trim().slice(0, 3000),
+      category: updates.category ?? tattoo.category,
+      categoryName: String(updates.categoryName ?? tattoo.categoryName).trim().slice(0, 80) || tattoo.categoryName,
+      tags: Array.from(
+        new Set(
+          (updates.tags ?? tattoo.tags ?? [])
+            .map((tag) => String(tag).trim().replace(/^#/, '').toLowerCase())
+            .filter(Boolean)
+        )
+      ).slice(0, 12),
+    };
+
+    try {
+      await updateDoc(doc(db, 'tattoos', tattooId), next);
+      Object.assign(tattoo, next);
+      this.saveTattoos();
+      window.dispatchEvent(new Event('tattoos-world-community-updated'));
+      return true;
+    } catch (err) {
+      console.warn('Tattoo update failed:', err);
+      return false;
+    }
+  }
+
   /**
    * Everyone can delete their own shared tattoos.
    * Admin can delete ANY tattoo.
