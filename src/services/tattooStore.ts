@@ -1782,6 +1782,39 @@ class TattooStoreService {
     return this.comments[tattooId] || [];
   }
 
+  public async syncCommentsForTattoo(tattooId: string): Promise<Comment[]> {
+    if (!tattooId) return [];
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'comments'), where('tattooId', '==', tattooId))
+      );
+      const remote = snap.docs
+        .map((item) => item.data() as Comment)
+        .filter((comment) => comment?.id && comment?.tattooId === tattooId)
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+      const local = this.comments[tattooId] || [];
+      const merged = new Map<string, Comment>();
+      local.forEach((comment) => merged.set(comment.id, comment));
+      remote.forEach((comment) => merged.set(comment.id, comment));
+
+      this.comments[tattooId] = Array.from(merged.values()).sort((a, b) =>
+        String(b.createdAt).localeCompare(String(a.createdAt))
+      );
+
+      const tattoo = this.tattoos.find((item) => item.id === tattooId);
+      if (tattoo) {
+        tattoo.commentsCount = this.comments[tattooId].length;
+        this.saveTattoos();
+      }
+      this.saveComments();
+      return [...this.comments[tattooId]];
+    } catch (err) {
+      console.warn('Tattoo comments sync skipped:', err);
+      return this.getComments(tattooId);
+    }
+  }
+
   public addComment(tattooId: string, text: string): Comment {
     const newComment: Comment = {
       id: 'comment_' + Date.now(),
