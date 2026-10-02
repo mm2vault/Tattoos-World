@@ -20,6 +20,12 @@ export const estimateDataUrlBytes = (value: string): number => {
   return Math.ceil(base64.length * 0.75);
 };
 
+export const optimizeDataUrlForFirestore = async (
+  dataUrl: string,
+  maxBytes = 96 * 1024,
+  maxSide = 320,
+): Promise<string> => optimizeDataUrl(dataUrl, maxBytes, maxSide);
+
 const optimizeDataUrl = async (
   dataUrl: string,
   maxBytes: number,
