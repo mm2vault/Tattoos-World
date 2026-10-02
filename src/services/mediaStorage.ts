@@ -39,10 +39,11 @@ const optimizeDataUrl = async (
     const image = new Image();
 
     image.onload = () => {
+      // maxSide is the longest edge, not the shortest edge. Using the
+      // shortest edge here needlessly shrank portrait/landscape images.
       let side = Math.min(
         maxSide,
-        Math.max(1, image.width),
-        Math.max(1, image.height),
+        Math.max(1, image.width, image.height),
       );
 
       const qualities = [0.72, 0.62, 0.52, 0.44, 0.36, 0.28];
